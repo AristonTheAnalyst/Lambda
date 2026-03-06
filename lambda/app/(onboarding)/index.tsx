@@ -146,7 +146,6 @@ export default function OnboardingScreen() {
                   <Picker.Item label="Male" value="Male" />
                   <Picker.Item label="Female" value="Female" />
                   <Picker.Item label="Other" value="Other" />
-                  <Picker.Item label="Prefer not to say" value="Prefer not to say" />
                 </Picker>
               </View>
             </View>

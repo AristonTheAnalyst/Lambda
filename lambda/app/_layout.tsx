@@ -3,24 +3,19 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import 'react-native-reanimated';
-import { ActivityIndicator, View } from 'react-native';
-
 import { useColorScheme } from '@/hooks';
 import { AuthProvider, useAuthContext } from '@/lib/AuthContext';
 
 export {
-  // Catch any errors thrown by the Layout component.
   ErrorBoundary,
 } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/(tabs)` keeps a back button present.
   initialRouteName: '(tabs)',
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -29,74 +24,67 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
     if (error) throw error;
   }, [error]);
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
-
-  return <RootLayoutNav />;
-}
-
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+  if (!loaded) return null;
 
   return (
     <AuthProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        </Stack>
-        <AuthGate />
-      </ThemeProvider>
+      <RootLayoutNav />
     </AuthProvider>
   );
 }
 
-function AuthGate() {
+function RootLayoutNav() {
+  const colorScheme = useColorScheme();
   const { session, loading, onboarded } = useAuthContext();
-  const segments = useSegments();
   const router = useRouter();
+  const segments = useSegments();
+  const didInitialRoute = useRef(false);
+
+  const authReady = !loading && (!session || onboarded !== null);
 
   useEffect(() => {
-    if (loading) return;
+    if (!authReady || didInitialRoute.current) return;
+    didInitialRoute.current = true;
+
+    if (!session) {
+      router.replace('/(auth)/login');
+    } else if (onboarded) {
+      router.replace('/(tabs)');
+    } else {
+      router.replace('/(onboarding)');
+    }
+
+    requestAnimationFrame(() => SplashScreen.hideAsync());
+  }, [authReady]);
+
+  useEffect(() => {
+    if (!authReady || !didInitialRoute.current) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const inOnboardingGroup = segments[0] === '(onboarding)';
 
     if (!session) {
       if (!inAuthGroup) router.replace('/(auth)/login');
-    } else {
-      if (onboarded === null) return; // profile still loading
-
-      if (inAuthGroup) {
-        router.replace(onboarded ? '/(tabs)' : '/(onboarding)');
-      } else if (onboarded === false && !inOnboardingGroup) {
-        router.replace('/(onboarding)');
-      } else if (onboarded === true && inOnboardingGroup) {
-        router.replace('/(tabs)');
-      }
+    } else if (onboarded === false) {
+      if (!inOnboardingGroup) router.replace('/(onboarding)');
+    } else if (onboarded === true && inOnboardingGroup) {
+      router.replace('/(tabs)');
     }
-  }, [session, loading, onboarded, segments]);
+  }, [session, onboarded, segments]);
 
-  if (loading) {
-    return (
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#007AFF" />
-      </View>
-    );
-  }
+  if (!authReady) return null;
 
-  return null;
+  return (
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <Stack>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      </Stack>
+    </ThemeProvider>
+  );
 }
