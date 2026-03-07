@@ -6,6 +6,8 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import supabase from './supabase';
 import { DimUser, AuthUser } from '@/types/database';
 
+WebBrowser.maybeCompleteAuthSession();
+
 interface AuthContextValue {
   user: AuthUser | null;
   session: Session | null;
@@ -115,21 +117,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error ?? null };
   }, []);
 
-  const signInWithGoogle = useCallback(async (): Promise<{ error: Error | null }> => {
-    try {
-      const redirectTo = Linking.createURL('auth/callback');
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo, skipBrowserRedirect: true },
-      });
-      if (error) return { error };
-      if (data.url) {
-        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-        if (result.type === 'success') {
-          const { error: sessionError } = await supabase.auth.exchangeCodeForSession(result.url);
-          if (sessionError) return { error: sessionError };
+  // Handle deep links from OAuth redirects
+  useEffect(() => {
+    const processUrl = async (url: string) => {
+      // Check for access_token in fragment (implicit flow)
+      if (url.includes('#access_token=')) {
+        const fragment = url.split('#')[1];
+        const params = new URLSearchParams(fragment);
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token') ?? '';
+        if (accessToken) {
+          await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+        }
+        return;
+      }
+      // Check for code in query params (PKCE flow)
+      if (url.includes('code=')) {
+        const queryStart = url.indexOf('?');
+        if (queryStart >= 0) {
+          const params = new URLSearchParams(url.substring(queryStart));
+          const code = params.get('code');
+          if (code) {
+            await supabase.auth.exchangeCodeForSession(code);
+          }
         }
       }
+    };
+
+    // Handle URLs that opened the app while it was closed
+    Linking.getInitialURL().then((url) => { if (url) processUrl(url); });
+
+    // Handle URLs received while the app is open
+    const sub = Linking.addEventListener('url', ({ url }) => processUrl(url));
+    return () => sub.remove();
+  }, []);
+
+  const signInWithGoogle = useCallback(async (): Promise<{ error: Error | null }> => {
+    try {
+      const redirectTo = Linking.createURL('/');
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error || !data.url) return { error: error ?? new Error('No OAuth URL') };
+
+      // Open browser — don't block on it
+      await WebBrowser.openBrowserAsync(data.url);
+
       return { error: null };
     } catch (err) {
       return { error: err instanceof Error ? err : new Error('Google sign-in failed') };
