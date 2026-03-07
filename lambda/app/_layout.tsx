@@ -16,7 +16,7 @@ export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -58,7 +58,7 @@ function RootLayoutNav() {
       router.replace('/(onboarding)');
     }
 
-    requestAnimationFrame(() => SplashScreen.hideAsync());
+    requestAnimationFrame(() => SplashScreen.hideAsync().catch(() => {}));
   }, [authReady]);
 
   useEffect(() => {
