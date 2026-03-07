@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useState, useEffect } from 'react';
 import {
   View,
   TextInput,
@@ -23,8 +23,13 @@ export default function SignupScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
   const router = useRouter();
-  const { signUp, signInWithGoogle, signInWithApple, loading } = useAuthContext();
+  const { signUp, signInWithGoogle, signInWithApple, loading, session } = useAuthContext();
   const colorScheme = useColorScheme();
+
+  // Clear social loading spinner once session is established
+  useEffect(() => {
+    if (session && socialLoading) setSocialLoading(null);
+  }, [session]);
 
   const isDark = colorScheme === 'dark';
   const backgroundColor = isDark ? '#1a1a1a' : '#fff';
@@ -52,15 +57,19 @@ export default function SignupScreen() {
   const handleGoogle = async () => {
     setSocialLoading('google');
     const { error } = await signInWithGoogle();
-    setSocialLoading(null);
-    if (error) Alert.alert('Google Sign-In Failed', error.message);
+    if (error) {
+      setSocialLoading(null);
+      Alert.alert('Google Sign-In Failed', error.message);
+    }
   };
 
   const handleApple = async () => {
     setSocialLoading('apple');
     const { error } = await signInWithApple();
-    setSocialLoading(null);
-    if (error) Alert.alert('Apple Sign-In Failed', error.message);
+    if (error) {
+      setSocialLoading(null);
+      Alert.alert('Apple Sign-In Failed', error.message);
+    }
   };
 
   const isLoading = loading || socialLoading !== null;

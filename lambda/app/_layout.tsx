@@ -1,7 +1,7 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef } from 'react';
 import 'react-native-reanimated';
@@ -41,30 +41,35 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { session, loading, onboarded } = useAuthContext();
   const router = useRouter();
-  const segments = useSegments();
   const hasNavigated = useRef(false);
+  const lastTarget = useRef<string | null>(null);
 
   useEffect(() => {
     if (loading) return;
     // Wait until onboarded status is known for authenticated users
     if (session && onboarded === null) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
-    const inOnboardingGroup = segments[0] === '(onboarding)';
-
+    let target: string;
     if (!session) {
-      if (!inAuthGroup) router.replace('/(auth)/login');
+      target = '/(auth)/login';
     } else if (onboarded === false) {
-      if (!inOnboardingGroup) router.replace('/(onboarding)');
-    } else if (onboarded === true) {
-      if (inAuthGroup || inOnboardingGroup) router.replace('/(tabs)');
+      target = '/(onboarding)';
+    } else {
+      target = '/(tabs)';
+    }
+
+    // Only navigate when the target actually changes
+    if (lastTarget.current !== target) {
+      console.log('[Nav] Navigating to:', target, '(session:', !!session, 'onboarded:', onboarded, ')');
+      lastTarget.current = target;
+      router.replace(target as any);
     }
 
     if (!hasNavigated.current) {
       hasNavigated.current = true;
       requestAnimationFrame(() => SplashScreen.hideAsync().catch(() => {}));
     }
-  }, [session, loading, onboarded, segments]);
+  }, [session, loading, onboarded]);
 
   // Only return null during initial auth loading — never unmount the Stack after that
   if (loading) return null;

@@ -36,13 +36,8 @@
     },
     "plugins": [
       "expo-router",
-      "expo-apple-authentication",
-      [
-        "@react-native-google-signin/google-signin",
-        {
-          "iosUrlScheme": "com.googleusercontent.apps.1087524383718-jaq962la7r80cdkquclmc34m7dkpd3ib"
-        }
-      ]
+      "expo-web-browser",
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true

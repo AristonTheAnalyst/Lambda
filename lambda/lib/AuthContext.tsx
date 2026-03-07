@@ -1,14 +1,12 @@
 ﻿import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Session } from '@supabase/supabase-js';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import supabase from './supabase';
 import { DimUser, AuthUser } from '@/types/database';
 
-GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-});
+WebBrowser.maybeCompleteAuthSession();
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -64,7 +62,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (currentSession?.user) {
       await fetchUserProfile(currentSession.user.id);
     }
-  }, [fetchUserProfile]);
+  }, []);
+
+  // Fetch profile whenever user changes — decoupled from onAuthStateChange
+  // so the Supabase client has the auth token fully applied
+  useEffect(() => {
+    if (user) {
+      fetchUserProfile(user.id);
+    } else {
+      setProfile(null);
+      setOnboarded(null);
+    }
+  }, [user?.id, fetchUserProfile]);
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -73,7 +82,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(currentSession);
         if (currentSession?.user) {
           setUser({ id: currentSession.user.id, email: currentSession.user.email || '' });
-          await fetchUserProfile(currentSession.user.id);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -84,17 +92,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initializeAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, currentSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
       console.log('[Auth] AUTH STATE CHANGE:', _event);
       console.log('[Auth] Session user:', currentSession?.user?.email || 'No user');
       setSession(currentSession);
       if (currentSession?.user) {
         setUser({ id: currentSession.user.id, email: currentSession.user.email || '' });
-        await fetchUserProfile(currentSession.user.id);
       } else {
         setUser(null);
-        setProfile(null);
-        setOnboarded(null);
       }
     });
 
@@ -102,13 +107,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchUserProfile]);
 
   const signUp = useCallback(async (email: string, password: string): Promise<{ error: Error | null }> => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.signUp({ email, password });
     if (error) return { error };
-    if (data.user && data.session) {
-      await fetchUserProfile(data.user.id);
-    }
     return { error: null };
-  }, [fetchUserProfile]);
+  }, []);
 
   const signIn = useCallback(async (email: string, password: string): Promise<{ error: Error | null }> => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -128,21 +130,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = useCallback(async (): Promise<{ error: Error | null }> => {
     try {
-      await GoogleSignin.hasPlayServices();
-      const response = await GoogleSignin.signIn();
+      const redirectTo = Linking.createURL('/');
 
-      if (!response.data?.idToken) {
-        return { error: new Error('No ID token returned from Google') };
-      }
-
-      const { error } = await supabase.auth.signInWithIdToken({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        token: response.data.idToken,
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+        },
       });
 
-      return { error: error ?? null };
-    } catch (err: any) {
-      if (err.code === 'SIGN_IN_CANCELLED') return { error: null };
+      if (error || !data.url) return { error: error ?? new Error('No OAuth URL') };
+
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+
+      if (result.type === 'success') {
+        const url = result.url;
+        if (url.includes('#access_token=')) {
+          const fragment = url.split('#')[1];
+          const params = new URLSearchParams(fragment);
+          const accessToken = params.get('access_token');
+          const refreshToken = params.get('refresh_token') ?? '';
+          if (accessToken) {
+            // Fire-and-forget: onAuthStateChange listener handles session state
+            supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            }).catch((err) => console.error('[Auth] setSession error:', err));
+          }
+        } else if (url.includes('code=')) {
+          const queryStart = url.indexOf('?');
+          if (queryStart >= 0) {
+            const params = new URLSearchParams(url.substring(queryStart));
+            const code = params.get('code');
+            if (code) {
+              // Fire-and-forget: onAuthStateChange listener handles session state
+              supabase.auth.exchangeCodeForSession(code)
+                .catch((err) => console.error('[Auth] exchangeCode error:', err));
+            }
+          }
+        }
+      }
+
+      return { error: null };
+    } catch (err) {
       return { error: err instanceof Error ? err : new Error('Google sign-in failed') };
     }
   }, []);
