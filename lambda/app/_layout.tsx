@@ -71,8 +71,10 @@ function RootLayoutNav() {
     }
   }, [session, loading, onboarded]);
 
-  // Only return null during initial auth loading — never unmount the Stack after that
+  // Don't render until auth state is fully resolved
+  // (prevents flash of wrong screen while profile loads)
   if (loading) return null;
+  if (session && onboarded === null) return null;
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
