@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Link } from 'expo-router';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { useAuthContext } from '@/lib/AuthContext';
 import { useColorScheme } from '@/hooks';
 
@@ -64,17 +65,13 @@ export default function LoginScreen() {
 
         <View style={styles.form}>
           {Platform.OS === 'ios' && (
-            <TouchableOpacity
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              cornerRadius={8}
               style={[styles.appleButton, { opacity: socialLoading === 'apple' ? 0.6 : 1 }]}
               onPress={handleApple}
-              disabled={isLoading}
-            >
-              {socialLoading === 'apple' ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.appleButtonText}>Continue with Apple</Text>
-              )}
-            </TouchableOpacity>
+            />
           )}
 
           <TouchableOpacity

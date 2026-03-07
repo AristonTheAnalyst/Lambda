@@ -1,9 +1,13 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Session } from '@supabase/supabase-js';
 import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
 import * as Linking from 'expo-linking';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import supabase from './supabase';
 import { DimUser, AuthUser } from '@/types/database';
+
+WebBrowser.maybeCompleteAuthSession();
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -91,6 +95,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription?.unsubscribe();
   }, [fetchUserProfile]);
 
+  // Fallback deep link listener for OAuth callbacks (e.g. magic links, email confirmations)
+  useEffect(() => {
+    const handleDeepLink = async (url: string) => {
+      if (url.includes('code=')) {
+        await supabase.auth.exchangeCodeForSession(url).catch(() => {});
+      }
+    };
+    Linking.getInitialURL().then(url => { if (url) handleDeepLink(url); });
+    const sub = Linking.addEventListener('url', ({ url }) => handleDeepLink(url));
+    return () => sub.remove();
+  }, []);
+
   const signUp = useCallback(async (email: string, password: string): Promise<{ error: Error | null }> => {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) return { error };
@@ -118,43 +134,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = useCallback(async (): Promise<{ error: Error | null }> => {
     try {
-      const redirectUrl = Linking.createURL('/');
+      // No explicit scheme — in Expo Go this generates exp://..., in a native build it uses lambda://
+      const redirectTo = AuthSession.makeRedirectUri({ path: 'auth/callback' });
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: redirectUrl, skipBrowserRedirect: true },
+        options: { redirectTo, skipBrowserRedirect: true },
       });
       if (error) return { error };
       if (data.url) {
-        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
         if (result.type === 'success') {
           const { error: sessionError } = await supabase.auth.exchangeCodeForSession(result.url);
           if (sessionError) return { error: sessionError };
         }
       }
       return { error: null };
-    } catch (error) {
-      return { error: error instanceof Error ? error : new Error('Google sign-in failed') };
+    } catch (err) {
+      return { error: err instanceof Error ? err : new Error('Google sign-in failed') };
     }
   }, []);
 
   const signInWithApple = useCallback(async (): Promise<{ error: Error | null }> => {
     try {
-      const redirectUrl = Linking.createURL('/');
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: { redirectTo: redirectUrl, skipBrowserRedirect: true },
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
       });
-      if (error) return { error };
-      if (data.url) {
-        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
-        if (result.type === 'success') {
-          const { error: sessionError } = await supabase.auth.exchangeCodeForSession(result.url);
-          if (sessionError) return { error: sessionError };
-        }
-      }
-      return { error: null };
-    } catch (error) {
-      return { error: error instanceof Error ? error : new Error('Apple sign-in failed') };
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: credential.identityToken!,
+      });
+      return { error: error ?? null };
+    } catch (err: any) {
+      if (err.code === 'ERR_REQUEST_CANCELED') return { error: null };
+      return { error: err instanceof Error ? err : new Error('Apple sign-in failed') };
     }
   }, []);
 
