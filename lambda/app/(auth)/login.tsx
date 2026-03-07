@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState } from 'react';
 import {
   View,
   TextInput,
@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Link } from 'expo-router';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useAuthContext } from '@/lib/AuthContext';
+import { withGuard } from '@/lib/asyncGuard';
 import { useColorScheme } from '@/hooks';
 
 export default function LoginScreen() {
@@ -21,13 +22,8 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
   const router = useRouter();
-  const { signIn, signInWithGoogle, signInWithApple, loading, session } = useAuthContext();
+  const { signIn, signInWithGoogle, signInWithApple, loading } = useAuthContext();
   const colorScheme = useColorScheme();
-
-  // Clear social loading spinner once session is established
-  useEffect(() => {
-    if (session && socialLoading) setSocialLoading(null);
-  }, [session]);
 
   const isDark = colorScheme === 'dark';
   const backgroundColor = isDark ? '#1a1a1a' : '#fff';
@@ -35,32 +31,34 @@ export default function LoginScreen() {
   const inputBg = isDark ? '#333' : '#f5f5f5';
   const dividerColor = isDark ? '#444' : '#ddd';
 
-  const handleLogin = async () => {
+  const handleLogin = () => withGuard(async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
     const { error } = await signIn(email, password);
     if (error) Alert.alert('Login Failed', error.message);
-  };
+  });
 
-  const handleGoogle = async () => {
+  const handleGoogle = () => withGuard(async () => {
     setSocialLoading('google');
-    const { error } = await signInWithGoogle();
-    if (error) {
+    try {
+      const { error } = await signInWithGoogle();
+      if (error) Alert.alert('Google Sign-In Failed', error.message);
+    } finally {
       setSocialLoading(null);
-      Alert.alert('Google Sign-In Failed', error.message);
     }
-  };
+  });
 
-  const handleApple = async () => {
+  const handleApple = () => withGuard(async () => {
     setSocialLoading('apple');
-    const { error } = await signInWithApple();
-    if (error) {
+    try {
+      const { error } = await signInWithApple();
+      if (error) Alert.alert('Apple Sign-In Failed', error.message);
+    } finally {
       setSocialLoading(null);
-      Alert.alert('Apple Sign-In Failed', error.message);
     }
-  };
+  });
 
   const isLoading = loading || socialLoading !== null;
 
