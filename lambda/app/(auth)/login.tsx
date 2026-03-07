@@ -74,6 +74,18 @@ export default function LoginScreen() {
             />
           )}
 
+          <TouchableOpacity
+            style={[styles.googleButton, { opacity: socialLoading === 'google' ? 0.6 : 1 }]}
+            onPress={handleGoogle}
+            disabled={isLoading}
+          >
+            {socialLoading === 'google' ? (
+              <ActivityIndicator color="#444" />
+            ) : (
+              <Text style={styles.googleButtonText}>Sign in with Google</Text>
+            )}
+          </TouchableOpacity>
+
           <View style={styles.dividerRow}>
             <View style={[styles.dividerLine, { backgroundColor: dividerColor }]} />
             <Text style={[styles.dividerText, { color: dividerColor }]}>or</Text>
