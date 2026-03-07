@@ -1,12 +1,14 @@
 ﻿import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Session } from '@supabase/supabase-js';
-import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import supabase from './supabase';
 import { DimUser, AuthUser } from '@/types/database';
 
-WebBrowser.maybeCompleteAuthSession();
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+});
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -124,123 +126,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error ?? null };
   }, []);
 
-  // Handle deep links from OAuth redirects
-  useEffect(() => {
-    const processUrl = async (url: string) => {
-      console.log('[Auth] processUrl called with:', url);
-      // Check for access_token in fragment (implicit flow)
-      if (url.includes('#access_token=')) {
-        console.log('[Auth] Found access_token in fragment (implicit flow)');
-        const fragment = url.split('#')[1];
-        const params = new URLSearchParams(fragment);
-        const accessToken = params.get('access_token');
-        const refreshToken = params.get('refresh_token') ?? '';
-        if (accessToken) {
-          console.log('[Auth] Setting session with access token...');
-          const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-          console.log('[Auth] setSession result error:', error);
-        }
-        return;
-      }
-      // Check for code in query params (PKCE flow)
-      if (url.includes('code=')) {
-        console.log('[Auth] Found code in query params (PKCE flow)');
-        const queryStart = url.indexOf('?');
-        if (queryStart >= 0) {
-          const params = new URLSearchParams(url.substring(queryStart));
-          const code = params.get('code');
-          if (code) {
-            console.log('[Auth] Exchanging code for session...');
-            const { error } = await supabase.auth.exchangeCodeForSession(code);
-            console.log('[Auth] exchangeCodeForSession error:', error);
-          }
-        }
-      } else {
-        console.log('[Auth] URL has no token or code — ignored');
-      }
-    };
-
-    // Handle URLs that opened the app while it was closed
-    Linking.getInitialURL().then((url) => {
-      console.log('[Auth] getInitialURL:', url);
-      if (url) processUrl(url);
-    });
-
-    // Handle URLs received while the app is open
-    const sub = Linking.addEventListener('url', ({ url }) => {
-      console.log('[Auth] Linking url event:', url);
-      processUrl(url);
-    });
-    return () => sub.remove();
-  }, []);
-
   const signInWithGoogle = useCallback(async (): Promise<{ error: Error | null }> => {
     try {
-      console.log('=== GOOGLE OAUTH START ===');
-      const redirectTo = Linking.createURL('/');
-      console.log('[Auth] redirectTo:', redirectTo);
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo,
-          skipBrowserRedirect: true,
-        },
-      });
-
-      console.log('[Auth] OAuth URL:', data?.url);
-      console.log('[Auth] OAuth error:', error);
-
-      if (error || !data.url) return { error: error ?? new Error('No OAuth URL') };
-
-      console.log('[Auth] Opening auth session...');
-      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-      console.log('[Auth] WebBrowser result type:', result.type);
-      if (result.type === 'success') {
-        console.log('[Auth] WebBrowser success URL:', result.url);
-
-        // Process tokens from the returned URL
-        const url = result.url;
-        if (url.includes('#access_token=')) {
-          const fragment = url.split('#')[1];
-          const params = new URLSearchParams(fragment);
-          const accessToken = params.get('access_token');
-          const refreshToken = params.get('refresh_token') ?? '';
-          if (accessToken) {
-            console.log('[Auth] Setting session from returned URL (non-blocking)...');
-            // Don't await — setSession blocks until onAuthStateChange callbacks finish,
-            // which includes fetchUserProfile. Fire-and-forget so the UI unblocks.
-            supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            }).then(({ error: setErr }) => {
-              if (setErr) console.error('[Auth] setSession error:', setErr);
-              else console.log('[Auth] Session set successfully');
-            });
-          }
-        } else if (url.includes('code=')) {
-          const queryStart = url.indexOf('?');
-          if (queryStart >= 0) {
-            const params = new URLSearchParams(url.substring(queryStart));
-            const code = params.get('code');
-            if (code) {
-              console.log('[Auth] Exchanging code for session (non-blocking)...');
-              supabase.auth.exchangeCodeForSession(code).then(({ error: codeErr }) => {
-                if (codeErr) console.error('[Auth] exchangeCodeForSession error:', codeErr);
-              });
-            }
-          }
-        }
-      } else {
-        console.log('[Auth] WebBrowser result (non-success):', JSON.stringify(result));
-        return { error: null };
+      if (!response.data?.idToken) {
+        return { error: new Error('No ID token returned from Google') };
       }
 
-      console.log('=== GOOGLE OAUTH END ===');
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: response.data.idToken,
+      });
 
-      return { error: null };
-    } catch (err) {
-      console.error('[Auth] Exception during Google OAuth:', err);
+      return { error: error ?? null };
+    } catch (err: any) {
+      if (err.code === 'SIGN_IN_CANCELLED') return { error: null };
       return { error: err instanceof Error ? err : new Error('Google sign-in failed') };
     }
   }, []);
