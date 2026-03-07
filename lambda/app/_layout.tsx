@@ -42,27 +42,12 @@ function RootLayoutNav() {
   const { session, loading, onboarded } = useAuthContext();
   const router = useRouter();
   const segments = useSegments();
-  const didInitialRoute = useRef(false);
-
-  const authReady = !loading && (!session || onboarded !== null);
+  const hasNavigated = useRef(false);
 
   useEffect(() => {
-    if (!authReady || didInitialRoute.current) return;
-    didInitialRoute.current = true;
-
-    if (!session) {
-      router.replace('/(auth)/login');
-    } else if (onboarded) {
-      router.replace('/(tabs)');
-    } else {
-      router.replace('/(onboarding)');
-    }
-
-    requestAnimationFrame(() => SplashScreen.hideAsync().catch(() => {}));
-  }, [authReady]);
-
-  useEffect(() => {
-    if (!authReady || !didInitialRoute.current) return;
+    if (loading) return;
+    // Wait until onboarded status is known for authenticated users
+    if (session && onboarded === null) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const inOnboardingGroup = segments[0] === '(onboarding)';
@@ -71,12 +56,18 @@ function RootLayoutNav() {
       if (!inAuthGroup) router.replace('/(auth)/login');
     } else if (onboarded === false) {
       if (!inOnboardingGroup) router.replace('/(onboarding)');
-    } else if (onboarded === true && inOnboardingGroup) {
-      router.replace('/(tabs)');
+    } else if (onboarded === true) {
+      if (inAuthGroup || inOnboardingGroup) router.replace('/(tabs)');
     }
-  }, [session, onboarded, segments]);
 
-  if (!authReady) return null;
+    if (!hasNavigated.current) {
+      hasNavigated.current = true;
+      requestAnimationFrame(() => SplashScreen.hideAsync().catch(() => {}));
+    }
+  }, [session, loading, onboarded, segments]);
+
+  // Only return null during initial auth loading — never unmount the Stack after that
+  if (loading) return null;
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

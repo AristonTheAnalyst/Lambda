@@ -85,7 +85,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         setOnboarded(null);
       }
-      setLoading(false);
     });
 
     return () => subscription?.unsubscribe();
