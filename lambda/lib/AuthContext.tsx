@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Session } from '@supabase/supabase-js';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import supabase from './supabase';
 import { DimUser, AuthUser } from '@/types/database';
 
@@ -11,6 +13,8 @@ interface AuthContextValue {
   profile: DimUser | null;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signInWithGoogle: () => Promise<{ error: Error | null }>;
+  signInWithApple: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<{ error: Error | null }>;
   refreshProfile: () => Promise<void>;
 }
@@ -112,8 +116,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error ?? null };
   }, []);
 
+  const signInWithGoogle = useCallback(async (): Promise<{ error: Error | null }> => {
+    try {
+      const redirectUrl = Linking.createURL('/');
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: redirectUrl, skipBrowserRedirect: true },
+      });
+      if (error) return { error };
+      if (data.url) {
+        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+        if (result.type === 'success') {
+          const { error: sessionError } = await supabase.auth.exchangeCodeForSession(result.url);
+          if (sessionError) return { error: sessionError };
+        }
+      }
+      return { error: null };
+    } catch (error) {
+      return { error: error instanceof Error ? error : new Error('Google sign-in failed') };
+    }
+  }, []);
+
+  const signInWithApple = useCallback(async (): Promise<{ error: Error | null }> => {
+    try {
+      const redirectUrl = Linking.createURL('/');
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: { redirectTo: redirectUrl, skipBrowserRedirect: true },
+      });
+      if (error) return { error };
+      if (data.url) {
+        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+        if (result.type === 'success') {
+          const { error: sessionError } = await supabase.auth.exchangeCodeForSession(result.url);
+          if (sessionError) return { error: sessionError };
+        }
+      }
+      return { error: null };
+    } catch (error) {
+      return { error: error instanceof Error ? error : new Error('Apple sign-in failed') };
+    }
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, onboarded, profile, signUp, signIn, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, session, loading, onboarded, profile, signUp, signIn, signInWithGoogle, signInWithApple, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
