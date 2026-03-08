@@ -71,34 +71,6 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.form}>
-          {Platform.OS === 'ios' && (
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-              cornerRadius={8}
-              style={[styles.appleButton, { opacity: socialLoading === 'apple' ? 0.6 : 1 }]}
-              onPress={handleApple}
-            />
-          )}
-
-          <TouchableOpacity
-            style={[styles.googleButton, { opacity: socialLoading === 'google' ? 0.6 : 1 }]}
-            onPress={handleGoogle}
-            disabled={isLoading}
-          >
-            {socialLoading === 'google' ? (
-              <ActivityIndicator color="#444" />
-            ) : (
-              <Text style={styles.googleButtonText}>Sign in with Google</Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.dividerRow}>
-            <View style={[styles.dividerLine, { backgroundColor: dividerColor }]} />
-            <Text style={[styles.dividerText, { color: dividerColor }]}>or</Text>
-            <View style={[styles.dividerLine, { backgroundColor: dividerColor }]} />
-          </View>
-
           <View style={styles.inputContainer}>
             <Text style={[styles.label, { color: textColor }]}>Email</Text>
             <TextInput
@@ -135,6 +107,34 @@ export default function LoginScreen() {
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={styles.buttonText}>Login</Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.dividerRow}>
+            <View style={[styles.dividerLine, { backgroundColor: dividerColor }]} />
+            <Text style={[styles.dividerText, { color: dividerColor }]}>or</Text>
+            <View style={[styles.dividerLine, { backgroundColor: dividerColor }]} />
+          </View>
+
+          {Platform.OS === 'ios' && (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              cornerRadius={8}
+              style={[styles.appleButton, { opacity: socialLoading === 'apple' ? 0.6 : 1 }]}
+              onPress={handleApple}
+            />
+          )}
+
+          <TouchableOpacity
+            style={[styles.googleButton, { opacity: socialLoading === 'google' ? 0.6 : 1 }]}
+            onPress={handleGoogle}
+            disabled={isLoading}
+          >
+            {socialLoading === 'google' ? (
+              <ActivityIndicator color="#444" />
+            ) : (
+              <Text style={styles.googleButtonText}>Sign in with Google</Text>
             )}
           </TouchableOpacity>
 
