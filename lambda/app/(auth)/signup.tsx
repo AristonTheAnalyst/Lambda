@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#000',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -223,5 +223,5 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
   footerText: { fontSize: 14 },
-  link: { color: '#007AFF', fontSize: 14, fontWeight: '600' },
+  link: { color: '#555', fontSize: 14, fontWeight: '600' },
 });
