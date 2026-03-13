@@ -1,5 +1,3 @@
-// Database types for Lambda app
-
 export interface DimUser {
   user_id: string;
   user_name: string;
@@ -16,7 +14,4 @@ export interface DimUser {
 export interface AuthUser {
   id: string;
   email: string;
-  user_metadata?: {
-    name?: string;
-  };
 }

@@ -71,14 +71,11 @@ function RootLayoutNav() {
     }
   }, [session, loading, onboarded]);
 
-  // Don't render until auth state is fully resolved
-  // (prevents flash of wrong screen while profile loads)
-  if (loading) return null;
-  if (session && onboarded === null) return null;
+  const bgColor = colorScheme === 'dark' ? '#1a1a1a' : '#fff';
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
+      <Stack screenOptions={{ contentStyle: { backgroundColor: bgColor } }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

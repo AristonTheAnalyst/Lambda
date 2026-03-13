@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, Link } from 'expo-router';
+import { Link } from 'expo-router';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useAuthContext } from '@/lib/AuthContext';
 import { withGuard } from '@/lib/asyncGuard';
@@ -25,7 +25,6 @@ export default function LoginScreen() {
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
   const [cooldown, setCooldown] = useState(0);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const router = useRouter();
   const { signIn, signInWithGoogle, signInWithApple, loading, sessionExpired, clearSessionExpired } = useAuthContext();
 
   useEffect(() => {

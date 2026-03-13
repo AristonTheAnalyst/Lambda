@@ -34,20 +34,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   const [profile, setProfile] = useState<DimUser | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
-  // Tracks whether the current sign-out was triggered explicitly by the user
   const explicitSignOut = useRef(false);
 
   const clearSessionExpired = useCallback(() => setSessionExpired(false), []);
 
   const fetchUserProfile = useCallback(async (userId: string) => {
-    console.log('[Auth] fetchUserProfile called for:', userId);
     const { data, error } = await supabase
       .from('dim_user')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle();
-
-    console.log('[Auth] fetchUserProfile result:', { data: !!data, error, onboarded: data?.onboarded });
 
     if (error) {
       console.error('[Auth] Error fetching profile:', error);
@@ -55,14 +51,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (!data) {
-      console.warn('[Auth] No dim_user row found — signing out');
       await supabase.auth.signOut();
       return;
     }
 
     setProfile(data as DimUser);
     setOnboarded(data.onboarded);
-    console.log('[Auth] Profile loaded, onboarded:', data.onboarded);
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -72,8 +66,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Fetch profile whenever user changes — decoupled from onAuthStateChange
-  // so the Supabase client has the auth token fully applied
   useEffect(() => {
     if (user) {
       fetchUserProfile(user.id);
@@ -101,13 +93,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      console.log('[Auth] AUTH STATE CHANGE:', _event);
-      console.log('[Auth] Session user:', currentSession?.user?.email || 'No user');
       setSession(currentSession);
       if (currentSession?.user) {
         setUser({ id: currentSession.user.id, email: currentSession.user.email || '' });
       } else {
-        // If SIGNED_OUT was not triggered by the user explicitly, the session expired
         if (_event === 'SIGNED_OUT' && !explicitSignOut.current) {
           setSessionExpired(true);
         }
@@ -177,7 +166,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const accessToken = params.get('access_token');
           const refreshToken = params.get('refresh_token') ?? '';
           if (accessToken) {
-            // Fire-and-forget: onAuthStateChange listener handles session state
             supabase.auth.setSession({
               access_token: accessToken,
               refresh_token: refreshToken,
@@ -189,7 +177,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const params = new URLSearchParams(url.substring(queryStart));
             const code = params.get('code');
             if (code) {
-              // Fire-and-forget: onAuthStateChange listener handles session state
               supabase.auth.exchangeCodeForSession(code)
                 .catch((err) => console.error('[Auth] exchangeCode error:', err));
             }
