@@ -1,4 +1,4 @@
-﻿import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+﻿import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { Session } from '@supabase/supabase-js';
 import * as WebBrowser from 'expo-web-browser';
@@ -15,6 +15,8 @@ interface AuthContextValue {
   loading: boolean;
   onboarded: boolean | null;
   profile: DimUser | null;
+  sessionExpired: boolean;
+  clearSessionExpired: () => void;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
@@ -31,6 +33,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   const [profile, setProfile] = useState<DimUser | null>(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
+  // Tracks whether the current sign-out was triggered explicitly by the user
+  const explicitSignOut = useRef(false);
+
+  const clearSessionExpired = useCallback(() => setSessionExpired(false), []);
 
   const fetchUserProfile = useCallback(async (userId: string) => {
     console.log('[Auth] fetchUserProfile called for:', userId);
@@ -100,6 +107,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (currentSession?.user) {
         setUser({ id: currentSession.user.id, email: currentSession.user.email || '' });
       } else {
+        // If SIGNED_OUT was not triggered by the user explicitly, the session expired
+        if (_event === 'SIGNED_OUT' && !explicitSignOut.current) {
+          setSessionExpired(true);
+        }
+        explicitSignOut.current = false;
         setUser(null);
       }
     });
@@ -108,8 +120,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchUserProfile]);
 
   const signUp = useCallback(async (email: string, password: string): Promise<{ error: Error | null }> => {
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) return { error };
+    // Supabase returns a fake success for existing emails (no session, no email confirmation)
+    if (data.user && !data.session && data.user.identities?.length === 0) {
+      return { error: new Error('An account with this email already exists') };
+    }
     return { error: null };
   }, []);
 
@@ -119,12 +135,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async (): Promise<{ error: Error | null }> => {
+    explicitSignOut.current = true;
     const { error } = await supabase.auth.signOut();
     if (!error) {
       setUser(null);
       setSession(null);
       setProfile(null);
       setOnboarded(null);
+    } else {
+      explicitSignOut.current = false;
     }
     return { error: error ?? null };
   }, []);
@@ -204,7 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, onboarded, profile, signUp, signIn, signInWithGoogle, signInWithApple, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, session, loading, onboarded, profile, sessionExpired, clearSessionExpired, signUp, signIn, signInWithGoogle, signInWithApple, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

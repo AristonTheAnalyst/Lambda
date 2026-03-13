@@ -17,6 +17,7 @@ import supabase from '@/lib/supabase';
 import { useColorScheme } from '@/hooks';
 import { useAuthContext } from '@/lib/AuthContext';
 import { useRouter } from 'expo-router';
+import { onboardingSchema, getFieldErrors } from '@/lib/validation';
 
 export default function OnboardingScreen() {
   const [name, setName] = useState('');
@@ -24,6 +25,7 @@ export default function OnboardingScreen() {
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [gender, setGender] = useState('');
   const [height, setHeight] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const { refreshProfile } = useAuthContext();
   const router = useRouter();
@@ -34,10 +36,12 @@ export default function OnboardingScreen() {
   const inputBg = isDark ? '#333' : '#f5f5f5';
 
   const handleCompleteOnboarding = async () => {
-    if (!name.trim()) {
-      Alert.alert('Error', 'Name is required');
+    const result = onboardingSchema.safeParse({ name: name.trim(), lastname, dateOfBirth, gender, height });
+    if (!result.success) {
+      setFieldErrors(getFieldErrors(result.error));
       return;
     }
+    setFieldErrors({});
 
     try {
       setLoading(true);
@@ -50,14 +54,7 @@ export default function OnboardingScreen() {
         return;
       }
 
-      // Parse height if provided
       const heightCm = height ? parseInt(height, 10) : null;
-
-      // Validate height
-      if (height && isNaN(heightCm as number)) {
-        Alert.alert('Error', 'Please enter a valid height');
-        return;
-      }
 
       const { error } = await supabase
         .from('dim_user')
@@ -100,37 +97,40 @@ export default function OnboardingScreen() {
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: textColor }]}>First Name *</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: inputBg, color: textColor }]}
+                style={[styles.input, { backgroundColor: inputBg, color: textColor }, fieldErrors.name && styles.inputError]}
                 placeholder="Enter your first name"
                 placeholderTextColor={isDark ? '#999' : '#ccc'}
                 value={name}
-                onChangeText={setName}
+                onChangeText={(v) => { setName(v); setFieldErrors((e) => ({ ...e, name: '' })); }}
                 editable={!loading}
               />
+              {fieldErrors.name ? <Text style={styles.errorText}>{fieldErrors.name}</Text> : null}
             </View>
 
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: textColor }]}>Last Name</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: inputBg, color: textColor }]}
+                style={[styles.input, { backgroundColor: inputBg, color: textColor }, fieldErrors.lastname && styles.inputError]}
                 placeholder="Enter your last name (optional)"
                 placeholderTextColor={isDark ? '#999' : '#ccc'}
                 value={lastname}
-                onChangeText={setLastname}
+                onChangeText={(v) => { setLastname(v); setFieldErrors((e) => ({ ...e, lastname: '' })); }}
                 editable={!loading}
               />
+              {fieldErrors.lastname ? <Text style={styles.errorText}>{fieldErrors.lastname}</Text> : null}
             </View>
 
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: textColor }]}>Date of Birth</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: inputBg, color: textColor }]}
+                style={[styles.input, { backgroundColor: inputBg, color: textColor }, fieldErrors.dateOfBirth && styles.inputError]}
                 placeholder="YYYY-MM-DD (optional)"
                 placeholderTextColor={isDark ? '#999' : '#ccc'}
                 value={dateOfBirth}
-                onChangeText={setDateOfBirth}
+                onChangeText={(v) => { setDateOfBirth(v); setFieldErrors((e) => ({ ...e, dateOfBirth: '' })); }}
                 editable={!loading}
               />
+              {fieldErrors.dateOfBirth ? <Text style={styles.errorText}>{fieldErrors.dateOfBirth}</Text> : null}
             </View>
 
             <View style={styles.inputContainer}>
@@ -153,14 +153,15 @@ export default function OnboardingScreen() {
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: textColor }]}>Height (cm)</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: inputBg, color: textColor }]}
+                style={[styles.input, { backgroundColor: inputBg, color: textColor }, fieldErrors.height && styles.inputError]}
                 placeholder="Enter your height in cm (optional)"
                 placeholderTextColor={isDark ? '#999' : '#ccc'}
                 value={height}
-                onChangeText={setHeight}
+                onChangeText={(v) => { setHeight(v); setFieldErrors((e) => ({ ...e, height: '' })); }}
                 keyboardType="number-pad"
                 editable={!loading}
               />
+              {fieldErrors.height ? <Text style={styles.errorText}>{fieldErrors.height}</Text> : null}
             </View>
 
             <TouchableOpacity
@@ -249,4 +250,6 @@ const styles = StyleSheet.create({
     opacity: 0.6,
     textAlign: 'center',
   },
+  errorText: { color: '#e74c3c', fontSize: 13, marginTop: 2 },
+  inputError: { borderColor: '#e74c3c' },
 });

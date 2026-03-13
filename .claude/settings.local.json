@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(where.exe claude:*)",
+      "Bash(ls /c/Users/zubir/AppData/Roaming/npm/claude*)",
+      "Bash(ls /c/Users/zubir/AppData/Local/Programs/claude*)"
+    ]
+  }
+}

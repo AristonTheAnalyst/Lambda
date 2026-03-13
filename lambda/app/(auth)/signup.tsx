@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import {
   View,
   TextInput,
@@ -17,14 +17,32 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { useAuthContext } from '@/lib/AuthContext';
 import { withGuard } from '@/lib/asyncGuard';
 import { useColorScheme } from '@/hooks';
+import { signupSchema, getFieldErrors } from '@/lib/validation';
 
 export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const router = useRouter();
   const { signUp, signInWithGoogle, signInWithApple, loading } = useAuthContext();
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    cooldownRef.current = setInterval(() => {
+      setCooldown((c) => {
+        if (c <= 1) {
+          clearInterval(cooldownRef.current!);
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(cooldownRef.current!);
+  }, [cooldown > 0]);
   const colorScheme = useColorScheme();
 
   const isDark = colorScheme === 'dark';
@@ -34,20 +52,18 @@ export default function SignupScreen() {
   const dividerColor = isDark ? '#444' : '#ddd';
 
   const handleSignup = () => withGuard(async () => {
-    if (!email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (cooldown > 0) return;
+    const result = signupSchema.safeParse({ email, password, confirmPassword });
+    if (!result.success) {
+      setFieldErrors(getFieldErrors(result.error));
       return;
     }
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
-      return;
-    }
+    setFieldErrors({});
     const { error } = await signUp(email, password);
-    if (error) Alert.alert('Signup Failed', error.message);
+    if (error) {
+      Alert.alert('Signup Failed', error.message);
+      setCooldown(30);
+    }
   });
 
   const handleGoogle = () => withGuard(async () => {
@@ -71,6 +87,7 @@ export default function SignupScreen() {
   });
 
   const isLoading = loading || socialLoading !== null;
+  const isCoolingDown = cooldown > 0;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
@@ -113,50 +130,55 @@ export default function SignupScreen() {
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: textColor }]}>Email</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: inputBg, color: textColor }]}
+                style={[styles.input, { backgroundColor: inputBg, color: textColor }, fieldErrors.email && styles.inputError]}
                 placeholder="Enter your email"
                 placeholderTextColor={isDark ? '#999' : '#ccc'}
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(v) => { setEmail(v); setFieldErrors((e) => ({ ...e, email: '' })); }}
                 autoCapitalize="none"
                 keyboardType="email-address"
                 editable={!isLoading}
               />
+              {fieldErrors.email ? <Text style={styles.errorText}>{fieldErrors.email}</Text> : null}
             </View>
 
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: textColor }]}>Password</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: inputBg, color: textColor }]}
+                style={[styles.input, { backgroundColor: inputBg, color: textColor }, fieldErrors.password && styles.inputError]}
                 placeholder="Enter password (min 6 characters)"
                 placeholderTextColor={isDark ? '#999' : '#ccc'}
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(v) => { setPassword(v); setFieldErrors((e) => ({ ...e, password: '' })); }}
                 secureTextEntry
                 editable={!isLoading}
               />
+              {fieldErrors.password ? <Text style={styles.errorText}>{fieldErrors.password}</Text> : null}
             </View>
 
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: textColor }]}>Confirm Password</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: inputBg, color: textColor }]}
+                style={[styles.input, { backgroundColor: inputBg, color: textColor }, fieldErrors.confirmPassword && styles.inputError]}
                 placeholder="Confirm your password"
                 placeholderTextColor={isDark ? '#999' : '#ccc'}
                 value={confirmPassword}
-                onChangeText={setConfirmPassword}
+                onChangeText={(v) => { setConfirmPassword(v); setFieldErrors((e) => ({ ...e, confirmPassword: '' })); }}
                 secureTextEntry
                 editable={!isLoading}
               />
+              {fieldErrors.confirmPassword ? <Text style={styles.errorText}>{fieldErrors.confirmPassword}</Text> : null}
             </View>
 
             <TouchableOpacity
-              style={[styles.button, { opacity: isLoading ? 0.6 : 1 }]}
+              style={[styles.button, { opacity: isLoading || isCoolingDown ? 0.6 : 1 }]}
               onPress={handleSignup}
-              disabled={isLoading}
+              disabled={isLoading || isCoolingDown}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
+              ) : isCoolingDown ? (
+                <Text style={styles.buttonText}>Try again in {cooldown}s</Text>
               ) : (
                 <Text style={styles.buttonText}>Sign Up</Text>
               )}
@@ -224,4 +246,6 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
   footerText: { fontSize: 14 },
   link: { color: '#555', fontSize: 14, fontWeight: '600' },
+  errorText: { color: '#e74c3c', fontSize: 13, marginTop: 2 },
+  inputError: { borderColor: '#e74c3c' },
 });
