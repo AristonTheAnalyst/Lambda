@@ -22,8 +22,8 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: getStorage(),
     autoRefreshToken: true,
-    persistSession: Platform.OS !== 'web',
-    detectSessionInUrl: false,
+    persistSession: true,
+    detectSessionInUrl: Platform.OS === 'web',
   },
 });
 

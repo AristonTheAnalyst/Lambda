@@ -1,4 +1,5 @@
 ﻿import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { Platform } from 'react-native';
 import { Session } from '@supabase/supabase-js';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
@@ -130,17 +131,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = useCallback(async (): Promise<{ error: Error | null }> => {
     try {
-      const redirectTo = Linking.createURL('/');
+      const redirectTo = Platform.OS === 'web'
+        ? window.location.origin
+        : Linking.createURL('/');
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo,
-          skipBrowserRedirect: true,
+          skipBrowserRedirect: Platform.OS !== 'web',
         },
       });
 
       if (error || !data.url) return { error: error ?? new Error('No OAuth URL') };
+
+      // On web, Supabase handles the redirect automatically (skipBrowserRedirect: false)
+      if (Platform.OS === 'web') return { error: null };
 
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
 
