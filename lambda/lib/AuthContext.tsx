@@ -76,32 +76,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user?.id, fetchUserProfile]);
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        setSession(currentSession);
-        if (currentSession?.user) {
-          setUser({ id: currentSession.user.id, email: currentSession.user.email || '' });
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       setSession(currentSession);
       if (currentSession?.user) {
         setUser({ id: currentSession.user.id, email: currentSession.user.email || '' });
       } else {
-        if (_event === 'SIGNED_OUT' && !explicitSignOut.current) {
+        if (event === 'SIGNED_OUT' && !explicitSignOut.current) {
           setSessionExpired(true);
         }
         explicitSignOut.current = false;
         setUser(null);
+      }
+      if (event === 'INITIAL_SESSION') {
+        setLoading(false);
       }
     });
 
