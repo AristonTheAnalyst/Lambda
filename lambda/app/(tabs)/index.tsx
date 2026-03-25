@@ -11,10 +11,10 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import supabase from '@/lib/supabase';
 import { useAuthContext } from '@/lib/AuthContext';
 import { DropdownSelect } from '@/components/FormControls';
+import PageHeader from '@/components/PageHeader';
 import T from '@/constants/Theme';
 
 const GENDER_OPTIONS = [
@@ -106,18 +106,18 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <PageHeader
+        title="User Profile"
+        right={!editing ? (
+          <TouchableOpacity onPress={startEditing}>
+            <Text style={styles.editButton}>Edit</Text>
+          </TouchableOpacity>
+        ) : undefined}
+      />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
-            <View style={styles.headerRow}>
-              <Text style={styles.title}>Profile</Text>
-              {!editing && (
-                <TouchableOpacity onPress={startEditing}>
-                  <Text style={styles.editButton}>Edit</Text>
-                </TouchableOpacity>
-              )}
-            </View>
 
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Email</Text>
@@ -207,7 +207,7 @@ export default function ProfileScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -215,8 +215,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: T.bg },
   flex: { flex: 1 },
   content: { padding: 20 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  title: { fontSize: 28, fontWeight: 'bold', color: T.primary },
   editButton: { color: T.accent, fontSize: 16, fontWeight: '600' },
   field: { marginBottom: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: T.border },
   fieldLabel: { fontSize: 12, marginBottom: 6, color: T.muted },

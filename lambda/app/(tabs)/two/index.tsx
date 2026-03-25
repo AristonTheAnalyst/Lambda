@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import PageHeader from '@/components/PageHeader';
 import T from '@/constants/Theme';
 
 const SECTIONS = [
@@ -29,8 +30,8 @@ export default function AdminExercisesHub() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Admin Exercises</Text>
-
+      <PageHeader title="Exercise Configuration" />
+      <View style={styles.content}>
       {SECTIONS.map((s) => (
         <TouchableOpacity
           key={s.route}
@@ -47,6 +48,7 @@ export default function AdminExercisesHub() {
           <FontAwesome name="chevron-right" size={14} color={T.muted} />
         </TouchableOpacity>
       ))}
+      </View>
     </View>
   );
 }
@@ -55,13 +57,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: T.bg,
-    padding: 20,
   },
-  heading: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: T.primary,
-    marginBottom: 24,
+  content: {
+    padding: 20,
   },
   card: {
     flexDirection: 'row',

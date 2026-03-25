@@ -7,11 +7,11 @@ export default function HamburgerButton() {
   const { openDrawer } = useDrawer();
   return (
     <TouchableOpacity onPress={openDrawer} style={styles.btn}>
-      <FontAwesome name="bars" size={20} color={T.primary} />
+      <FontAwesome name="bars" size={25} color={T.primary} />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  btn: { paddingHorizontal: 16, paddingVertical: 8 },
+  btn: { paddingHorizontal: 24, paddingVertical: 14 },
 });

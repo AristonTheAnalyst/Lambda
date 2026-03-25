@@ -3,8 +3,6 @@ import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import T from '@/constants/Theme';
-import HamburgerButton from '@/components/HamburgerButton';
-
 const NAV_BAR_HEIGHT = Platform.OS === 'ios' ? 44 : 56;
 
 function BackButton() {
@@ -36,13 +34,7 @@ export default function AdminExercisesLayout() {
 
   return (
     <Stack screenOptions={{ ...sharedHeader, gestureEnabled: true, headerHeight }}>
-      <Stack.Screen
-        name="index"
-        options={{
-          title: 'Exercise Configuration',
-          headerLeft: () => <HamburgerButton />,
-        }}
-      />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="exercises" options={{ title: 'Exercises', headerLeft: () => <BackButton /> }} />
       <Stack.Screen name="variations" options={{ title: 'Variations', headerLeft: () => <BackButton /> }} />
       <Stack.Screen name="assign" options={{ title: 'Assign Variations', headerLeft: () => <BackButton /> }} />

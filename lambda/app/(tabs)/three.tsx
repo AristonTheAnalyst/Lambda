@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import PageHeader from '@/components/PageHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DropdownSelect, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData, ExerciseDetail, AssignedVariation } from '@/lib/ExerciseDataContext';
@@ -317,6 +318,7 @@ export default function WorkoutLogScreen() {
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: T.bg }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <PageHeader title="Workout Log" />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 16 }}

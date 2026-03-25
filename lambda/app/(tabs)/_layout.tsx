@@ -47,10 +47,10 @@ export default function TabLayout() {
           headerStyle: { backgroundColor: T.bg },
           headerTitleStyle: { color: T.primary },
         }}>
-        <Tabs.Screen name="index" options={{ title: 'User Profile' }} />
+        <Tabs.Screen name="index" options={{ headerShown: false }} />
         <Tabs.Screen name="two" options={{ headerShown: false }} />
-        <Tabs.Screen name="three" options={{ title: 'Workout Log' }} />
-        <Tabs.Screen name="four" options={{ title: 'Training Logs' }} />
+        <Tabs.Screen name="three" options={{ headerShown: false }} />
+        <Tabs.Screen name="four" options={{ headerShown: false }} />
       </Tabs>
 
       <Modal
