@@ -12,18 +12,10 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs, useRouter, usePathname } from 'expo-router';
 import T from '@/constants/Theme';
 import { ExerciseDataProvider } from '@/lib/ExerciseDataContext';
-import { DrawerContext, useDrawer } from '@/lib/DrawerContext';
+import { DrawerContext } from '@/lib/DrawerContext';
+import HamburgerButton from '@/components/HamburgerButton';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-function HamburgerButton() {
-  const { openDrawer } = useDrawer();
-  return (
-    <TouchableOpacity onPress={openDrawer} style={styles.hamburgerBtn}>
-      <FontAwesome name="bars" size={20} color={T.primary} />
-    </TouchableOpacity>
-  );
-}
 
 const NAV_ITEMS = [
   { label: 'User Profile', route: '/', icon: 'user' as const },
@@ -115,10 +107,6 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
-  hamburgerBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
