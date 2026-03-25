@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
   hamburgerBtn: { paddingHorizontal: 16, paddingVertical: 8 },
   backBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingLeft: 4, width: 70, height: NAV_BAR_HEIGHT,
+    paddingLeft: 4, width: 70,
   },
   backLabel: { color: T.accent, fontSize: 17 },
 });
