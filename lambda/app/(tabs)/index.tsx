@@ -12,19 +12,20 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Picker } from '@react-native-picker/picker';
 import supabase from '@/lib/supabase';
-import { useColorScheme } from '@/hooks';
 import { useAuthContext } from '@/lib/AuthContext';
+import { DropdownSelect } from '@/components/FormControls';
+import T from '@/constants/Theme';
+
+const GENDER_OPTIONS = [
+  { label: 'Not specified', value: '' },
+  { label: 'Male', value: 'Male' },
+  { label: 'Female', value: 'Female' },
+  { label: 'Other', value: 'Other' },
+];
 
 export default function ProfileScreen() {
   const { user, profile, signOut, refreshProfile } = useAuthContext();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const backgroundColor = isDark ? '#1a1a1a' : '#fff';
-  const textColor = isDark ? '#fff' : '#000';
-  const secondaryTextColor = isDark ? '#999' : '#666';
-  const inputBg = isDark ? '#333' : '#f5f5f5';
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -44,10 +45,7 @@ export default function ProfileScreen() {
   };
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert('Error', 'First name is required.');
-      return;
-    }
+    if (!name.trim()) { Alert.alert('Error', 'First name is required.'); return; }
     setSaving(true);
     try {
       const { error } = await supabase
@@ -60,11 +58,7 @@ export default function ProfileScreen() {
           user_height_cm: height ? parseInt(height, 10) : null,
         })
         .eq('user_id', user!.id);
-
-      if (error) {
-        Alert.alert('Error', error.message);
-        return;
-      }
+      if (error) { Alert.alert('Error', error.message); return; }
       await refreshProfile();
       setEditing(false);
     } catch {
@@ -77,13 +71,10 @@ export default function ProfileScreen() {
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        onPress: async () => {
-          const { error } = await signOut();
-          if (error) Alert.alert('Error', 'Failed to logout: ' + error.message);
-        },
-      },
+      { text: 'Logout', onPress: async () => {
+        const { error } = await signOut();
+        if (error) Alert.alert('Error', 'Failed to logout: ' + error.message);
+      }},
     ]);
   };
 
@@ -93,44 +84,34 @@ export default function ProfileScreen() {
       'This will permanently delete your account and all associated data. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const { data: { session } } = await supabase.auth.getSession();
-              const response = await fetch(
-                `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-account`,
-                {
-                  method: 'POST',
-                  headers: {
-                    Authorization: `Bearer ${session?.access_token}`,
-                    'Content-Type': 'application/json',
-                  },
-                },
-              );
-              if (!response.ok) {
-                const body = await response.json();
-                Alert.alert('Error', body.error ?? 'Failed to delete account.');
-                return;
-              }
-              await signOut();
-            } catch {
-              Alert.alert('Error', 'Failed to delete account. Please try again.');
+        { text: 'Delete', style: 'destructive', onPress: async () => {
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const response = await fetch(
+              `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-account`,
+              { method: 'POST', headers: { Authorization: `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' } },
+            );
+            if (!response.ok) {
+              const body = await response.json();
+              Alert.alert('Error', body.error ?? 'Failed to delete account.');
+              return;
             }
-          },
-        },
+            await signOut();
+          } catch {
+            Alert.alert('Error', 'Failed to delete account. Please try again.');
+          }
+        }},
       ],
     );
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor }]}>
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
             <View style={styles.headerRow}>
-              <Text style={[styles.title, { color: textColor }]}>Profile</Text>
+              <Text style={styles.title}>Profile</Text>
               {!editing && (
                 <TouchableOpacity onPress={startEditing}>
                   <Text style={styles.editButton}>Edit</Text>
@@ -139,93 +120,65 @@ export default function ProfileScreen() {
             </View>
 
             <View style={styles.field}>
-              <Text style={[styles.label, { color: secondaryTextColor }]}>Email</Text>
-              <Text style={[styles.value, { color: textColor }]}>{user?.email}</Text>
+              <Text style={styles.fieldLabel}>Email</Text>
+              <Text style={styles.value}>{user?.email}</Text>
             </View>
 
             <View style={styles.field}>
-              <Text style={[styles.label, { color: secondaryTextColor }]}>First Name</Text>
+              <Text style={styles.fieldLabel}>First Name</Text>
               {editing ? (
-                <TextInput
-                  style={[styles.input, { backgroundColor: inputBg, color: textColor }]}
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Enter first name"
-                  placeholderTextColor={isDark ? '#999' : '#ccc'}
-                  editable={!saving}
-                />
+                <TextInput style={styles.input} value={name} onChangeText={setName}
+                  placeholder="Enter first name" placeholderTextColor={T.muted}
+                  editable={!saving} />
               ) : (
-                <Text style={[styles.value, { color: textColor }]}>{profile?.user_name || '—'}</Text>
+                <Text style={styles.value}>{profile?.user_name || '—'}</Text>
               )}
             </View>
 
             <View style={styles.field}>
-              <Text style={[styles.label, { color: secondaryTextColor }]}>Last Name</Text>
+              <Text style={styles.fieldLabel}>Last Name</Text>
               {editing ? (
-                <TextInput
-                  style={[styles.input, { backgroundColor: inputBg, color: textColor }]}
-                  value={lastname}
-                  onChangeText={setLastname}
-                  placeholder="Enter last name (optional)"
-                  placeholderTextColor={isDark ? '#999' : '#ccc'}
-                  editable={!saving}
-                />
+                <TextInput style={styles.input} value={lastname} onChangeText={setLastname}
+                  placeholder="Enter last name (optional)" placeholderTextColor={T.muted}
+                  editable={!saving} />
               ) : (
-                <Text style={[styles.value, { color: textColor }]}>{profile?.user_lastname || '—'}</Text>
+                <Text style={styles.value}>{profile?.user_lastname || '—'}</Text>
               )}
             </View>
 
             <View style={styles.field}>
-              <Text style={[styles.label, { color: secondaryTextColor }]}>Date of Birth</Text>
+              <Text style={styles.fieldLabel}>Date of Birth</Text>
               {editing ? (
-                <TextInput
-                  style={[styles.input, { backgroundColor: inputBg, color: textColor }]}
-                  value={dateOfBirth}
-                  onChangeText={setDateOfBirth}
-                  placeholder="YYYY-MM-DD (optional)"
-                  placeholderTextColor={isDark ? '#999' : '#ccc'}
-                  editable={!saving}
-                />
+                <TextInput style={styles.input} value={dateOfBirth} onChangeText={setDateOfBirth}
+                  placeholder="YYYY-MM-DD (optional)" placeholderTextColor={T.muted}
+                  editable={!saving} />
               ) : (
-                <Text style={[styles.value, { color: textColor }]}>{profile?.user_date_of_birth || '—'}</Text>
+                <Text style={styles.value}>{profile?.user_date_of_birth || '—'}</Text>
               )}
             </View>
 
             <View style={styles.field}>
-              <Text style={[styles.label, { color: secondaryTextColor }]}>Gender</Text>
+              <Text style={styles.fieldLabel}>Gender</Text>
               {editing ? (
-                <View style={[styles.pickerContainer, { backgroundColor: inputBg }]}>
-                  <Picker
-                    selectedValue={gender}
-                    onValueChange={setGender}
-                    enabled={!saving}
-                    style={{ color: textColor }}
-                  >
-                    <Picker.Item label="Not specified" value="" />
-                    <Picker.Item label="Male" value="Male" />
-                    <Picker.Item label="Female" value="Female" />
-                    <Picker.Item label="Other" value="Other" />
-                  </Picker>
-                </View>
+                <DropdownSelect
+                  options={GENDER_OPTIONS}
+                  value={gender}
+                  onChange={setGender}
+                  placeholder="Not specified"
+                />
               ) : (
-                <Text style={[styles.value, { color: textColor }]}>{profile?.user_gender || '—'}</Text>
+                <Text style={styles.value}>{profile?.user_gender || '—'}</Text>
               )}
             </View>
 
             <View style={styles.field}>
-              <Text style={[styles.label, { color: secondaryTextColor }]}>Height (cm)</Text>
+              <Text style={styles.fieldLabel}>Height (cm)</Text>
               {editing ? (
-                <TextInput
-                  style={[styles.input, { backgroundColor: inputBg, color: textColor }]}
-                  value={height}
-                  onChangeText={setHeight}
-                  placeholder="Enter height in cm (optional)"
-                  placeholderTextColor={isDark ? '#999' : '#ccc'}
-                  keyboardType="number-pad"
-                  editable={!saving}
-                />
+                <TextInput style={styles.input} value={height} onChangeText={setHeight}
+                  placeholder="Enter height in cm (optional)" placeholderTextColor={T.muted}
+                  keyboardType="number-pad" editable={!saving} />
               ) : (
-                <Text style={[styles.value, { color: textColor }]}>
+                <Text style={styles.value}>
                   {profile?.user_height_cm ? `${profile.user_height_cm} cm` : '—'}
                 </Text>
               )}
@@ -233,12 +186,9 @@ export default function ProfileScreen() {
 
             {editing ? (
               <View style={styles.editActions}>
-                <TouchableOpacity
-                  style={[styles.saveButton, { opacity: saving ? 0.6 : 1 }]}
-                  onPress={handleSave}
-                  disabled={saving}
-                >
-                  {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Save</Text>}
+                <TouchableOpacity style={[styles.saveButton, { opacity: saving ? 0.6 : 1 }]}
+                  onPress={handleSave} disabled={saving}>
+                  {saving ? <ActivityIndicator color={T.accentText} /> : <Text style={styles.saveButtonText}>Save</Text>}
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.cancelButton} onPress={() => setEditing(false)} disabled={saving}>
                   <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -262,31 +212,32 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: T.bg },
   flex: { flex: 1 },
   content: { padding: 20 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  title: { fontSize: 28, fontWeight: 'bold' },
-  editButton: { color: '#555', fontSize: 16, fontWeight: '600' },
-  field: { marginBottom: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  label: { fontSize: 12, marginBottom: 6 },
-  value: { fontSize: 16, fontWeight: '500' },
+  title: { fontSize: 28, fontWeight: 'bold', color: T.primary },
+  editButton: { color: T.accent, fontSize: 16, fontWeight: '600' },
+  field: { marginBottom: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: T.border },
+  fieldLabel: { fontSize: 12, marginBottom: 6, color: T.muted },
+  value: { fontSize: 16, fontWeight: '500', color: T.primary },
   input: {
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: T.border,
+    backgroundColor: T.surface,
+    color: T.primary,
   },
-  pickerContainer: { borderRadius: 8, borderWidth: 1, borderColor: '#ddd', overflow: 'hidden' },
   editActions: { gap: 12, marginTop: 8 },
-  saveButton: { backgroundColor: '#000', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
-  saveButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  cancelButton: { borderWidth: 1, borderColor: '#ddd', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
-  cancelButtonText: { color: '#666', fontSize: 16, fontWeight: '600' },
-  logoutButton: { backgroundColor: '#000', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 32 },
-  logoutButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  deleteButton: { borderWidth: 1, borderColor: '#e74c3c', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 12 },
-  deleteButtonText: { color: '#e74c3c', fontSize: 16, fontWeight: '600' },
+  saveButton: { backgroundColor: T.accent, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  saveButtonText: { color: T.accentText, fontSize: 16, fontWeight: '600' },
+  cancelButton: { borderWidth: 1, borderColor: T.border, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  cancelButtonText: { color: T.muted, fontSize: 16, fontWeight: '600' },
+  logoutButton: { backgroundColor: T.accent, paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 32 },
+  logoutButtonText: { color: T.accentText, fontSize: 16, fontWeight: '600' },
+  deleteButton: { borderWidth: 1, borderColor: T.dangerBorder, paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 12 },
+  deleteButtonText: { color: T.danger, fontSize: 16, fontWeight: '600' },
 });

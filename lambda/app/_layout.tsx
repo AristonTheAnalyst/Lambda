@@ -71,11 +71,9 @@ function RootLayoutNav() {
     }
   }, [session, loading, onboarded]);
 
-  const bgColor = colorScheme === 'dark' ? '#1a1a1a' : '#fff';
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ contentStyle: { backgroundColor: bgColor } }}>
+    <ThemeProvider value={DarkTheme}>
+      <Stack screenOptions={{ contentStyle: { backgroundColor: '#262626' } }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

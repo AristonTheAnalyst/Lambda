@@ -10,8 +10,7 @@ import {
 } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs, useRouter, usePathname } from 'expo-router';
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/hooks';
+import T from '@/constants/Theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -19,10 +18,9 @@ const DrawerContext = createContext<{ openDrawer: () => void }>({ openDrawer: ()
 
 function HamburgerButton() {
   const { openDrawer } = useContext(DrawerContext);
-  const colorScheme = useColorScheme();
   return (
     <TouchableOpacity onPress={openDrawer} style={styles.hamburgerBtn}>
-      <FontAwesome name="bars" size={20} color={colorScheme === 'dark' ? '#fff' : '#333'} />
+      <FontAwesome name="bars" size={20} color={T.primary} />
     </TouchableOpacity>
   );
 }
@@ -34,7 +32,6 @@ const NAV_ITEMS = [
 ];
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
@@ -47,17 +44,14 @@ export default function TabLayout() {
     router.push(route as any);
   };
 
-  const isDark = colorScheme === 'dark';
-  const tint = Colors[colorScheme ?? 'light'].tint;
-
   return (
     <DrawerContext.Provider value={{ openDrawer }}>
       <Tabs
         screenOptions={{
           tabBarStyle: { display: 'none' },
           headerLeft: () => <HamburgerButton />,
-          headerStyle: { backgroundColor: isDark ? '#1a1a1a' : '#fff' },
-          headerTitleStyle: { color: isDark ? '#fff' : '#000' },
+          headerStyle: { backgroundColor: T.bg },
+          headerTitleStyle: { color: T.primary },
         }}>
         <Tabs.Screen name="index" options={{ title: 'User Profile' }} />
         <Tabs.Screen name="two" options={{ title: 'Admin Exercises' }} />
@@ -75,10 +69,10 @@ export default function TabLayout() {
           activeOpacity={1}>
           <TouchableOpacity
             activeOpacity={1}
-            style={[styles.drawer, { backgroundColor: isDark ? '#1a1a1a' : '#fff' }]}
+            style={[styles.drawer, { backgroundColor: T.surface }]}
             onPress={() => {}}>
             <SafeAreaView style={{ flex: 1 }}>
-              <Text style={[styles.drawerTitle, { color: isDark ? '#fff' : '#000' }]}>
+              <Text style={[styles.drawerTitle, { color: T.primary }]}>
                 Menu
               </Text>
               {NAV_ITEMS.map((item) => {
@@ -90,18 +84,18 @@ export default function TabLayout() {
                     key={item.route}
                     style={[
                       styles.navItem,
-                      isActive && { backgroundColor: isDark ? '#2a2a2a' : '#f0f0f0' },
+                      isActive && { backgroundColor: T.accentBg },
                     ]}
                     onPress={() => navTo(item.route)}>
                     <FontAwesome
                       name={item.icon}
                       size={18}
-                      color={isActive ? tint : isDark ? '#ccc' : '#555'}
+                      color={isActive ? T.accent : T.muted}
                     />
                     <Text
                       style={[
                         styles.navLabel,
-                        { color: isActive ? tint : isDark ? '#ccc' : '#333' },
+                        { color: isActive ? T.accent : T.primary },
                       ]}>
                       {item.label}
                     </Text>
@@ -141,7 +135,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ccc',
+    borderBottomColor: '#444',
     marginBottom: 8,
   },
   navItem: {

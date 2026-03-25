@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   TextInput,
@@ -16,8 +16,8 @@ import { Link } from 'expo-router';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useAuthContext } from '@/lib/AuthContext';
 import { withGuard } from '@/lib/asyncGuard';
-import { useColorScheme } from '@/hooks';
 import { signupSchema, getFieldErrors } from '@/lib/validation';
+import T from '@/constants/Theme';
 
 export default function SignupScreen() {
   const [email, setEmail] = useState('');
@@ -33,36 +33,20 @@ export default function SignupScreen() {
     if (cooldown <= 0) return;
     cooldownRef.current = setInterval(() => {
       setCooldown((c) => {
-        if (c <= 1) {
-          clearInterval(cooldownRef.current!);
-          return 0;
-        }
+        if (c <= 1) { clearInterval(cooldownRef.current!); return 0; }
         return c - 1;
       });
     }, 1000);
     return () => clearInterval(cooldownRef.current!);
   }, [cooldown > 0]);
-  const colorScheme = useColorScheme();
-
-  const isDark = colorScheme === 'dark';
-  const backgroundColor = isDark ? '#1a1a1a' : '#fff';
-  const textColor = isDark ? '#fff' : '#000';
-  const inputBg = isDark ? '#333' : '#f5f5f5';
-  const dividerColor = isDark ? '#444' : '#ddd';
 
   const handleSignup = () => withGuard(async () => {
     if (cooldown > 0) return;
     const result = signupSchema.safeParse({ email, password, confirmPassword });
-    if (!result.success) {
-      setFieldErrors(getFieldErrors(result.error));
-      return;
-    }
+    if (!result.success) { setFieldErrors(getFieldErrors(result.error)); return; }
     setFieldErrors({});
     const { error } = await signUp(email, password);
-    if (error) {
-      Alert.alert('Signup Failed', error.message);
-      setCooldown(30);
-    }
+    if (error) { Alert.alert('Signup Failed', error.message); setCooldown(30); }
   });
 
   const handleGoogle = () => withGuard(async () => {
@@ -70,9 +54,7 @@ export default function SignupScreen() {
     try {
       const { error } = await signInWithGoogle();
       if (error) Alert.alert('Google Sign-In Failed', error.message);
-    } finally {
-      setSocialLoading(null);
-    }
+    } finally { setSocialLoading(null); }
   });
 
   const handleApple = () => withGuard(async () => {
@@ -80,21 +62,19 @@ export default function SignupScreen() {
     try {
       const { error } = await signInWithApple();
       if (error) Alert.alert('Apple Sign-In Failed', error.message);
-    } finally {
-      setSocialLoading(null);
-    }
+    } finally { setSocialLoading(null); }
   });
 
   const isLoading = loading || socialLoading !== null;
   const isCoolingDown = cooldown > 0;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor }]}>
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.content}>
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
-            <Text style={[styles.title, { color: textColor }]}>Lambda</Text>
-            <Text style={[styles.subtitle, { color: textColor }]}>Create Account</Text>
+            <Text style={styles.title}>Lambda</Text>
+            <Text style={styles.subtitle}>Create Account</Text>
           </View>
 
           <View style={styles.form}>
@@ -111,27 +91,26 @@ export default function SignupScreen() {
             <TouchableOpacity
               style={[styles.googleButton, { opacity: socialLoading === 'google' ? 0.6 : 1 }]}
               onPress={handleGoogle}
-              disabled={isLoading}
-            >
+              disabled={isLoading}>
               {socialLoading === 'google' ? (
-                <ActivityIndicator color="#444" />
+                <ActivityIndicator color={T.primary} />
               ) : (
                 <Text style={styles.googleButtonText}>Continue with Google</Text>
               )}
             </TouchableOpacity>
 
             <View style={styles.dividerRow}>
-              <View style={[styles.dividerLine, { backgroundColor: dividerColor }]} />
-              <Text style={[styles.dividerText, { color: dividerColor }]}>or</Text>
-              <View style={[styles.dividerLine, { backgroundColor: dividerColor }]} />
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: textColor }]}>Email</Text>
+              <Text style={styles.label}>Email</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: inputBg, color: textColor }, fieldErrors.email && styles.inputError]}
+                style={[styles.input, fieldErrors.email && styles.inputError]}
                 placeholder="Enter your email"
-                placeholderTextColor={isDark ? '#999' : '#ccc'}
+                placeholderTextColor={T.muted}
                 value={email}
                 onChangeText={(v) => { setEmail(v); setFieldErrors((e) => ({ ...e, email: '' })); }}
                 autoCapitalize="none"
@@ -142,11 +121,11 @@ export default function SignupScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: textColor }]}>Password</Text>
+              <Text style={styles.label}>Password</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: inputBg, color: textColor }, fieldErrors.password && styles.inputError]}
+                style={[styles.input, fieldErrors.password && styles.inputError]}
                 placeholder="Enter password (min 6 characters)"
-                placeholderTextColor={isDark ? '#999' : '#ccc'}
+                placeholderTextColor={T.muted}
                 value={password}
                 onChangeText={(v) => { setPassword(v); setFieldErrors((e) => ({ ...e, password: '' })); }}
                 secureTextEntry
@@ -156,11 +135,11 @@ export default function SignupScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: textColor }]}>Confirm Password</Text>
+              <Text style={styles.label}>Confirm Password</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: inputBg, color: textColor }, fieldErrors.confirmPassword && styles.inputError]}
+                style={[styles.input, fieldErrors.confirmPassword && styles.inputError]}
                 placeholder="Confirm your password"
-                placeholderTextColor={isDark ? '#999' : '#ccc'}
+                placeholderTextColor={T.muted}
                 value={confirmPassword}
                 onChangeText={(v) => { setConfirmPassword(v); setFieldErrors((e) => ({ ...e, confirmPassword: '' })); }}
                 secureTextEntry
@@ -172,10 +151,9 @@ export default function SignupScreen() {
             <TouchableOpacity
               style={[styles.button, { opacity: isLoading || isCoolingDown ? 0.6 : 1 }]}
               onPress={handleSignup}
-              disabled={isLoading || isCoolingDown}
-            >
+              disabled={isLoading || isCoolingDown}>
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={T.accentText} />
               ) : isCoolingDown ? (
                 <Text style={styles.buttonText}>Try again in {cooldown}s</Text>
               ) : (
@@ -184,7 +162,7 @@ export default function SignupScreen() {
             </TouchableOpacity>
 
             <View style={styles.footer}>
-              <Text style={[styles.footerText, { color: textColor }]}>Already have an account? </Text>
+              <Text style={styles.footerText}>Already have an account? </Text>
               <Link href="/(auth)/login">
                 <Text style={styles.link}>Login</Text>
               </Link>
@@ -197,54 +175,49 @@ export default function SignupScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: T.bg },
   content: { flex: 1, justifyContent: 'center', paddingHorizontal: 20 },
   header: { marginBottom: 40, alignItems: 'center' },
-  title: { fontSize: 32, fontWeight: 'bold', marginBottom: 8 },
-  subtitle: { fontSize: 18, opacity: 0.6 },
+  title: { fontSize: 32, fontWeight: 'bold', marginBottom: 8, color: T.primary },
+  subtitle: { fontSize: 18, color: T.muted },
   form: { gap: 16 },
-  appleButton: {
-    height: 48,
-    borderRadius: 8,
-    backgroundColor: '#000',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  appleButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  googleButton: {
-    height: 48,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  googleButtonText: { color: '#444', fontSize: 16, fontWeight: '600' },
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 4 },
-  dividerLine: { flex: 1, height: 1 },
-  dividerText: { fontSize: 13 },
   inputContainer: { gap: 8 },
-  label: { fontSize: 16, fontWeight: '600' },
+  label: { fontSize: 16, fontWeight: '600', color: T.primary },
   input: {
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: T.border,
+    backgroundColor: T.surface,
+    color: T.primary,
   },
+  inputError: { borderColor: T.danger },
   button: {
-    backgroundColor: '#000',
+    backgroundColor: T.accent,
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 4,
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  buttonText: { color: T.accentText, fontSize: 16, fontWeight: '600' },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 4 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: T.border },
+  dividerText: { fontSize: 13, color: T.muted },
+  appleButton: { height: 48, borderRadius: 8 },
+  googleButton: {
+    height: 48,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: T.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: T.surface,
+  },
+  googleButtonText: { color: T.primary, fontSize: 16, fontWeight: '600' },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
-  footerText: { fontSize: 14 },
-  link: { color: '#555', fontSize: 14, fontWeight: '600' },
-  errorText: { color: '#e74c3c', fontSize: 13, marginTop: 2 },
-  inputError: { borderColor: '#e74c3c' },
+  footerText: { fontSize: 14, color: T.muted },
+  link: { color: T.accent, fontSize: 14, fontWeight: '600' },
+  errorText: { color: T.danger, fontSize: 13, marginTop: 2 },
 });

@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  FlatList,
   Alert,
   Modal,
   ScrollView,
@@ -13,11 +12,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useColorScheme } from '@/hooks';
+import { DropdownSelect } from '@/components/FormControls';
 import { useAuthContext } from '@/lib/AuthContext';
 import supabase from '@/lib/supabase';
+import T from '@/constants/Theme';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,7 +42,6 @@ interface WorkoutSet {
   workout_set_id: number;
   workout_set_number: number;
   exercise_id: number;
-  exercise_name: string;
   workout_set_weight: number | null;
   workout_set_reps: number[] | null;
   workout_set_duration_seconds: number[] | null;
@@ -69,13 +67,7 @@ function formatValues(arr: number[] | null): string {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function WorkoutLogScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const bg = isDark ? '#1a1a1a' : '#fff';
-  const textColor = isDark ? '#fff' : '#000';
-  const inputBg = isDark ? '#2a2a2a' : '#f5f5f5';
-  const borderColor = isDark ? '#444' : '#ddd';
-  const subColor = isDark ? '#aaa' : '#666';
+  const isDark = true;
 
   const { user } = useAuthContext();
 
@@ -396,7 +388,7 @@ export default function WorkoutLogScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: bg }}
+      style={{ flex: 1, backgroundColor: T.bg }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         style={{ flex: 1 }}
@@ -406,17 +398,17 @@ export default function WorkoutLogScreen() {
         {/* ── No active workout ── */}
         {!currentWorkoutId && (
           <View>
-            <Text style={[styles.heading, { color: textColor }]}>Start a Workout</Text>
+            <Text style={[styles.heading, { color: T.primary }]}>Start a Workout</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: inputBg, color: textColor, borderColor }]}
+              style={[styles.input, { backgroundColor: T.surface, color: T.primary, borderColor: T.border }]}
               placeholder="Workout notes (optional)"
-              placeholderTextColor={isDark ? '#888' : '#aaa'}
+              placeholderTextColor={T.muted}
               value={startNotes}
               onChangeText={setStartNotes}
             />
             <TouchableOpacity style={styles.btn} onPress={startWorkout} disabled={startLoading}>
               {startLoading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={T.accentText} />
               ) : (
                 <Text style={styles.btnText}>Start Workout</Text>
               )}
@@ -427,47 +419,43 @@ export default function WorkoutLogScreen() {
         {/* ── Active workout ── */}
         {currentWorkoutId && (
           <>
-            <Text style={[styles.heading, { color: textColor }]}>Log a Set</Text>
+            <Text style={[styles.heading, { color: T.primary }]}>Log a Set</Text>
 
             {/* Exercise picker */}
-            <Text style={[styles.label, { color: textColor }]}>Exercise</Text>
-            <View style={[styles.pickerWrap, { backgroundColor: inputBg, borderColor }]}>
-              <Picker
-                selectedValue={selectedExId}
-                onValueChange={(v) => onSelectExercise(v)}
-                style={{ color: textColor }}>
-                <Picker.Item label="— select exercise —" value={null} />
-                {exercises.map((ex) => (
-                  <Picker.Item key={ex.exercise_id} label={ex.exercise_name} value={ex.exercise_id} />
-                ))}
-              </Picker>
-            </View>
+            <Text style={[styles.label, { color: T.primary }]}>Exercise</Text>
+            <DropdownSelect
+              options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.exercise_id }))}
+              value={selectedExId}
+              onChange={onSelectExercise}
+              placeholder="Select exercise…"
+              isDark={isDark}
+            />
 
             {selectedEx && (
               <>
                 {/* Weight */}
-                <Text style={[styles.label, { color: textColor }]}>Weight (optional)</Text>
+                <Text style={[styles.label, { color: T.primary }]}>Weight (optional)</Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: inputBg, color: textColor, borderColor }]}
+                  style={[styles.input, { backgroundColor: T.surface, color: T.primary, borderColor: T.border }]}
                   placeholder="kg"
-                  placeholderTextColor={isDark ? '#888' : '#aaa'}
+                  placeholderTextColor={T.muted}
                   keyboardType="decimal-pad"
                   value={weight}
                   onChangeText={setWeight}
                 />
 
                 {/* Reps or Duration */}
-                <Text style={[styles.label, { color: textColor }]}>
+                <Text style={[styles.label, { color: T.primary }]}>
                   {selectedEx.exercise_volume_type === 'reps' ? 'Reps' : 'Duration (seconds)'}
                 </Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: inputBg, color: textColor, borderColor }]}
+                  style={[styles.input, { backgroundColor: T.surface, color: T.primary, borderColor: T.border }]}
                   placeholder={
                     selectedEx.exercise_volume_type === 'reps'
                       ? 'e.g. 10,8,6'
                       : 'e.g. 60,45'
                   }
-                  placeholderTextColor={isDark ? '#888' : '#aaa'}
+                  placeholderTextColor={T.muted}
                   keyboardType="numbers-and-punctuation"
                   value={repsOrDuration}
                   onChangeText={setRepsOrDuration}
@@ -477,44 +465,35 @@ export default function WorkoutLogScreen() {
                 {selectedEx.assigned_variations.length > 0 &&
                   Object.entries(groupByType(selectedEx.assigned_variations)).map(([typeName, vars]) => (
                     <View key={typeName}>
-                      <Text style={[styles.label, { color: textColor }]}>{typeName}</Text>
-                      <View style={[styles.pickerWrap, { backgroundColor: inputBg, borderColor }]}>
-                        <Picker
-                          selectedValue={
-                            selectedVarIds.find((id) =>
-                              vars.some((v) => v.exercise_variation_id === id)
-                            ) ?? null
-                          }
-                          onValueChange={(v) =>
-                            setVariationForType(typeName, v, selectedEx.assigned_variations, selectedVarIds, setSelectedVarIds)
-                          }
-                          style={{ color: textColor }}>
-                          <Picker.Item label="None" value={null} />
-                          {vars.map((v) => (
-                            <Picker.Item
-                              key={v.exercise_variation_id}
-                              label={v.exercise_variation_name}
-                              value={v.exercise_variation_id}
-                            />
-                          ))}
-                        </Picker>
-                      </View>
+                      <Text style={[styles.label, { color: T.primary }]}>{typeName}</Text>
+                      <DropdownSelect
+                        options={[
+                          { label: 'None', value: null },
+                          ...vars.map((v) => ({ label: v.exercise_variation_name, value: v.exercise_variation_id })),
+                        ]}
+                        value={selectedVarIds.find((id) => vars.some((v) => v.exercise_variation_id === id)) ?? null}
+                        onChange={(v) =>
+                          setVariationForType(typeName, v, selectedEx.assigned_variations, selectedVarIds, setSelectedVarIds)
+                        }
+                        placeholder="None"
+                        isDark={isDark}
+                      />
                     </View>
                   ))}
 
                 {/* Notes */}
-                <Text style={[styles.label, { color: textColor }]}>Set notes (optional)</Text>
+                <Text style={[styles.label, { color: T.primary }]}>Set notes (optional)</Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: inputBg, color: textColor, borderColor }]}
+                  style={[styles.input, { backgroundColor: T.surface, color: T.primary, borderColor: T.border }]}
                   placeholder="Notes…"
-                  placeholderTextColor={isDark ? '#888' : '#aaa'}
+                  placeholderTextColor={T.muted}
                   value={setNotes}
                   onChangeText={setSetNotes}
                 />
 
                 <TouchableOpacity style={styles.btn} onPress={logSet} disabled={logLoading}>
                   {logLoading ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={T.accentText} />
                   ) : (
                     <Text style={styles.btnText}>Log Set</Text>
                   )}
@@ -523,13 +502,13 @@ export default function WorkoutLogScreen() {
             )}
 
             {/* ── Sets table ── */}
-            <Text style={[styles.heading, { color: textColor, marginTop: 24 }]}>
+            <Text style={[styles.heading, { color: T.primary, marginTop: 24 }]}>
               Sets this workout
             </Text>
             {setsLoading ? (
-              <ActivityIndicator color="#4a90e2" style={{ marginTop: 12 }} />
+              <ActivityIndicator color={T.accent} style={{ marginTop: 12 }} />
             ) : sets.length === 0 ? (
-              <Text style={{ color: subColor, marginTop: 8 }}>No sets logged yet.</Text>
+              <Text style={{ color: T.muted, marginTop: 8 }}>No sets logged yet.</Text>
             ) : (
               sets.map((s) => {
                 const exName = exerciseMap[s.exercise_id]?.exercise_name ?? `#${s.exercise_id}`;
@@ -540,12 +519,12 @@ export default function WorkoutLogScreen() {
                     ? `${formatValues(s.workout_set_duration_seconds)}s`
                     : '—';
                 return (
-                  <View key={s.workout_set_id} style={[styles.setRow, { borderColor }]}>
+                  <View key={s.workout_set_id} style={[styles.setRow, { borderColor: T.border }]}>
                     <View style={styles.setMeta}>
-                      <Text style={[styles.setNum, { color: '#4a90e2' }]}>#{s.workout_set_number}</Text>
+                      <Text style={[styles.setNum, { color: T.accent }]}>#{s.workout_set_number}</Text>
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.setExName, { color: textColor }]}>{exName}</Text>
-                        <Text style={[styles.setSub, { color: subColor }]}>
+                        <Text style={[styles.setExName, { color: T.primary }]}>{exName}</Text>
+                        <Text style={[styles.setSub, { color: T.muted }]}>
                           {s.workout_set_weight != null ? `${s.workout_set_weight}kg · ` : ''}{repsStr}
                           {s.workout_set_notes ? ` · ${s.workout_set_notes}` : ''}
                         </Text>
@@ -558,7 +537,7 @@ export default function WorkoutLogScreen() {
                       <TouchableOpacity
                         onPress={() => deleteSet(s.workout_set_id)}
                         style={[styles.rowBtn, styles.rowBtnDanger]}>
-                        <Text style={[styles.rowBtnText, { color: '#e55' }]}>Del</Text>
+                        <Text style={[styles.rowBtnText, { color: T.danger }]}>Del</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -567,21 +546,21 @@ export default function WorkoutLogScreen() {
             )}
 
             {/* ── End workout ── */}
-            <View style={[styles.endSection, { borderColor }]}>
-              <Text style={[styles.label, { color: textColor }]}>Final notes (optional)</Text>
+            <View style={[styles.endSection, { borderColor: T.border }]}>
+              <Text style={[styles.label, { color: T.primary }]}>Final notes (optional)</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: inputBg, color: textColor, borderColor }]}
+                style={[styles.input, { backgroundColor: T.surface, color: T.primary, borderColor: T.border }]}
                 placeholder="Notes…"
-                placeholderTextColor={isDark ? '#888' : '#aaa'}
+                placeholderTextColor={T.muted}
                 value={endNotes}
                 onChangeText={setEndNotes}
               />
               <TouchableOpacity
-                style={[styles.btn, { backgroundColor: '#e55' }]}
+                style={[styles.btn, { backgroundColor: T.danger }]}
                 onPress={confirmEndWorkout}
                 disabled={endLoading}>
                 {endLoading ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={T.accentText} />
                 ) : (
                   <Text style={styles.btnText}>End Workout</Text>
                 )}
@@ -599,15 +578,15 @@ export default function WorkoutLogScreen() {
         onRequestClose={() => setEditingSet(null)}>
         <View style={styles.modalOverlay}>
           <ScrollView
-            style={[styles.modalBox, { backgroundColor: bg }]}
+            style={[styles.modalBox, { backgroundColor: T.surface }]}
             keyboardShouldPersistTaps="handled">
-            <Text style={[styles.modalTitle, { color: textColor }]}>Edit Set</Text>
+            <Text style={[styles.modalTitle, { color: T.primary }]}>Edit Set</Text>
 
-            <Text style={[styles.label, { color: textColor }]}>Weight (optional)</Text>
+            <Text style={[styles.label, { color: T.primary }]}>Weight (optional)</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: inputBg, color: textColor, borderColor }]}
+              style={[styles.input, { backgroundColor: T.surface, color: T.primary, borderColor: T.border }]}
               placeholder="kg"
-              placeholderTextColor={isDark ? '#888' : '#aaa'}
+              placeholderTextColor={T.muted}
               keyboardType="decimal-pad"
               value={editWeight}
               onChangeText={setEditWeight}
@@ -615,13 +594,13 @@ export default function WorkoutLogScreen() {
 
             {editEx && (
               <>
-                <Text style={[styles.label, { color: textColor }]}>
+                <Text style={[styles.label, { color: T.primary }]}>
                   {editEx.exercise_volume_type === 'reps' ? 'Reps' : 'Duration (seconds)'}
                 </Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: inputBg, color: textColor, borderColor }]}
+                  style={[styles.input, { backgroundColor: T.surface, color: T.primary, borderColor: T.border }]}
                   placeholder={editEx.exercise_volume_type === 'reps' ? 'e.g. 10,8,6' : 'e.g. 60,45'}
-                  placeholderTextColor={isDark ? '#888' : '#aaa'}
+                  placeholderTextColor={T.muted}
                   keyboardType="numbers-and-punctuation"
                   value={editRepsOrDuration}
                   onChangeText={setEditRepsOrDuration}
@@ -630,50 +609,41 @@ export default function WorkoutLogScreen() {
                 {editEx.assigned_variations.length > 0 &&
                   Object.entries(groupByType(editEx.assigned_variations)).map(([typeName, vars]) => (
                     <View key={typeName}>
-                      <Text style={[styles.label, { color: textColor }]}>{typeName}</Text>
-                      <View style={[styles.pickerWrap, { backgroundColor: inputBg, borderColor }]}>
-                        <Picker
-                          selectedValue={
-                            editVarIds.find((id) =>
-                              vars.some((v) => v.exercise_variation_id === id)
-                            ) ?? null
-                          }
-                          onValueChange={(v) =>
-                            setVariationForType(typeName, v, editEx.assigned_variations, editVarIds, setEditVarIds)
-                          }
-                          style={{ color: textColor }}>
-                          <Picker.Item label="None" value={null} />
-                          {vars.map((v) => (
-                            <Picker.Item
-                              key={v.exercise_variation_id}
-                              label={v.exercise_variation_name}
-                              value={v.exercise_variation_id}
-                            />
-                          ))}
-                        </Picker>
-                      </View>
+                      <Text style={[styles.label, { color: T.primary }]}>{typeName}</Text>
+                      <DropdownSelect
+                        options={[
+                          { label: 'None', value: null },
+                          ...vars.map((v) => ({ label: v.exercise_variation_name, value: v.exercise_variation_id })),
+                        ]}
+                        value={editVarIds.find((id) => vars.some((v) => v.exercise_variation_id === id)) ?? null}
+                        onChange={(v) =>
+                          setVariationForType(typeName, v, editEx.assigned_variations, editVarIds, setEditVarIds)
+                        }
+                        placeholder="None"
+                        isDark={isDark}
+                      />
                     </View>
                   ))}
               </>
             )}
 
-            <Text style={[styles.label, { color: textColor }]}>Notes (optional)</Text>
+            <Text style={[styles.label, { color: T.primary }]}>Notes (optional)</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: inputBg, color: textColor, borderColor }]}
+              style={[styles.input, { backgroundColor: T.surface, color: T.primary, borderColor: T.border }]}
               placeholder="Notes…"
-              placeholderTextColor={isDark ? '#888' : '#aaa'}
+              placeholderTextColor={T.muted}
               value={editNotes}
               onChangeText={setEditNotes}
             />
 
             <View style={styles.modalBtns}>
               <TouchableOpacity style={[styles.btn, { flex: 1, marginRight: 8 }]} onPress={saveEditSet} disabled={editLoading}>
-                {editLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Save</Text>}
+                {editLoading ? <ActivityIndicator color={T.accentText} /> : <Text style={styles.btnText}>Save</Text>}
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.btn, styles.btnSecondary, { flex: 1, borderColor }]}
+                style={[styles.btn, styles.btnSecondary, { flex: 1, borderColor: T.border }]}
                 onPress={() => setEditingSet(null)}>
-                <Text style={[styles.btnText, { color: textColor }]}>Cancel</Text>
+                <Text style={[styles.btnText, { color: T.primary }]}>Cancel</Text>
               </TouchableOpacity>
             </View>
             <View style={{ height: 40 }} />
@@ -685,55 +655,54 @@ export default function WorkoutLogScreen() {
 }
 
 const styles = StyleSheet.create({
-  heading: { fontSize: 20, fontWeight: '700', marginBottom: 12 },
-  label: { fontSize: 13, fontWeight: '500', marginTop: 12, marginBottom: 4 },
+  heading: { fontSize: 20, fontWeight: '700', marginBottom: 12, color: T.primary },
+  label: { fontSize: 13, fontWeight: '500', marginTop: 12, marginBottom: 4, color: T.primary },
   input: {
     borderWidth: 1,
+    borderColor: T.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 15,
     marginBottom: 4,
-  },
-  pickerWrap: {
-    borderWidth: 1,
-    borderRadius: 8,
-    marginBottom: 4,
-    overflow: 'hidden',
+    backgroundColor: T.surface,
+    color: T.primary,
   },
   btn: {
-    backgroundColor: '#4a90e2',
+    backgroundColor: T.accent,
     borderRadius: 8,
     padding: 13,
     alignItems: 'center',
     marginTop: 12,
   },
-  btnSecondary: { backgroundColor: 'transparent', borderWidth: 1 },
-  btnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
+  btnSecondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: T.border },
+  btnText: { color: T.accentText, fontWeight: '600', fontSize: 15 },
   setRow: {
     borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: T.border,
     paddingVertical: 10,
   },
   setMeta: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  setNum: { fontWeight: '700', fontSize: 15, marginTop: 1 },
-  setExName: { fontSize: 15, fontWeight: '500' },
-  setSub: { fontSize: 12, marginTop: 2 },
+  setNum: { fontWeight: '700', fontSize: 15, marginTop: 1, color: T.accent },
+  setExName: { fontSize: 15, fontWeight: '500', color: T.primary },
+  setSub: { fontSize: 12, marginTop: 2, color: T.muted },
   setActions: { flexDirection: 'row', gap: 8, marginTop: 6 },
   rowBtn: {
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
-    backgroundColor: '#e8f0fe',
+    backgroundColor: T.accentBg,
   },
-  rowBtnDanger: { backgroundColor: '#fee8e8' },
-  rowBtnText: { fontSize: 13, fontWeight: '500', color: '#4a90e2' },
+  rowBtnDanger: { backgroundColor: T.dangerBg },
+  rowBtnText: { fontSize: 13, fontWeight: '500', color: T.accent },
   endSection: {
     marginTop: 32,
     paddingTop: 20,
     borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: T.border,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
   },
   modalBox: {
@@ -741,7 +710,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
     padding: 20,
     maxHeight: '85%',
+    backgroundColor: T.surface,
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8, color: T.primary },
   modalBtns: { flexDirection: 'row', marginTop: 12 },
 });
