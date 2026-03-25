@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { DropdownSelect, SlideUpModal } from '@/components/FormControls';
-import { useAdminData } from './AdminDataContext';
+import { useExerciseData } from '@/lib/ExerciseDataContext';
 import supabase from '@/lib/supabase';
 import T from '@/constants/Theme';
 
@@ -22,7 +22,7 @@ interface Variation {
 }
 
 export default function VariationsScreen() {
-  const { variations, variationTypes, refreshVariations } = useAdminData();
+  const { variations, variationTypes, refreshVariations } = useExerciseData();
   const [name, setName] = useState('');
   const [typeId, setTypeId] = useState<number | null>(variationTypes[0]?.variation_type_id ?? null);
   const [creating, setCreating] = useState(false);

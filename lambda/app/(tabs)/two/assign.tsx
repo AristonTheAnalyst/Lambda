@@ -9,12 +9,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { DropdownSelect } from '@/components/FormControls';
-import { useAdminData } from './AdminDataContext';
+import { useExerciseData } from '@/lib/ExerciseDataContext';
 import supabase from '@/lib/supabase';
 import T from '@/constants/Theme';
 
 export default function AssignVariationsScreen() {
-  const { exercises, variations } = useAdminData();
+  const { exercises, variations, refreshExerciseDetails } = useExerciseData();
   const [assignExId, setAssignExId] = useState<number | null>(null);
   const [selectedVarIds, setSelectedVarIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
@@ -46,6 +46,7 @@ export default function AssignVariationsScreen() {
       );
     }
     setSaving(false);
+    refreshExerciseDetails();
     Alert.alert('Saved', 'Variations assigned successfully.');
   }
 

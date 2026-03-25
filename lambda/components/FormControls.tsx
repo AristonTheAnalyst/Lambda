@@ -163,40 +163,32 @@ export function DropdownSelect<T = any>({
         <Text style={{ color: T.muted, fontSize: 12 }}>▾</Text>
       </TouchableOpacity>
 
-      <Modal
-        visible={open}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setOpen(false)}>
-        <TouchableOpacity style={drop.overlay} onPress={() => setOpen(false)} activeOpacity={1}>
-          <TouchableOpacity activeOpacity={1} style={drop.sheet} onPress={() => {}}>
-            <SafeAreaView>
-              <View style={drop.handle} />
-              <FlatList
-                data={options}
-                keyExtractor={(item) => String(item.value)}
-                ItemSeparatorComponent={() => (
-                  <View style={{ height: 1, backgroundColor: T.border }} />
-                )}
-                renderItem={({ item }) => {
-                  const active = item.value === value;
-                  return (
-                    <TouchableOpacity
-                      style={[drop.row, active && { backgroundColor: T.accentBg }]}
-                      onPress={() => { onChange(item.value); setOpen(false); }}
-                      activeOpacity={0.6}>
-                      <Text style={[drop.rowText, active && { color: T.accent, fontWeight: '600' }]}>
-                        {item.label}
-                      </Text>
-                      {active && <Text style={{ color: T.accent, fontSize: 16 }}>✓</Text>}
-                    </TouchableOpacity>
-                  );
-                }}
-              />
-            </SafeAreaView>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+      <SlideUpModal visible={open} onClose={() => setOpen(false)}>
+        <SafeAreaView style={drop.sheet}>
+          <View style={drop.handle} />
+          <FlatList
+            data={options}
+            keyExtractor={(item) => String(item.value)}
+            ItemSeparatorComponent={() => (
+              <View style={{ height: 1, backgroundColor: T.border }} />
+            )}
+            renderItem={({ item }) => {
+              const active = item.value === value;
+              return (
+                <TouchableOpacity
+                  style={[drop.row, active && { backgroundColor: T.accentBg }]}
+                  onPress={() => { onChange(item.value); setOpen(false); }}
+                  activeOpacity={0.6}>
+                  <Text style={[drop.rowText, active && { color: T.accent, fontWeight: '600' }]}>
+                    {item.label}
+                  </Text>
+                  {active && <Text style={{ color: T.accent, fontSize: 16 }}>✓</Text>}
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </SafeAreaView>
+      </SlideUpModal>
     </>
   );
 }
@@ -219,11 +211,6 @@ const drop = StyleSheet.create({
     flex: 1,
     marginRight: 8,
     color: T.primary,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
   },
   sheet: {
     borderTopLeftRadius: 16,

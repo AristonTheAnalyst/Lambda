@@ -1,4 +1,4 @@
-import React, { useState, useContext, createContext, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Modal,
   View,
@@ -11,13 +11,13 @@ import {
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs, useRouter, usePathname } from 'expo-router';
 import T from '@/constants/Theme';
+import { ExerciseDataProvider } from '@/lib/ExerciseDataContext';
+import { DrawerContext, useDrawer } from '@/lib/DrawerContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const DrawerContext = createContext<{ openDrawer: () => void }>({ openDrawer: () => {} });
-
 function HamburgerButton() {
-  const { openDrawer } = useContext(DrawerContext);
+  const { openDrawer } = useDrawer();
   return (
     <TouchableOpacity onPress={openDrawer} style={styles.hamburgerBtn}>
       <FontAwesome name="bars" size={20} color={T.primary} />
@@ -45,6 +45,7 @@ export default function TabLayout() {
   };
 
   return (
+    <ExerciseDataProvider>
     <DrawerContext.Provider value={{ openDrawer }}>
       <Tabs
         screenOptions={{
@@ -54,7 +55,7 @@ export default function TabLayout() {
           headerTitleStyle: { color: T.primary },
         }}>
         <Tabs.Screen name="index" options={{ title: 'User Profile' }} />
-        <Tabs.Screen name="two" options={{ title: 'Admin Exercises' }} />
+        <Tabs.Screen name="two" options={{ headerShown: false }} />
         <Tabs.Screen name="three" options={{ title: 'Workout Log' }} />
       </Tabs>
 
@@ -107,6 +108,7 @@ export default function TabLayout() {
         </TouchableOpacity>
       </Modal>
     </DrawerContext.Provider>
+    </ExerciseDataProvider>
   );
 }
 

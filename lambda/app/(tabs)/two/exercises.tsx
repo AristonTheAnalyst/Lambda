@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SegmentedControl, SlideUpModal } from '@/components/FormControls';
-import { useAdminData } from './AdminDataContext';
+import { useExerciseData } from '@/lib/ExerciseDataContext';
 import supabase from '@/lib/supabase';
 import T from '@/constants/Theme';
 
@@ -26,7 +26,7 @@ const VOLUME_OPTIONS = [{ label: 'Reps', value: 'reps' }, { label: 'Duration', v
 const INTENSITY_OPTIONS = [{ label: 'Weight', value: 'weight' }, { label: 'Distance', value: 'distance' }];
 
 export default function ExercisesScreen() {
-  const { exercises, refreshExercises } = useAdminData();
+  const { exercises, refreshExercises } = useExerciseData();
   const [name, setName] = useState('');
   const [volume, setVolume] = useState('reps');
   const [intensity, setIntensity] = useState('weight');
