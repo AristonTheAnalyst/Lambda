@@ -27,8 +27,9 @@ function HamburgerButton() {
 
 const NAV_ITEMS = [
   { label: 'User Profile', route: '/', icon: 'user' as const },
-  { label: 'Admin Exercises', route: '/two', icon: 'list' as const },
+  { label: 'Exercise Configuration', route: '/two', icon: 'pencil' as const },
   { label: 'Workout Log', route: '/three', icon: 'heartbeat' as const },
+  { label: 'Training Logs', route: '/four', icon: 'list' as const },
 ];
 
 export default function TabLayout() {
@@ -57,6 +58,7 @@ export default function TabLayout() {
         <Tabs.Screen name="index" options={{ title: 'User Profile' }} />
         <Tabs.Screen name="two" options={{ headerShown: false }} />
         <Tabs.Screen name="three" options={{ title: 'Workout Log' }} />
+        <Tabs.Screen name="four" options={{ title: 'Training Logs' }} />
       </Tabs>
 
       <Modal

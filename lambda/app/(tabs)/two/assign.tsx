@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DropdownSelect } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
 import supabase from '@/lib/supabase';
@@ -17,10 +18,11 @@ export default function AssignVariationsScreen() {
   const { exercises, variations, refreshExerciseDetails } = useExerciseData();
   const [assignExId, setAssignExId] = useState<number | null>(null);
   const [selectedVarIds, setSelectedVarIds] = useState<number[]>([]);
+  const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!assignExId) { setSelectedVarIds([]); return; }
+    if (!assignExId) { setSelectedVarIds([]); setExpandedTypes(new Set()); return; }
     (async () => {
       const { data } = await supabase
         .from('bridge_exercise_variation')
@@ -29,6 +31,14 @@ export default function AssignVariationsScreen() {
       if (data) setSelectedVarIds(data.map((r: any) => r.exercise_variation_id));
     })();
   }, [assignExId]);
+
+  function toggleType(typeName: string) {
+    setExpandedTypes((prev) => {
+      const next = new Set(prev);
+      next.has(typeName) ? next.delete(typeName) : next.add(typeName);
+      return next;
+    });
+  }
 
   function toggle(varId: number) {
     setSelectedVarIds((prev) =>
@@ -50,7 +60,6 @@ export default function AssignVariationsScreen() {
     Alert.alert('Saved', 'Variations assigned successfully.');
   }
 
-  // Group variations by type
   const grouped = variations.reduce<Record<string, typeof variations>>((acc, v) => {
     if (!acc[v.variation_type_name]) acc[v.variation_type_name] = [];
     acc[v.variation_type_name].push(v);
@@ -70,25 +79,48 @@ export default function AssignVariationsScreen() {
       {assignExId && (
         <>
           <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Select Variations</Text>
-          {Object.entries(grouped).map(([typeName, vars]) => (
-            <View key={typeName} style={{ marginBottom: 8 }}>
-              <Text style={styles.groupHeader}>{typeName}</Text>
-              {vars.map((v) => {
-                const checked = selectedVarIds.includes(v.exercise_variation_id);
-                return (
-                  <TouchableOpacity
-                    key={v.exercise_variation_id}
-                    style={styles.checkRow}
-                    onPress={() => toggle(v.exercise_variation_id)}>
-                    <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
-                      {checked && <Text style={{ color: T.accentText, fontSize: 12 }}>✓</Text>}
-                    </View>
-                    <Text style={styles.checkLabel}>{v.exercise_variation_name}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          ))}
+
+          {Object.entries(grouped).map(([typeName, vars]) => {
+            const isExpanded = expandedTypes.has(typeName);
+            const selectedCount = vars.filter((v) => selectedVarIds.includes(v.exercise_variation_id)).length;
+
+            return (
+              <View key={typeName} style={styles.typeBlock}>
+                <TouchableOpacity style={styles.typeRow} onPress={() => toggleType(typeName)} activeOpacity={0.7}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.typeName}>{typeName}</Text>
+                    {!isExpanded && selectedCount > 0 && (
+                      <Text style={styles.selectedHint}>{selectedCount} selected</Text>
+                    )}
+                  </View>
+                  <FontAwesome
+                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                    size={12}
+                    color={T.muted}
+                  />
+                </TouchableOpacity>
+
+                {isExpanded && (
+                  <View style={styles.varList}>
+                    {vars.map((v) => {
+                      const checked = selectedVarIds.includes(v.exercise_variation_id);
+                      return (
+                        <TouchableOpacity
+                          key={v.exercise_variation_id}
+                          style={styles.checkRow}
+                          onPress={() => toggle(v.exercise_variation_id)}>
+                          <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
+                            {checked && <Text style={{ color: T.accentText, fontSize: 12 }}>✓</Text>}
+                          </View>
+                          <Text style={styles.checkLabel}>{v.exercise_variation_name}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+            );
+          })}
 
           <TouchableOpacity style={[styles.btn, { marginTop: 20 }]} onPress={save} disabled={saving}>
             {saving ? <ActivityIndicator color={T.accentText} /> : <Text style={styles.btnText}>Save Assignments</Text>}
@@ -103,12 +135,20 @@ export default function AssignVariationsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: T.bg, padding: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: T.primary, marginBottom: 12 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: T.primary, marginBottom: 8 },
   label: { fontSize: 13, fontWeight: '500', color: T.primary, marginTop: 4, marginBottom: 4 },
-  groupHeader: {
-    fontSize: 11, fontWeight: '700', textTransform: 'uppercase',
-    letterSpacing: 1, color: T.muted, marginTop: 16, marginBottom: 6,
+  typeBlock: {
+    borderWidth: 1, borderColor: T.border, borderRadius: 10,
+    marginBottom: 8, overflow: 'hidden',
   },
+  typeRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 14, paddingHorizontal: 14,
+    backgroundColor: T.surface,
+  },
+  typeName: { fontSize: 15, fontWeight: '600', color: T.primary },
+  selectedHint: { fontSize: 12, color: T.accent, marginTop: 2 },
+  varList: { paddingHorizontal: 14, paddingBottom: 6, backgroundColor: T.bg },
   checkRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 14 },
   checkbox: {
     width: 22, height: 22, borderRadius: 4,

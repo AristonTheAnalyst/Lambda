@@ -49,7 +49,7 @@ export default function AdminExercisesLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: 'Admin Exercises',
+          title: 'Exercise Configuration',
           headerLeft: () => <HamburgerButton />,
         }}
       />
