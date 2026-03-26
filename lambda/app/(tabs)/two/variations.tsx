@@ -67,9 +67,9 @@ export default function VariationsScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: T.bg }}
-      contentContainerStyle={{ padding: T.space.lg }}
-      keyboardShouldPersistTaps="handled"
-    >
+        contentContainerStyle={{ padding: T.space.lg }}
+        keyboardShouldPersistTaps="handled"
+      >
       {/* ── Create form ── */}
       <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>New Variation</Text>
       <Input placeholder="Variation name" value={name} onChangeText={setName} />

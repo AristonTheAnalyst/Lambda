@@ -6,10 +6,11 @@ import T from '@/constants/Theme';
 
 interface Props {
   title: string;
+  left?: ReactNode;
   right?: ReactNode;
 }
 
-export default function PageHeader({ title, right }: Props) {
+export default function PageHeader({ title, left, right }: Props) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -20,9 +21,9 @@ export default function PageHeader({ title, right }: Props) {
         alignItems="center"
         justifyContent="space-between"
       >
-        {/* Left — hamburger */}
+        {/* Left — hamburger or custom */}
         <XStack width={73} alignItems="center">
-          <HamburgerButton />
+          {left ?? <HamburgerButton />}
         </XStack>
 
         {/* Center — title */}

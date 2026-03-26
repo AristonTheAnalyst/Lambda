@@ -65,9 +65,9 @@ export default function AssignVariationsScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: T.bg }}
-      contentContainerStyle={{ padding: T.space.lg }}
-      keyboardShouldPersistTaps="handled"
-    >
+        contentContainerStyle={{ padding: T.space.lg }}
+        keyboardShouldPersistTaps="handled"
+      >
       <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginTop={T.space.xs} marginBottom={T.space.xs}>Exercise</Text>
       <DropdownSelect
         options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.exercise_id }))}

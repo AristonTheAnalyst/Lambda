@@ -18,12 +18,13 @@ function BackButton() {
 const sharedHeader = {
   headerStyle: { backgroundColor: T.bg },
   headerTitleStyle: { color: T.primary },
+  headerTintColor: T.primary,
+  headerLeftContainerStyle: { paddingLeft: 8,  minWidth: 200 },
 };
 
 const styles = StyleSheet.create({
   backBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingLeft: 4, width: 70,
   },
   backLabel: { color: T.accent, fontSize: 17 },
 });

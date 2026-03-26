@@ -73,7 +73,7 @@ export default function ExercisesScreen() {
       style={{ flex: 1, backgroundColor: T.bg }}
       contentContainerStyle={{ padding: T.space.lg }}
       keyboardShouldPersistTaps="handled"
-    >
+      >
       {/* ── Create form ── */}
       <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>New Exercise</Text>
       <Input placeholder="Exercise name" value={name} onChangeText={setName} />
