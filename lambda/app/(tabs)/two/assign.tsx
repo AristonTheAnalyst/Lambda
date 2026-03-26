@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Alert,
-  ScrollView,
-  StyleSheet,
-} from 'react-native';
+import { Alert, ScrollView } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { Text, XStack, YStack } from 'tamagui';
 import { DropdownSelect } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
 import Button from '@/components/Button';
@@ -16,10 +10,10 @@ import T from '@/constants/Theme';
 
 export default function AssignVariationsScreen() {
   const { exercises, variations, refreshExerciseDetails } = useExerciseData();
-  const [assignExId, setAssignExId] = useState<number | null>(null);
+  const [assignExId, setAssignExId]         = useState<number | null>(null);
   const [selectedVarIds, setSelectedVarIds] = useState<number[]>([]);
-  const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set());
-  const [saving, setSaving] = useState(false);
+  const [expandedTypes, setExpandedTypes]   = useState<Set<string>>(new Set());
+  const [saving, setSaving]                 = useState(false);
 
   useEffect(() => {
     if (!assignExId) { setSelectedVarIds([]); setExpandedTypes(new Set()); return; }
@@ -67,8 +61,12 @@ export default function AssignVariationsScreen() {
   }, {});
 
   return (
-    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.label}>Exercise</Text>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: T.bg }}
+      contentContainerStyle={{ padding: T.space.lg }}
+      keyboardShouldPersistTaps="handled"
+    >
+      <Text fontSize="$sm" fontWeight="500" color="$color" marginTop="$xs" marginBottom="$xs">Exercise</Text>
       <DropdownSelect
         options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.exercise_id }))}
         value={assignExId}
@@ -78,95 +76,90 @@ export default function AssignVariationsScreen() {
 
       {assignExId && (
         <>
-          <Text style={[styles.sectionTitle, { marginTop: T.space.xl }]}>Select Variations</Text>
+          <Text fontSize="$lg" fontWeight="700" color="$color" marginTop="$xl" marginBottom="$sm">
+            Select Variations
+          </Text>
 
           {Object.entries(grouped).map(([typeName, vars]) => {
-            const isExpanded = expandedTypes.has(typeName);
+            const isExpanded    = expandedTypes.has(typeName);
             const selectedCount = vars.filter((v) => selectedVarIds.includes(v.exercise_variation_id)).length;
 
             return (
-              <View key={typeName} style={styles.typeBlock}>
-                <TouchableOpacity style={styles.typeRow} onPress={() => toggleType(typeName)} activeOpacity={0.7}>
-                  <View style={styles.typeRowText}>
-                    <Text style={styles.typeName}>{typeName}</Text>
+              <YStack
+                key={typeName}
+                borderWidth={1}
+                borderColor="$borderColor"
+                borderRadius="$md"
+                marginBottom="$sm"
+                overflow="hidden"
+              >
+                {/* Type header row */}
+                <XStack
+                  alignItems="center"
+                  paddingVertical="$md"
+                  paddingHorizontal="$md"
+                  backgroundColor="$surface"
+                  pressStyle={{ opacity: 0.7 }}
+                  onPress={() => toggleType(typeName)}
+                  cursor="pointer"
+                >
+                  <YStack flex={1}>
+                    <Text fontSize={15} fontWeight="600" color="$color">{typeName}</Text>
                     {!isExpanded && selectedCount > 0 && (
-                      <Text style={styles.selectedHint}>{selectedCount} selected</Text>
+                      <Text fontSize="$xs" color="$accent" marginTop="$xs">{selectedCount} selected</Text>
                     )}
-                  </View>
+                  </YStack>
                   <FontAwesome
                     name={isExpanded ? 'chevron-up' : 'chevron-down'}
                     size={12}
                     color={T.muted}
                   />
-                </TouchableOpacity>
+                </XStack>
 
+                {/* Variation rows */}
                 {isExpanded && (
-                  <View style={styles.varList}>
+                  <YStack paddingHorizontal="$md" paddingBottom="$xs" backgroundColor="$background">
                     {vars.map((v) => {
                       const checked = selectedVarIds.includes(v.exercise_variation_id);
                       return (
-                        <TouchableOpacity
+                        <XStack
                           key={v.exercise_variation_id}
-                          style={styles.checkRow}
-                          onPress={() => toggle(v.exercise_variation_id)}>
-                          <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
-                            {checked && <Text style={styles.checkmark}>✓</Text>}
-                          </View>
-                          <Text style={styles.checkLabel}>{v.exercise_variation_name}</Text>
-                        </TouchableOpacity>
+                          alignItems="center"
+                          paddingVertical="$sm"
+                          gap="$md"
+                          pressStyle={{ opacity: 0.7 }}
+                          onPress={() => toggle(v.exercise_variation_id)}
+                          cursor="pointer"
+                        >
+                          <XStack
+                            width={22}
+                            height={22}
+                            borderRadius="$sm"
+                            borderWidth={2}
+                            borderColor="$accent"
+                            alignItems="center"
+                            justifyContent="center"
+                            backgroundColor={checked ? '$accent' : 'transparent'}
+                          >
+                            {checked && <Text color="$accentText" fontSize="$xs">✓</Text>}
+                          </XStack>
+                          <Text fontSize={15} color="$color">{v.exercise_variation_name}</Text>
+                        </XStack>
                       );
                     })}
-                  </View>
+                  </YStack>
                 )}
-              </View>
+              </YStack>
             );
           })}
 
-          <View style={styles.btnRow}>
+          <YStack marginTop="$lg">
             <Button label="Save Assignments" onPress={save} loading={saving} />
-          </View>
+          </YStack>
         </>
       )}
 
-      <View style={{ height: T.space.xxl }} />
+      <YStack height={T.space.xxl} />
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: T.bg, padding: T.space.lg },
-  sectionTitle: { fontSize: T.fontSize.lg, fontWeight: '700', color: T.primary, marginBottom: T.space.sm },
-  label: { fontSize: T.fontSize.sm, fontWeight: '500', color: T.primary, marginTop: T.space.xs, marginBottom: T.space.xs },
-  typeBlock: {
-    borderWidth: 1,
-    borderColor: T.border,
-    borderRadius: T.radius.md,
-    marginBottom: T.space.sm,
-    overflow: 'hidden',
-  },
-  typeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: T.space.md,
-    paddingHorizontal: T.space.md,
-    backgroundColor: T.surface,
-  },
-  typeRowText: { flex: 1 },
-  typeName: { fontSize: T.fontSize.md - 1, fontWeight: '600', color: T.primary },
-  selectedHint: { fontSize: T.fontSize.xs, color: T.accent, marginTop: T.space.xs },
-  varList: { paddingHorizontal: T.space.md, paddingBottom: T.space.xs, backgroundColor: T.bg },
-  checkRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: T.space.sm, gap: T.space.md },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: T.radius.sm,
-    borderWidth: 2,
-    borderColor: T.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: { backgroundColor: T.accent },
-  checkmark: { color: T.accentText, fontSize: T.fontSize.xs },
-  checkLabel: { fontSize: T.fontSize.md - 1, color: T.primary },
-  btnRow: { marginTop: T.space.lg },
-});

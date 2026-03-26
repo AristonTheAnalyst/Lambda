@@ -1,7 +1,7 @@
-import { View, Text, StyleSheet, ReactNode } from 'react-native';
+import { ReactNode } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Separator, Stack, Text, XStack, YStack } from 'tamagui';
 import HamburgerButton from './HamburgerButton';
-import T from '@/constants/Theme';
 
 interface Props {
   title: string;
@@ -10,41 +10,38 @@ interface Props {
 
 export default function PageHeader({ title, right }: Props) {
   const insets = useSafeAreaInsets();
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.side}>
-        <HamburgerButton />
-      </View>
-      <Text style={styles.title}>{title}</Text>
-      <View style={[styles.side, styles.rightSlot]}>{right ?? null}</View>
-    </View>
+    <YStack>
+      <XStack
+        paddingTop={insets.top}
+        backgroundColor="$background"
+        alignItems="center"
+        justifyContent="space-between"
+      >
+        {/* Left — hamburger */}
+        <XStack width={73} alignItems="center">
+          <HamburgerButton />
+        </XStack>
+
+        {/* Center — title (absolutely fills remaining space, pointer-events off) */}
+        <Text
+          fontSize={20}
+          fontWeight="600"
+          color="$color"
+          flex={1}
+          textAlign="center"
+          pointerEvents="none"
+        >
+          {title}
+        </Text>
+
+        {/* Right — optional slot */}
+        <XStack width={73} justifyContent="flex-end" paddingRight="$lg" alignItems="center">
+          {right ?? null}
+        </XStack>
+      </XStack>
+      <Separator borderColor="$borderColor" />
+    </YStack>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: T.bg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: T.border,
-  },
-  title: {
-    position: 'static',
-    left: 0,
-    right: 0,
-    textAlign: 'center',
-    fontSize: 20,
-    fontWeight: '600',
-    color: T.primary,
-    pointerEvents: 'none',
-  },
-  side: {
-    width: 73,
-  },
-  rightSlot: {
-    alignItems: 'flex-end',
-    paddingRight: 16,
-  },
-});

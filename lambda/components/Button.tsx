@@ -1,12 +1,5 @@
-import {
-  TouchableOpacity,
-  Text,
-  ActivityIndicator,
-  StyleSheet,
-  Platform,
-  View,
-} from 'react-native';
-import T from '@/constants/Theme';
+import { Platform } from 'react-native';
+import { Button as TamaguiButton, Spinner, Stack, Text, styled } from 'tamagui';
 
 const isGlassSupported = Platform.OS === 'ios' && Number(Platform.Version) >= 26;
 
@@ -19,6 +12,42 @@ if (isGlassSupported) {
   }
 }
 
+// ─── Styled variants ──────────────────────────────────────────────────────────
+
+const Base = styled(TamaguiButton, {
+  borderRadius: '$md',
+  paddingVertical: '$md',
+  paddingHorizontal: '$lg',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: 'auto',
+
+  variants: {
+    variant: {
+      primary: {
+        backgroundColor: '$accent',
+        borderWidth: 0,
+        pressStyle: { opacity: 0.75 },
+      },
+      ghost: {
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        borderColor: '$accent',
+        pressStyle: { opacity: 0.75 },
+      },
+      danger: {
+        backgroundColor: '$danger',
+        borderWidth: 0,
+        pressStyle: { opacity: 0.75 },
+      },
+    },
+  } as const,
+
+  defaultVariants: { variant: 'primary' },
+});
+
+// ─── Props ────────────────────────────────────────────────────────────────────
+
 interface ButtonProps {
   label: string;
   onPress: () => void;
@@ -26,6 +55,8 @@ interface ButtonProps {
   disabled?: boolean;
   loading?: boolean;
 }
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Button({
   label,
@@ -35,105 +66,40 @@ export default function Button({
   loading = false,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
+  const effective  = variant === 'glass' ? 'primary' : variant;
+  const spinnerColor = effective === 'ghost' ? '$accent' : '$accentText';
+  const labelColor   = effective === 'ghost' ? '$accent' : '$accentText';
 
+  // Glass variant on iOS 26+
   if (variant === 'glass' && isGlassSupported && GlassView) {
     return (
-      <TouchableOpacity
-        onPress={onPress}
-        disabled={isDisabled}
-        activeOpacity={0.75}
-        style={[styles.touchable, isDisabled && styles.disabled]}
-      >
+      <Stack borderRadius="$md" overflow="hidden" opacity={isDisabled ? 0.45 : 1}>
         <GlassView
           glassEffectStyle="systemMaterial"
-          tintColor={T.accent}
-          style={styles.glassInner}
+          tintColor="#bb7423"
+          onTouchEnd={isDisabled ? undefined : onPress}
+          style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 16 }}
         >
-          {loading ? (
-            <ActivityIndicator color={T.accentText} />
-          ) : (
-            <Text style={styles.glassText}>{label}</Text>
-          )}
+          {loading
+            ? <Spinner size="small" color="$accentText" />
+            : <Text color="$accentText" fontSize="$md" fontWeight="600">{label}</Text>
+          }
         </GlassView>
-      </TouchableOpacity>
+      </Stack>
     );
   }
 
   return (
-    <TouchableOpacity
+    <Base
+      variant={effective}
       onPress={onPress}
       disabled={isDisabled}
-      activeOpacity={0.75}
-      style={[
-        styles.base,
-        variant === 'primary' && styles.primary,
-        variant === 'glass' && styles.primary, // fallback: same as primary
-        variant === 'ghost' && styles.ghost,
-        variant === 'danger' && styles.danger,
-        isDisabled && styles.disabled,
-      ]}
+      opacity={isDisabled ? 0.45 : 1}
     >
-      {loading ? (
-        <ActivityIndicator
-          color={variant === 'ghost' ? T.accent : T.accentText}
-        />
-      ) : (
-        <Text
-          style={[
-            styles.label,
-            variant === 'ghost' && styles.ghostLabel,
-          ]}
-        >
-          {label}
-        </Text>
-      )}
-    </TouchableOpacity>
+      {loading
+        ? <Spinner size="small" color={spinnerColor} />
+        : <Text color={labelColor} fontSize="$md" fontWeight="600">{label}</Text>
+      }
+    </Base>
   );
 }
-
-const styles = StyleSheet.create({
-  touchable: {
-    borderRadius: T.radius.md,
-    overflow: 'hidden',
-  },
-  base: {
-    paddingVertical: T.space.md,
-    paddingHorizontal: T.space.lg,
-    borderRadius: T.radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primary: {
-    backgroundColor: T.accent,
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: T.accent,
-  },
-  danger: {
-    backgroundColor: T.danger,
-  },
-  disabled: {
-    opacity: 0.45,
-  },
-  label: {
-    color: T.accentText,
-    fontSize: T.fontSize.md,
-    fontWeight: '600',
-  },
-  ghostLabel: {
-    color: T.accent,
-  },
-  glassInner: {
-    paddingVertical: T.space.md,
-    paddingHorizontal: T.space.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  glassText: {
-    color: T.accentText,
-    fontSize: T.fontSize.md,
-    fontWeight: '600',
-  },
-});

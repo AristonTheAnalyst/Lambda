@@ -1,10 +1,12 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef } from 'react';
 import 'react-native-reanimated';
+import { TamaguiProvider } from 'tamagui';
+import config from '../tamagui.config';
 import { useColorScheme } from '@/hooks';
 import { AuthProvider, useAuthContext } from '@/lib/AuthContext';
 
@@ -31,14 +33,15 @@ export default function RootLayout() {
   if (!loaded) return null;
 
   return (
-    <AuthProvider>
-      <RootLayoutNav />
-    </AuthProvider>
+    <TamaguiProvider config={config} defaultTheme="dark">
+      <AuthProvider>
+        <RootLayoutNav />
+      </AuthProvider>
+    </TamaguiProvider>
   );
 }
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
   const { session, loading, onboarded } = useAuthContext();
   const router = useRouter();
   const hasNavigated = useRef(false);
@@ -46,7 +49,6 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (loading) return;
-    // Wait until onboarded status is known for authenticated users
     if (session && onboarded === null) return;
 
     let target: string;
@@ -58,7 +60,6 @@ function RootLayoutNav() {
       target = '/(tabs)';
     }
 
-    // Only navigate when the target actually changes
     if (lastTarget.current !== target) {
       console.log('[Nav] Navigating to:', target, '(session:', !!session, 'onboarded:', onboarded, ')');
       lastTarget.current = target;

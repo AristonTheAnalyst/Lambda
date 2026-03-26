@@ -1,5 +1,5 @@
-import { TouchableOpacity, View, StyleSheet, Platform } from 'react-native';
-import T from '@/constants/Theme';
+import { Platform } from 'react-native';
+import { Stack, styled } from 'tamagui';
 
 const isGlassSupported = Platform.OS === 'ios' && Number(Platform.Version) >= 26;
 
@@ -12,56 +12,51 @@ if (isGlassSupported) {
   }
 }
 
+// ─── Styled card ──────────────────────────────────────────────────────────────
+
+const StyledCard = styled(Stack, {
+  backgroundColor: '$surface',
+  borderWidth: 1,
+  borderColor: '$borderColor',
+  borderRadius: '$md',
+  padding: '$md',
+
+  variants: {
+    pressable: {
+      true: { pressStyle: { opacity: 0.75 }, cursor: 'pointer' },
+    },
+  } as const,
+});
+
+// ─── Props ────────────────────────────────────────────────────────────────────
+
 interface CardProps {
   children: React.ReactNode;
   onPress?: () => void;
   variant?: 'default' | 'glass';
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function Card({ children, onPress, variant = 'default' }: CardProps) {
   if (variant === 'glass' && isGlassSupported && GlassView) {
-    if (onPress) {
-      return (
-        <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.touchable}>
-          <GlassView glassEffectStyle="systemMaterial" style={styles.inner}>
-            {children}
-          </GlassView>
-        </TouchableOpacity>
-      );
-    }
     return (
-      <GlassView glassEffectStyle="systemMaterial" style={styles.inner}>
-        {children}
-      </GlassView>
+      <Stack
+        borderRadius="$md"
+        overflow="hidden"
+        pressStyle={onPress ? { opacity: 0.8 } : undefined}
+        onPress={onPress}
+      >
+        <GlassView glassEffectStyle="systemMaterial" style={{ borderRadius: 8, padding: 12 }}>
+          {children}
+        </GlassView>
+      </Stack>
     );
   }
 
-  // default variant (or glass fallback on older platforms)
-  if (onPress) {
-    return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.75} style={styles.card}>
-        {children}
-      </TouchableOpacity>
-    );
-  }
-
-  return <View style={styles.card}>{children}</View>;
+  return (
+    <StyledCard pressable={!!onPress} onPress={onPress}>
+      {children}
+    </StyledCard>
+  );
 }
-
-const styles = StyleSheet.create({
-  touchable: {
-    borderRadius: T.radius.md,
-    overflow: 'hidden',
-  },
-  card: {
-    backgroundColor: T.surface,
-    borderWidth: 1,
-    borderColor: T.border,
-    borderRadius: T.radius.md,
-    padding: T.space.md,
-  },
-  inner: {
-    borderRadius: T.radius.md,
-    padding: T.space.md,
-  },
-});

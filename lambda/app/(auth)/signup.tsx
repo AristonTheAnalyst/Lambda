@@ -1,10 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  View,
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -13,6 +8,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import { useAuthContext } from '@/lib/AuthContext';
 import { withGuard } from '@/lib/asyncGuard';
 import { signupSchema, getFieldErrors } from '@/lib/validation';
@@ -21,12 +17,12 @@ import Input from '@/components/Input';
 import T from '@/constants/Theme';
 
 export default function SignupScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail]             = useState('');
+  const [password, setPassword]       = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
-  const [cooldown, setCooldown] = useState(0);
+  const [cooldown, setCooldown]       = useState(0);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { signUp, signInWithGoogle, signInWithApple, loading } = useAuthContext();
 
@@ -66,119 +62,110 @@ export default function SignupScreen() {
     } finally { setSocialLoading(null); }
   });
 
-  const isLoading = loading || socialLoading !== null;
+  const isLoading   = loading || socialLoading !== null;
   const isCoolingDown = cooldown > 0;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.content}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
         <ScrollView showsVerticalScrollIndicator={false}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Lambda</Text>
-            <Text style={styles.subtitle}>Create Account</Text>
-          </View>
+          <YStack paddingHorizontal="$xl" gap="$lg" paddingBottom="$xxl">
 
-          <View style={styles.form}>
-            {Platform.OS === 'ios' && (
-              <AppleAuthentication.AppleAuthenticationButton
-                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
-                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                cornerRadius={T.radius.md}
-                style={[styles.appleButton, { opacity: socialLoading === 'apple' ? 0.6 : 1 }]}
-                onPress={handleApple}
-              />
-            )}
+            <YStack alignItems="center" marginBottom="$xxl" marginTop="$xl">
+              <Text fontSize={32} fontWeight="bold" marginBottom="$sm" color="$color">Lambda</Text>
+              <Text fontSize="$lg" color="$muted">Create Account</Text>
+            </YStack>
 
-            <TouchableOpacity
-              style={[styles.googleButton, { opacity: socialLoading === 'google' ? 0.6 : 1 }]}
-              onPress={handleGoogle}
-              disabled={isLoading}>
-              {socialLoading === 'google' ? (
-                <ActivityIndicator color={T.primary} />
-              ) : (
-                <Text style={styles.googleButtonText}>Continue with Google</Text>
+            <YStack gap="$lg">
+              {/* Apple Sign-Up (iOS only) */}
+              {Platform.OS === 'ios' && (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
+                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                  cornerRadius={T.radius.md}
+                  style={{ height: 48, borderRadius: T.radius.md, opacity: socialLoading === 'apple' ? 0.6 : 1 }}
+                  onPress={handleApple}
+                />
               )}
-            </TouchableOpacity>
 
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
+              {/* Google Sign-Up */}
+              <XStack
+                height={48}
+                borderRadius="$md"
+                borderWidth={1}
+                borderColor="$borderColor"
+                alignItems="center"
+                justifyContent="center"
+                backgroundColor="$surface"
+                opacity={socialLoading === 'google' ? 0.6 : 1}
+                pressStyle={{ opacity: 0.75 }}
+                onPress={isLoading ? undefined : handleGoogle}
+                cursor="pointer"
+              >
+                {socialLoading === 'google'
+                  ? <Spinner size="small" color="$color" />
+                  : <Text color="$color" fontSize="$md" fontWeight="600">Continue with Google</Text>
+                }
+              </XStack>
 
-            <Input
-              label="Email"
-              value={email}
-              onChangeText={(v) => { setEmail(v); setFieldErrors((e) => ({ ...e, email: '' })); }}
-              placeholder="Enter your email"
-              error={fieldErrors.email}
-              editable={!isLoading}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
+              <XStack alignItems="center" gap="$sm" marginVertical="$xs">
+                <Separator flex={1} borderColor="$borderColor" />
+                <Text fontSize="$sm" color="$muted">or</Text>
+                <Separator flex={1} borderColor="$borderColor" />
+              </XStack>
 
-            <Input
-              label="Password"
-              value={password}
-              onChangeText={(v) => { setPassword(v); setFieldErrors((e) => ({ ...e, password: '' })); }}
-              placeholder="Enter password (min 6 characters)"
-              error={fieldErrors.password}
-              editable={!isLoading}
-              secureTextEntry
-            />
+              <Input
+                label="Email"
+                value={email}
+                onChangeText={(v) => { setEmail(v); setFieldErrors((e) => ({ ...e, email: '' })); }}
+                placeholder="Enter your email"
+                error={fieldErrors.email}
+                editable={!isLoading}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
 
-            <Input
-              label="Confirm Password"
-              value={confirmPassword}
-              onChangeText={(v) => { setConfirmPassword(v); setFieldErrors((e) => ({ ...e, confirmPassword: '' })); }}
-              placeholder="Confirm your password"
-              error={fieldErrors.confirmPassword}
-              editable={!isLoading}
-              secureTextEntry
-            />
+              <Input
+                label="Password"
+                value={password}
+                onChangeText={(v) => { setPassword(v); setFieldErrors((e) => ({ ...e, password: '' })); }}
+                placeholder="Enter password (min 6 characters)"
+                error={fieldErrors.password}
+                editable={!isLoading}
+                secureTextEntry
+              />
 
-            <Button
-              label={isCoolingDown ? `Try again in ${cooldown}s` : 'Sign Up'}
-              onPress={handleSignup}
-              disabled={isLoading || isCoolingDown}
-              loading={loading}
-            />
+              <Input
+                label="Confirm Password"
+                value={confirmPassword}
+                onChangeText={(v) => { setConfirmPassword(v); setFieldErrors((e) => ({ ...e, confirmPassword: '' })); }}
+                placeholder="Confirm your password"
+                error={fieldErrors.confirmPassword}
+                editable={!isLoading}
+                secureTextEntry
+              />
 
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Already have an account? </Text>
-              <Link href="/(auth)/login">
-                <Text style={styles.link}>Login</Text>
-              </Link>
-            </View>
-          </View>
+              <Button
+                label={isCoolingDown ? `Try again in ${cooldown}s` : 'Sign Up'}
+                onPress={handleSignup}
+                disabled={isLoading || isCoolingDown}
+                loading={loading}
+              />
+
+              <XStack justifyContent="center" marginTop="$sm">
+                <Text fontSize="$sm" color="$muted">Already have an account? </Text>
+                <Link href="/(auth)/login">
+                  <Text color="$accent" fontSize="$sm" fontWeight="600">Login</Text>
+                </Link>
+              </XStack>
+            </YStack>
+
+          </YStack>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: T.bg },
-  content: { flex: 1, justifyContent: 'center', paddingHorizontal: T.space.xl },
-  header: { marginBottom: T.space.xxl, alignItems: 'center', marginTop: T.space.xl },
-  title: { fontSize: 32, fontWeight: 'bold', marginBottom: T.space.sm, color: T.primary },
-  subtitle: { fontSize: T.fontSize.lg, color: T.muted },
-  form: { gap: T.space.lg, paddingBottom: T.space.xxl },
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.sm, marginVertical: T.space.xs },
-  dividerLine: { flex: 1, height: 1, backgroundColor: T.border },
-  dividerText: { fontSize: T.fontSize.sm, color: T.muted },
-  appleButton: { height: 48, borderRadius: T.radius.md },
-  googleButton: {
-    height: 48,
-    borderRadius: T.radius.md,
-    borderWidth: 1,
-    borderColor: T.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: T.surface,
-  },
-  googleButtonText: { color: T.primary, fontSize: T.fontSize.md, fontWeight: '600' },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: T.space.sm },
-  footerText: { fontSize: T.fontSize.sm, color: T.muted },
-  link: { color: T.accent, fontSize: T.fontSize.sm, fontWeight: '600' },
-});

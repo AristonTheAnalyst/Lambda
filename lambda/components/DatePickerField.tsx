@@ -1,13 +1,7 @@
 import { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-} from 'react-native';
+import { Platform } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { SlideUpModal } from '@/components/FormControls';
+import { Sheet, Stack, Text, YStack } from 'tamagui';
 import Button from '@/components/Button';
 import T from '@/constants/Theme';
 
@@ -33,8 +27,7 @@ function toISO(date: Date): string {
 
 function formatDisplay(str: string): string {
   if (!str) return '';
-  const d = toDate(str);
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  return toDate(str).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 export default function DatePickerField({
@@ -43,25 +36,34 @@ export default function DatePickerField({
   placeholder = 'Select date (optional)',
   editable = true,
 }: DatePickerFieldProps) {
-  const [open, setOpen] = useState(false);
-  // staged value for iOS spinner — only committed on Done
+  const [open, setOpen]     = useState(false);
   const [staged, setStaged] = useState<Date>(toDate(value));
 
   const displayText = value ? formatDisplay(value) : '';
 
-  // ── Android: native dialog, commits immediately ────────────────────────────
+  const triggerContent = (
+    <Stack
+      backgroundColor="$surface"
+      borderWidth={1}
+      borderColor="$borderColor"
+      borderRadius="$md"
+      padding="$md"
+      opacity={editable ? 1 : 0.5}
+      pressStyle={editable ? { opacity: 0.7 } : undefined}
+      onPress={editable ? () => { setStaged(toDate(value)); setOpen(true); } : undefined}
+      cursor={editable ? 'pointer' : 'default'}
+    >
+      <Text fontSize="$md" color={displayText ? '$color' : '$muted'}>
+        {displayText || placeholder}
+      </Text>
+    </Stack>
+  );
+
+  // ── Android: native dialog ─────────────────────────────────────────────
   if (Platform.OS === 'android') {
     return (
       <>
-        <TouchableOpacity
-          style={[styles.trigger, !editable && styles.disabled]}
-          onPress={() => editable && setOpen(true)}
-          activeOpacity={0.7}>
-          <Text style={[styles.triggerText, !displayText && styles.placeholder]}>
-            {displayText || placeholder}
-          </Text>
-        </TouchableOpacity>
-
+        {triggerContent}
         {open && (
           <DateTimePicker
             value={toDate(value)}
@@ -70,9 +72,7 @@ export default function DatePickerField({
             maximumDate={new Date()}
             onChange={(event: DateTimePickerEvent, date?: Date) => {
               setOpen(false);
-              if (event.type === 'set' && date) {
-                onChangeDate(toISO(date));
-              }
+              if (event.type === 'set' && date) onChangeDate(toISO(date));
             }}
           />
         )}
@@ -80,25 +80,32 @@ export default function DatePickerField({
     );
   }
 
-  // ── iOS: spinner inside SlideUpModal ──────────────────────────────────────
+  // ── iOS: spinner inside Tamagui Sheet ─────────────────────────────────
   return (
     <>
-      <TouchableOpacity
-        style={[styles.trigger, !editable && styles.disabled]}
-        onPress={() => {
-          if (!editable) return;
-          setStaged(toDate(value));
-          setOpen(true);
-        }}
-        activeOpacity={0.7}>
-        <Text style={[styles.triggerText, !displayText && styles.placeholder]}>
-          {displayText || placeholder}
-        </Text>
-      </TouchableOpacity>
+      {triggerContent}
 
-      <SlideUpModal visible={open} onClose={() => setOpen(false)}>
-        <View style={styles.sheet}>
-          <View style={styles.handle} />
+      <Sheet
+        modal
+        open={open}
+        onOpenChange={(o: boolean) => { if (!o) setOpen(false); }}
+        animation="medium"
+        snapPoints={[45]}
+        disableDrag
+        zIndex={100_000}
+      >
+        <Sheet.Overlay
+          animation="lazy"
+          enterStyle={{ opacity: 0 }}
+          exitStyle={{ opacity: 0 }}
+          backgroundColor="rgba(0,0,0,0.6)"
+        />
+        <Sheet.Frame backgroundColor="$surface">
+          {/* Handle */}
+          <YStack alignItems="center" paddingTop="$sm" paddingBottom="$xs">
+            <YStack width={36} height={4} borderRadius={2} backgroundColor="$borderColor" />
+          </YStack>
+
           <DateTimePicker
             value={staged}
             mode="date"
@@ -109,61 +116,17 @@ export default function DatePickerField({
             onChange={(_event: DateTimePickerEvent, date?: Date) => {
               if (date) setStaged(date);
             }}
-            style={styles.picker}
+            style={{ height: 200 }}
           />
-          <View style={styles.doneBtn}>
+
+          <YStack paddingHorizontal="$xl" paddingTop="$sm" paddingBottom="$xl">
             <Button
               label="Done"
-              onPress={() => {
-                onChangeDate(toISO(staged));
-                setOpen(false);
-              }}
+              onPress={() => { onChangeDate(toISO(staged)); setOpen(false); }}
             />
-          </View>
-        </View>
-      </SlideUpModal>
+          </YStack>
+        </Sheet.Frame>
+      </Sheet>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  trigger: {
-    backgroundColor: T.surface,
-    borderWidth: 1,
-    borderColor: T.border,
-    borderRadius: T.radius.md,
-    padding: T.space.md,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  triggerText: {
-    color: T.primary,
-    fontSize: T.fontSize.md,
-  },
-  placeholder: {
-    color: T.muted,
-  },
-  sheet: {
-    backgroundColor: T.surface,
-    borderTopLeftRadius: T.radius.lg,
-    borderTopRightRadius: T.radius.lg,
-    paddingBottom: T.space.xl,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: T.border,
-    alignSelf: 'center',
-    marginTop: T.space.sm,
-    marginBottom: T.space.xs,
-  },
-  picker: {
-    height: 200,
-  },
-  doneBtn: {
-    paddingHorizontal: T.space.xl,
-    marginTop: T.space.sm,
-  },
-});

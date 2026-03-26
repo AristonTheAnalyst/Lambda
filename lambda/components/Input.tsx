@@ -1,13 +1,37 @@
-import { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TextInputProps,
-  StyleSheet,
-  Platform,
-} from 'react-native';
-import T from '@/constants/Theme';
+import { Platform } from 'react-native';
+import { Input as TamaguiInput, Text, YStack, styled } from 'tamagui';
+
+// ─── Styled input ─────────────────────────────────────────────────────────────
+
+const StyledInput = styled(TamaguiInput, {
+  backgroundColor: '$surface',
+  borderWidth: 1,
+  borderColor: '$borderColor',
+  borderRadius: '$md',
+  padding: '$md',
+  color: '$color',
+  fontSize: '$md',
+  placeholderTextColor: '$muted',
+
+  focusStyle: {
+    borderColor: '$accent',
+    outlineWidth: 0,
+  },
+
+  variants: {
+    errored: {
+      true: { borderColor: '$dangerBorder' },
+    },
+    isMultiline: {
+      true: { minHeight: 96, textAlignVertical: 'top' },
+    },
+    isDisabled: {
+      true: { opacity: 0.5 },
+    },
+  } as const,
+});
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface InputProps {
   value: string;
@@ -18,10 +42,12 @@ interface InputProps {
   multiline?: boolean;
   editable?: boolean;
   secureTextEntry?: boolean;
-  autoCapitalize?: TextInputProps['autoCapitalize'];
-  keyboardType?: TextInputProps['keyboardType'];
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad' | 'number-pad' | 'decimal-pad' | 'numbers-and-punctuation';
   autoCorrect?: boolean;
 }
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Input({
   value,
@@ -36,72 +62,26 @@ export default function Input({
   keyboardType,
   autoCorrect,
 }: InputProps) {
-  const [focused, setFocused] = useState(false);
-
   return (
-    <View style={styles.wrapper}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
-      <TextInput
+    <YStack gap="$xs">
+      {label ? <Text color="$color" fontSize="$sm" fontWeight="600">{label}</Text> : null}
+      <StyledInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={T.muted}
         editable={editable}
         multiline={multiline}
         secureTextEntry={secureTextEntry}
         autoCapitalize={autoCapitalize}
         keyboardType={keyboardType}
         autoCorrect={autoCorrect}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        errored={!!error}
+        isMultiline={multiline}
+        isDisabled={!editable}
         keyboardAppearance={Platform.OS === 'ios' ? 'dark' : undefined}
         returnKeyType={Platform.OS === 'ios' ? (multiline ? 'default' : 'done') : undefined}
-        style={[
-          styles.input,
-          multiline && styles.multiline,
-          focused && styles.focused,
-          !!error && styles.errored,
-          !editable && styles.disabled,
-        ]}
       />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-    </View>
+      {error ? <Text color="$danger" fontSize="$xs">{error}</Text> : null}
+    </YStack>
   );
 }
-
-const styles = StyleSheet.create({
-  wrapper: {
-    gap: T.space.xs,
-  },
-  label: {
-    color: T.primary,
-    fontSize: T.fontSize.sm,
-    fontWeight: '600',
-  },
-  input: {
-    backgroundColor: T.surface,
-    borderWidth: 1,
-    borderColor: T.border,
-    borderRadius: T.radius.md,
-    padding: T.space.md,
-    color: T.primary,
-    fontSize: T.fontSize.md,
-  },
-  multiline: {
-    minHeight: 96,
-    textAlignVertical: 'top',
-  },
-  focused: {
-    borderColor: T.accent,
-  },
-  errored: {
-    borderColor: T.dangerBorder,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  error: {
-    color: T.danger,
-    fontSize: T.fontSize.xs,
-  },
-});

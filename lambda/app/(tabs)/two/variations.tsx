@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Alert,
-  ScrollView,
-  StyleSheet,
-} from 'react-native';
+import { Alert, ScrollView } from 'react-native';
+import { Text, XStack, YStack } from 'tamagui';
 import { DropdownSelect, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
 import Button from '@/components/Button';
@@ -23,10 +17,10 @@ interface Variation {
 
 export default function VariationsScreen() {
   const { variations, variationTypes, refreshVariations } = useExerciseData();
-  const [name, setName] = useState('');
+  const [name, setName]     = useState('');
   const [typeId, setTypeId] = useState<number | null>(variationTypes[0]?.variation_type_id ?? null);
   const [creating, setCreating] = useState(false);
-  const [editVar, setEditVar] = useState<Variation | null>(null);
+  const [editVar, setEditVar]   = useState<Variation | null>(null);
 
   const typeOptions = variationTypes.map((vt) => ({ label: vt.variation_type_name, value: vt.variation_type_id }));
 
@@ -69,98 +63,96 @@ export default function VariationsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      style={{ flex: 1, backgroundColor: T.bg }}
+      contentContainerStyle={{ padding: T.space.lg }}
+      keyboardShouldPersistTaps="handled"
+    >
       {/* ── Create form ── */}
-      <Text style={styles.sectionTitle}>New Variation</Text>
-      <Input
-        placeholder="Variation name"
-        value={name}
-        onChangeText={setName}
-      />
-      <Text style={styles.label}>Variation type</Text>
-      <DropdownSelect
-        options={typeOptions}
-        value={typeId}
-        onChange={setTypeId}
-        placeholder="Select type…"
-      />
-      <View style={styles.btnRow}>
+      <Text fontSize="$lg" fontWeight="700" color="$color" marginBottom="$md">New Variation</Text>
+      <Input placeholder="Variation name" value={name} onChangeText={setName} />
+
+      <Text fontSize="$sm" fontWeight="500" color="$color" marginTop="$md" marginBottom="$xs">Variation type</Text>
+      <DropdownSelect options={typeOptions} value={typeId} onChange={setTypeId} placeholder="Select type…" />
+
+      <YStack marginTop="$md">
         <Button label="Add Variation" onPress={create} loading={creating} />
-      </View>
+      </YStack>
 
       {/* ── List ── */}
-      <Text style={[styles.sectionTitle, { marginTop: T.space.xxl }]}>All Variations</Text>
+      <Text fontSize="$lg" fontWeight="700" color="$color" marginTop="$xxl" marginBottom="$md">All Variations</Text>
       {variations.length === 0 ? (
-        <Text style={styles.empty}>No variations yet.</Text>
+        <Text color="$muted" padding="$xs">No variations yet.</Text>
       ) : (
         variations.map((v) => (
-          <View key={v.exercise_variation_id} style={styles.row}>
-            <View style={styles.rowInfo}>
-              <Text style={styles.rowName}>{v.exercise_variation_name}</Text>
-              <Text style={styles.rowSub}>{v.variation_type_name}</Text>
-            </View>
-            <TouchableOpacity style={styles.rowBtn} onPress={() => setEditVar({ ...v })}>
-              <Text style={styles.rowBtnText}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.rowBtn, styles.rowBtnDanger]} onPress={() => confirmDelete(v.exercise_variation_id)}>
-              <Text style={[styles.rowBtnText, { color: T.danger }]}>Del</Text>
-            </TouchableOpacity>
-          </View>
+          <XStack
+            key={v.exercise_variation_id}
+            alignItems="center"
+            paddingVertical="$md"
+            borderBottomWidth={0.5}
+            borderBottomColor="$borderColor"
+          >
+            <YStack flex={1}>
+              <Text fontSize={15} color="$color">{v.exercise_variation_name}</Text>
+              <Text fontSize="$xs" color="$muted" marginTop="$xs">{v.variation_type_name}</Text>
+            </YStack>
+            <XStack
+              paddingHorizontal="$sm"
+              paddingVertical={T.space.xs + 2}
+              marginLeft="$sm"
+              borderRadius="$sm"
+              backgroundColor="$accentBg"
+              pressStyle={{ opacity: 0.7 }}
+              onPress={() => setEditVar({ ...v })}
+              cursor="pointer"
+            >
+              <Text fontSize="$sm" fontWeight="500" color="$accent">Edit</Text>
+            </XStack>
+            <XStack
+              paddingHorizontal="$sm"
+              paddingVertical={T.space.xs + 2}
+              marginLeft="$sm"
+              borderRadius="$sm"
+              backgroundColor="$dangerBg"
+              pressStyle={{ opacity: 0.7 }}
+              onPress={() => confirmDelete(v.exercise_variation_id)}
+              cursor="pointer"
+            >
+              <Text fontSize="$sm" fontWeight="500" color="$danger">Del</Text>
+            </XStack>
+          </XStack>
         ))
       )}
-      <View style={{ height: T.space.xxl }} />
+      <YStack height={T.space.xxl} />
 
       {/* ── Edit modal ── */}
       <SlideUpModal visible={!!editVar} onClose={() => setEditVar(null)}>
-        <View style={styles.modalBox}>
-          <Text style={styles.modalTitle}>Edit Variation</Text>
+        <YStack
+          backgroundColor="$surface"
+          borderTopLeftRadius="$lg"
+          borderTopRightRadius="$lg"
+          padding="$xl"
+          paddingBottom="$xxl"
+        >
+          <Text fontSize="$lg" fontWeight="700" color="$color" marginBottom="$md">Edit Variation</Text>
           <Input
             value={editVar?.exercise_variation_name ?? ''}
             onChangeText={(t) => setEditVar((v) => v ? { ...v, exercise_variation_name: t } : v)}
             placeholder="Variation name"
           />
-          <Text style={styles.label}>Variation type</Text>
+          <Text fontSize="$sm" fontWeight="500" color="$color" marginTop="$md" marginBottom="$xs">Variation type</Text>
           <DropdownSelect
             options={typeOptions}
             value={editVar?.variation_type_id ?? null}
             onChange={(v) => setEditVar((e) => e ? { ...e, variation_type_id: v } : e)}
             placeholder="Select type…"
           />
-          <View style={styles.modalBtns}>
-            <View style={styles.modalBtnFlex}>
-              <Button label="Save" onPress={saveEdit} />
-            </View>
-            <View style={styles.modalBtnFlex}>
-              <Button label="Cancel" onPress={() => setEditVar(null)} variant="ghost" />
-            </View>
-          </View>
-        </View>
+          <XStack gap="$sm" marginTop="$sm">
+            <YStack flex={1}><Button label="Save" onPress={saveEdit} /></YStack>
+            <YStack flex={1}><Button label="Cancel" onPress={() => setEditVar(null)} variant="ghost" /></YStack>
+          </XStack>
+        </YStack>
       </SlideUpModal>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: T.bg, padding: T.space.lg },
-  sectionTitle: { fontSize: T.fontSize.lg, fontWeight: '700', color: T.primary, marginBottom: T.space.md },
-  label: { fontSize: T.fontSize.sm, fontWeight: '500', color: T.primary, marginTop: T.space.md, marginBottom: T.space.xs },
-  btnRow: { marginTop: T.space.md },
-  empty: { color: T.muted, padding: T.space.xs },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: T.space.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: T.border,
-  },
-  rowInfo: { flex: 1 },
-  rowName: { fontSize: T.fontSize.md - 1, color: T.primary },
-  rowSub: { fontSize: T.fontSize.xs, color: T.muted, marginTop: T.space.xs },
-  rowBtn: { paddingHorizontal: T.space.sm, paddingVertical: T.space.xs + 2, marginLeft: T.space.sm, borderRadius: T.radius.sm, backgroundColor: T.accentBg },
-  rowBtnDanger: { backgroundColor: T.dangerBg },
-  rowBtnText: { fontSize: T.fontSize.sm, fontWeight: '500', color: T.accent },
-  modalBox: { backgroundColor: T.surface, borderTopLeftRadius: T.radius.lg, borderTopRightRadius: T.radius.lg, padding: T.space.xl, paddingBottom: T.space.xxl },
-  modalTitle: { fontSize: T.fontSize.lg, fontWeight: '700', color: T.primary, marginBottom: T.space.md },
-  modalBtns: { flexDirection: 'row', gap: T.space.sm, marginTop: T.space.sm },
-  modalBtnFlex: { flex: 1 },
-});

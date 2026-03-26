@@ -1,6 +1,6 @@
-import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { Text, XStack, YStack } from 'tamagui';
 import PageHeader from '@/components/PageHeader';
 import Card from '@/components/Card';
 import T from '@/constants/Theme';
@@ -30,53 +30,31 @@ export default function AdminExercisesHub() {
   const router = useRouter();
 
   return (
-    <View style={styles.container}>
+    <YStack flex={1} backgroundColor="$background">
       <PageHeader title="Exercise Configuration" />
-      <View style={styles.content}>
+      <YStack padding="$xl" gap="$md">
         {SECTIONS.map((s) => (
           <Card key={s.route} onPress={() => router.push(s.route as any)}>
-            <View style={styles.cardInner}>
-              <View style={styles.iconWrap}>
+            <XStack alignItems="center" gap="$lg">
+              <XStack
+                width={44}
+                height={44}
+                borderRadius="$md"
+                backgroundColor="$accentBg"
+                alignItems="center"
+                justifyContent="center"
+              >
                 <FontAwesome name={s.icon} size={22} color={T.accent} />
-              </View>
-              <View style={styles.cardText}>
-                <Text style={styles.cardLabel}>{s.label}</Text>
-                <Text style={styles.cardDesc}>{s.description}</Text>
-              </View>
+              </XStack>
+              <YStack flex={1}>
+                <Text fontSize="$lg" fontWeight="600" color="$color" marginBottom="$xs">{s.label}</Text>
+                <Text fontSize="$sm" color="$muted">{s.description}</Text>
+              </YStack>
               <FontAwesome name="chevron-right" size={14} color={T.muted} />
-            </View>
+            </XStack>
           </Card>
         ))}
-      </View>
-    </View>
+      </YStack>
+    </YStack>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: T.bg },
-  content: { padding: T.space.xl, gap: T.space.md },
-  cardInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: T.space.lg,
-  },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: T.radius.md,
-    backgroundColor: T.accentBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardText: { flex: 1 },
-  cardLabel: {
-    fontSize: T.fontSize.lg,
-    fontWeight: '600',
-    color: T.primary,
-    marginBottom: T.space.xs,
-  },
-  cardDesc: {
-    fontSize: T.fontSize.sm,
-    color: T.muted,
-  },
-});

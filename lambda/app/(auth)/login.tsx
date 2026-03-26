@@ -1,9 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  View,
-  TouchableOpacity,
-  Text,
-  StyleSheet,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
@@ -12,6 +8,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import { useAuthContext } from '@/lib/AuthContext';
 import { withGuard } from '@/lib/asyncGuard';
 import { loginSchema, getFieldErrors } from '@/lib/validation';
@@ -29,9 +26,7 @@ export default function LoginScreen() {
   const { signIn, signInWithGoogle, signInWithApple, loading, sessionExpired, clearSessionExpired } = useAuthContext();
 
   useEffect(() => {
-    if (sessionExpired) {
-      return () => clearSessionExpired();
-    }
+    if (sessionExpired) return () => clearSessionExpired();
   }, []);
 
   useEffect(() => {
@@ -70,122 +65,115 @@ export default function LoginScreen() {
     } finally { setSocialLoading(null); }
   });
 
-  const isLoading = loading || socialLoading !== null;
+  const isLoading   = loading || socialLoading !== null;
   const isCoolingDown = cooldown > 0;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.content}>
-        {sessionExpired && (
-          <View style={styles.expiredBanner}>
-            <Text style={styles.expiredBannerText}>Your session expired. Please log in again.</Text>
-          </View>
-        )}
+    <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <YStack flex={1} justifyContent="center" paddingHorizontal="$xl" gap="$lg">
 
-        <View style={styles.header}>
-          <Text style={styles.title}>Lambda</Text>
-          <Text style={styles.subtitle}>Login</Text>
-        </View>
-
-        <View style={styles.form}>
-          <Input
-            label="Email"
-            value={email}
-            onChangeText={(v) => { setEmail(v); setFieldErrors((e) => ({ ...e, email: '' })); }}
-            placeholder="Enter your email"
-            error={fieldErrors.email}
-            editable={!isLoading}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-
-          <Input
-            label="Password"
-            value={password}
-            onChangeText={(v) => { setPassword(v); setFieldErrors((e) => ({ ...e, password: '' })); }}
-            placeholder="Enter your password"
-            error={fieldErrors.password}
-            editable={!isLoading}
-            secureTextEntry
-          />
-
-          <Button
-            label={isCoolingDown ? `Try again in ${cooldown}s` : 'Login'}
-            onPress={handleLogin}
-            disabled={isLoading || isCoolingDown}
-            loading={loading}
-          />
-
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {Platform.OS === 'ios' && (
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-              cornerRadius={T.radius.md}
-              style={[styles.appleButton, { opacity: socialLoading === 'apple' ? 0.6 : 1 }]}
-              onPress={handleApple}
-            />
+          {/* Session expired banner */}
+          {sessionExpired && (
+            <YStack
+              backgroundColor="$accentBg"
+              borderColor="$accent"
+              borderWidth={1}
+              borderRadius="$md"
+              padding="$md"
+            >
+              <Text color="$accent" fontSize="$sm" textAlign="center">
+                Your session expired. Please log in again.
+              </Text>
+            </YStack>
           )}
 
-          <TouchableOpacity
-            style={[styles.googleButton, { opacity: socialLoading === 'google' ? 0.6 : 1 }]}
-            onPress={handleGoogle}
-            disabled={isLoading}>
-            {socialLoading === 'google' ? (
-              <ActivityIndicator color={T.primary} />
-            ) : (
-              <Text style={styles.googleButtonText}>Sign in with Google</Text>
-            )}
-          </TouchableOpacity>
+          {/* Header */}
+          <YStack alignItems="center" marginBottom="$xxl">
+            <Text fontSize={32} fontWeight="bold" marginBottom="$sm" color="$color">Lambda</Text>
+            <Text fontSize="$lg" color="$muted">Login</Text>
+          </YStack>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <Link href="/(auth)/signup">
-              <Text style={styles.link}>Sign up</Text>
-            </Link>
-          </View>
-        </View>
+          {/* Form */}
+          <YStack gap="$lg">
+            <Input
+              label="Email"
+              value={email}
+              onChangeText={(v) => { setEmail(v); setFieldErrors((e) => ({ ...e, email: '' })); }}
+              placeholder="Enter your email"
+              error={fieldErrors.email}
+              editable={!isLoading}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+
+            <Input
+              label="Password"
+              value={password}
+              onChangeText={(v) => { setPassword(v); setFieldErrors((e) => ({ ...e, password: '' })); }}
+              placeholder="Enter your password"
+              error={fieldErrors.password}
+              editable={!isLoading}
+              secureTextEntry
+            />
+
+            <Button
+              label={isCoolingDown ? `Try again in ${cooldown}s` : 'Login'}
+              onPress={handleLogin}
+              disabled={isLoading || isCoolingDown}
+              loading={loading}
+            />
+
+            <XStack alignItems="center" gap="$sm" marginVertical="$xs">
+              <Separator flex={1} borderColor="$borderColor" />
+              <Text fontSize="$sm" color="$muted">or</Text>
+              <Separator flex={1} borderColor="$borderColor" />
+            </XStack>
+
+            {/* Apple Sign-In (iOS only, uses native component) */}
+            {Platform.OS === 'ios' && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={T.radius.md}
+                style={{ height: 48, borderRadius: T.radius.md, opacity: socialLoading === 'apple' ? 0.6 : 1 }}
+                onPress={handleApple}
+              />
+            )}
+
+            {/* Google Sign-In */}
+            <XStack
+              height={48}
+              borderRadius="$md"
+              borderWidth={1}
+              borderColor="$borderColor"
+              alignItems="center"
+              justifyContent="center"
+              backgroundColor="$surface"
+              opacity={socialLoading === 'google' ? 0.6 : 1}
+              pressStyle={{ opacity: 0.75 }}
+              onPress={isLoading ? undefined : handleGoogle}
+              cursor="pointer"
+            >
+              {socialLoading === 'google'
+                ? <Spinner size="small" color="$color" />
+                : <Text color="$color" fontSize="$md" fontWeight="600">Sign in with Google</Text>
+              }
+            </XStack>
+
+            <XStack justifyContent="center" marginTop="$sm">
+              <Text fontSize="$sm" color="$muted">Don't have an account? </Text>
+              <Link href="/(auth)/signup">
+                <Text color="$accent" fontSize="$sm" fontWeight="600">Sign up</Text>
+              </Link>
+            </XStack>
+          </YStack>
+
+        </YStack>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: T.bg },
-  content: { flex: 1, justifyContent: 'center', paddingHorizontal: T.space.xl },
-  header: { marginBottom: T.space.xxl, alignItems: 'center' },
-  title: { fontSize: 32, fontWeight: 'bold', marginBottom: T.space.sm, color: T.primary },
-  subtitle: { fontSize: T.fontSize.lg, color: T.muted },
-  form: { gap: T.space.lg },
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.sm, marginVertical: T.space.xs },
-  dividerLine: { flex: 1, height: 1, backgroundColor: T.border },
-  dividerText: { fontSize: T.fontSize.sm, color: T.muted },
-  appleButton: { height: 48, borderRadius: T.radius.md },
-  googleButton: {
-    height: 48,
-    borderRadius: T.radius.md,
-    borderWidth: 1,
-    borderColor: T.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: T.surface,
-  },
-  googleButtonText: { color: T.primary, fontSize: T.fontSize.md, fontWeight: '600' },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: T.space.sm },
-  footerText: { fontSize: T.fontSize.sm, color: T.muted },
-  link: { color: T.accent, fontSize: T.fontSize.sm, fontWeight: '600' },
-  expiredBanner: {
-    backgroundColor: T.accentBg,
-    borderColor: T.accent,
-    borderWidth: 1,
-    borderRadius: T.radius.md,
-    padding: T.space.md,
-    marginBottom: T.space.lg,
-  },
-  expiredBannerText: { color: T.accent, fontSize: T.fontSize.sm, textAlign: 'center' },
-});

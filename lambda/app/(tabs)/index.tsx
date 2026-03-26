@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  TouchableOpacity,
 } from 'react-native';
+import { Separator, Text, XStack, YStack } from 'tamagui';
 import supabase from '@/lib/supabase';
 import { useAuthContext } from '@/lib/AuthContext';
 import { DropdownSelect } from '@/components/FormControls';
@@ -28,13 +25,13 @@ const GENDER_OPTIONS = [
 export default function ProfileScreen() {
   const { user, profile, signOut, refreshProfile } = useAuthContext();
 
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [name, setName] = useState('');
-  const [lastname, setLastname] = useState('');
+  const [editing, setEditing]     = useState(false);
+  const [saving, setSaving]       = useState(false);
+  const [name, setName]           = useState('');
+  const [lastname, setLastname]   = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
-  const [gender, setGender] = useState('');
-  const [height, setHeight] = useState('');
+  const [gender, setGender]       = useState('');
+  const [height, setHeight]       = useState('');
 
   const startEditing = () => {
     setName(profile?.user_name ?? '');
@@ -107,113 +104,87 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <YStack flex={1} backgroundColor="$background">
       <PageHeader
         title="User Profile"
-        right={!editing ? (
-          <TouchableOpacity onPress={startEditing}>
-            <Text style={styles.editButton}>Edit</Text>
-          </TouchableOpacity>
-        ) : undefined}
+        right={!editing
+          ? <Text color="$accent" fontSize="$md" fontWeight="600" onPress={startEditing} cursor="pointer">Edit</Text>
+          : undefined
+        }
       />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView showsVerticalScrollIndicator={false}>
-          <View style={styles.content}>
+          <YStack padding="$xl" gap="$lg">
 
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Email</Text>
-              <Text style={styles.value}>{user?.email}</Text>
-            </View>
+            {/* Email */}
+            <YStack gap="$xs" paddingBottom="$lg" borderBottomWidth={0.5} borderBottomColor="$borderColor">
+              <Text fontSize="$xs" color="$muted">Email</Text>
+              <Text fontSize="$md" fontWeight="500" color="$color">{user?.email}</Text>
+            </YStack>
 
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>First Name</Text>
-              {editing ? (
-                <Input value={name} onChangeText={setName} placeholder="Enter first name" editable={!saving} />
-              ) : (
-                <Text style={styles.value}>{profile?.user_name || '—'}</Text>
-              )}
-            </View>
+            {/* First Name */}
+            <YStack gap="$xs" paddingBottom="$lg" borderBottomWidth={0.5} borderBottomColor="$borderColor">
+              <Text fontSize="$xs" color="$muted">First Name</Text>
+              {editing
+                ? <Input value={name} onChangeText={setName} placeholder="Enter first name" editable={!saving} />
+                : <Text fontSize="$md" fontWeight="500" color="$color">{profile?.user_name || '—'}</Text>
+              }
+            </YStack>
 
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Last Name</Text>
-              {editing ? (
-                <Input value={lastname} onChangeText={setLastname} placeholder="Enter last name (optional)" editable={!saving} />
-              ) : (
-                <Text style={styles.value}>{profile?.user_lastname || '—'}</Text>
-              )}
-            </View>
+            {/* Last Name */}
+            <YStack gap="$xs" paddingBottom="$lg" borderBottomWidth={0.5} borderBottomColor="$borderColor">
+              <Text fontSize="$xs" color="$muted">Last Name</Text>
+              {editing
+                ? <Input value={lastname} onChangeText={setLastname} placeholder="Enter last name (optional)" editable={!saving} />
+                : <Text fontSize="$md" fontWeight="500" color="$color">{profile?.user_lastname || '—'}</Text>
+              }
+            </YStack>
 
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Date of Birth</Text>
-              {editing ? (
-                <DatePickerField value={dateOfBirth} onChangeDate={setDateOfBirth} editable={!saving} />
-              ) : (
-                <Text style={styles.value}>{profile?.user_date_of_birth || '—'}</Text>
-              )}
-            </View>
+            {/* Date of Birth */}
+            <YStack gap="$xs" paddingBottom="$lg" borderBottomWidth={0.5} borderBottomColor="$borderColor">
+              <Text fontSize="$xs" color="$muted">Date of Birth</Text>
+              {editing
+                ? <DatePickerField value={dateOfBirth} onChangeDate={setDateOfBirth} editable={!saving} />
+                : <Text fontSize="$md" fontWeight="500" color="$color">{profile?.user_date_of_birth || '—'}</Text>
+              }
+            </YStack>
 
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Gender</Text>
-              {editing ? (
-                <DropdownSelect
-                  options={GENDER_OPTIONS}
-                  value={gender}
-                  onChange={setGender}
-                  placeholder="Not specified"
-                />
-              ) : (
-                <Text style={styles.value}>{profile?.user_gender || '—'}</Text>
-              )}
-            </View>
+            {/* Gender */}
+            <YStack gap="$xs" paddingBottom="$lg" borderBottomWidth={0.5} borderBottomColor="$borderColor">
+              <Text fontSize="$xs" color="$muted">Gender</Text>
+              {editing
+                ? <DropdownSelect options={GENDER_OPTIONS} value={gender} onChange={setGender} placeholder="Not specified" />
+                : <Text fontSize="$md" fontWeight="500" color="$color">{profile?.user_gender || '—'}</Text>
+              }
+            </YStack>
 
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Height (cm)</Text>
-              {editing ? (
-                <Input
-                  value={height}
-                  onChangeText={setHeight}
-                  placeholder="Enter height in cm (optional)"
-                  keyboardType="number-pad"
-                  editable={!saving}
-                />
-              ) : (
-                <Text style={styles.value}>
-                  {profile?.user_height_cm ? `${profile.user_height_cm} cm` : '—'}
-                </Text>
-              )}
-            </View>
+            {/* Height */}
+            <YStack gap="$xs" paddingBottom="$lg" borderBottomWidth={0.5} borderBottomColor="$borderColor">
+              <Text fontSize="$xs" color="$muted">Height (cm)</Text>
+              {editing
+                ? <Input value={height} onChangeText={setHeight} placeholder="Enter height in cm (optional)" keyboardType="number-pad" editable={!saving} />
+                : <Text fontSize="$md" fontWeight="500" color="$color">
+                    {profile?.user_height_cm ? `${profile.user_height_cm} cm` : '—'}
+                  </Text>
+              }
+            </YStack>
 
+            {/* Actions */}
             {editing ? (
-              <View style={styles.editActions}>
+              <YStack gap="$md" marginTop="$sm">
                 <Button label="Save" onPress={handleSave} loading={saving} disabled={saving} />
                 <Button label="Cancel" onPress={() => setEditing(false)} variant="ghost" disabled={saving} />
-              </View>
+              </YStack>
             ) : (
-              <View style={styles.accountActions}>
+              <YStack gap="$md" marginTop="$xxl">
                 <Button label="Logout" onPress={handleLogout} />
                 <Button label="Delete Account" onPress={handleDeleteAccount} variant="danger" />
-              </View>
+              </YStack>
             )}
-          </View>
+
+          </YStack>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </YStack>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: T.bg },
-  flex: { flex: 1 },
-  content: { padding: T.space.xl },
-  editButton: { color: T.accent, fontSize: T.fontSize.md, fontWeight: '600' },
-  field: {
-    marginBottom: T.space.lg,
-    paddingBottom: T.space.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: T.border,
-  },
-  fieldLabel: { fontSize: T.fontSize.xs, marginBottom: T.space.xs, color: T.muted },
-  value: { fontSize: T.fontSize.md, fontWeight: '500', color: T.primary },
-  editActions: { gap: T.space.md, marginTop: T.space.sm },
-  accountActions: { gap: T.space.md, marginTop: T.space.xxl },
-});
