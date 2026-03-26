@@ -6,6 +6,7 @@ import { useExerciseData } from '@/lib/ExerciseDataContext';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import supabase from '@/lib/supabase';
+import { useAsyncGuard } from '@/lib/asyncGuard';
 import T from '@/constants/Theme';
 
 interface Exercise {
@@ -20,6 +21,7 @@ const VOLUME_OPTIONS    = [{ label: 'Reps', value: 'reps' }, { label: 'Duration'
 const INTENSITY_OPTIONS = [{ label: 'Weight', value: 'weight' }, { label: 'Distance', value: 'distance' }];
 
 export default function ExercisesScreen() {
+  const guard = useAsyncGuard();
   const { exercises, refreshExercises } = useExerciseData();
   const [name, setName]       = useState('');
   const [volume, setVolume]   = useState('reps');
@@ -27,7 +29,7 @@ export default function ExercisesScreen() {
   const [creating, setCreating]   = useState(false);
   const [editEx, setEditEx]       = useState<Exercise | null>(null);
 
-  async function create() {
+  function create() { return guard(async () => {
     if (!name.trim()) return Alert.alert('Name required');
     setCreating(true);
     const { error } = await supabase.from('dim_exercise').insert({
@@ -39,9 +41,9 @@ export default function ExercisesScreen() {
     if (error) return Alert.alert('Error', error.message);
     setName('');
     refreshExercises();
-  }
+  }); }
 
-  async function saveEdit() {
+  function saveEdit() { return guard(async () => {
     if (!editEx?.exercise_name.trim()) return;
     const { error } = await supabase
       .from('dim_exercise')
@@ -54,15 +56,15 @@ export default function ExercisesScreen() {
     if (error) return Alert.alert('Error', error.message);
     setEditEx(null);
     refreshExercises();
-  }
+  }); }
 
   function confirmDelete(id: number) {
     Alert.alert('Delete Exercise', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
+      { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
         await supabase.from('dim_exercise').update({ is_active: false }).eq('exercise_id', id);
         refreshExercises();
-      }},
+      })},
     ]);
   }
 

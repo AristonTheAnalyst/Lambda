@@ -1,15 +1,17 @@
-let busy = false;
+import { useCallback, useRef } from 'react';
 
 /**
- * Global async guard — prevents concurrent execution of any guarded handler.
- * If a guarded function is already running, subsequent calls are silently ignored.
+ * Per-component async guard — prevents concurrent execution of guarded handlers
+ * within the same component. Call once per component; returns a stable guard function.
+ *
+ * Use on API calls, form submissions, and auth actions.
+ * Do NOT use on navigation or other instant UI interactions.
  */
-export async function withGuard<T>(fn: () => Promise<T>): Promise<T | undefined> {
-  if (busy) return undefined;
-  busy = true;
-  try {
-    return await fn();
-  } finally {
-    busy = false;
-  }
+export function useAsyncGuard() {
+  const busy = useRef(false);
+  return useCallback(async <T>(fn: () => Promise<T>): Promise<T | undefined> => {
+    if (busy.current) return undefined;
+    busy.current = true;
+    try { return await fn(); } finally { busy.current = false; }
+  }, []);
 }

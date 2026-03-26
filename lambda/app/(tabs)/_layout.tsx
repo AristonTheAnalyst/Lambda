@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -8,6 +8,13 @@ import {
   SafeAreaView,
   Dimensions,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  runOnJS,
+  Easing,
+} from 'react-native-reanimated';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs, useRouter, usePathname } from 'expo-router';
 import T from '@/constants/Theme';
@@ -16,6 +23,7 @@ import { DrawerContext } from '@/lib/DrawerContext';
 import HamburgerButton from '@/components/HamburgerButton';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const DRAWER_WIDTH = SCREEN_WIDTH * 0.72;
 
 const NAV_ITEMS = [
   { label: 'User Profile', route: '/', icon: 'user' as const },
@@ -29,13 +37,43 @@ export default function TabLayout() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const openDrawer = useCallback(() => setDrawerOpen(true), []);
-  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+  const overlayOpacity   = useSharedValue(0);
+  const drawerTranslateX = useSharedValue(-DRAWER_WIDTH);
 
-  const navTo = (route: string) => {
+  const openDrawer = useCallback(() => {
+    overlayOpacity.value   = 0;
+    drawerTranslateX.value = -DRAWER_WIDTH;
+    setDrawerOpen(true);
+  }, []);
+
+  useEffect(() => {
+    if (drawerOpen) {
+      overlayOpacity.value   = withTiming(1, { duration: 250 });
+      drawerTranslateX.value = withTiming(0, { duration: 280, easing: Easing.out(Easing.cubic) });
+    }
+  }, [drawerOpen]);
+
+  const closeDrawer = useCallback(() => {
+    overlayOpacity.value   = withTiming(0, { duration: 200 });
+    drawerTranslateX.value = withTiming(
+      -DRAWER_WIDTH,
+      { duration: 220, easing: Easing.in(Easing.cubic) },
+      (finished) => { if (finished) runOnJS(setDrawerOpen)(false); }
+    );
+  }, []);
+
+  const navTo = useCallback((route: string) => {
     closeDrawer();
     router.push(route as any);
-  };
+  }, [closeDrawer, router]);
+
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: overlayOpacity.value,
+  }));
+
+  const drawerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: drawerTranslateX.value }],
+  }));
 
   return (
     <ExerciseDataProvider>
@@ -56,50 +94,56 @@ export default function TabLayout() {
       <Modal
         visible={drawerOpen}
         transparent
-        animationType="fade"
-        onRequestClose={closeDrawer}>
-        <TouchableOpacity
-          style={styles.overlay}
-          onPress={closeDrawer}
-          activeOpacity={1}>
+        animationType="none"
+        onRequestClose={closeDrawer}
+      >
+        {/* Overlay — fades in/out independently */}
+        <Animated.View style={[styles.overlay, overlayStyle]}>
           <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            onPress={closeDrawer}
             activeOpacity={1}
-            style={[styles.drawer, { backgroundColor: T.surface }]}
-            onPress={() => {}}>
-            <SafeAreaView style={{ flex: 1 }}>
-              <Text style={[styles.drawerTitle, { color: T.primary }]}>
-                Menu
-              </Text>
-              {NAV_ITEMS.map((item) => {
-                const isActive =
-                  (item.route === '/' && pathname === '/') ||
-                  (item.route !== '/' && pathname.startsWith(item.route));
-                return (
-                  <TouchableOpacity
-                    key={item.route}
+          />
+        </Animated.View>
+
+        {/* Drawer panel — slides in/out from left */}
+        <Animated.View style={[styles.drawer, { backgroundColor: T.surface }, drawerStyle]}>
+          <SafeAreaView style={{ flex: 1 }}>
+            <Text style={[styles.drawerTitle, { color: T.primary }]}>
+              Menu
+            </Text>
+            {NAV_ITEMS.map((item) => {
+              const isActive =
+                (item.route === '/' && pathname === '/') ||
+                (item.route !== '/' && pathname.startsWith(item.route));
+              return (
+                <TouchableOpacity
+                  key={item.route}
+                  style={[
+                    styles.navItem,
+                    isActive && { backgroundColor: T.accentBg },
+                  ]}
+                  onPress={isActive ? closeDrawer : () => navTo(item.route)}
+                  activeOpacity={isActive ? 1 : 0.7}
+                >
+                  <FontAwesome
+                    name={item.icon}
+                    size={18}
+                    color={isActive ? T.accent : T.muted}
+                  />
+                  <Text
                     style={[
-                      styles.navItem,
-                      isActive && { backgroundColor: T.accentBg },
+                      styles.navLabel,
+                      { color: isActive ? T.accent : T.primary },
                     ]}
-                    onPress={() => navTo(item.route)}>
-                    <FontAwesome
-                      name={item.icon}
-                      size={18}
-                      color={isActive ? T.accent : T.muted}
-                    />
-                    <Text
-                      style={[
-                        styles.navLabel,
-                        { color: isActive ? T.accent : T.primary },
-                      ]}>
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </SafeAreaView>
-          </TouchableOpacity>
-        </TouchableOpacity>
+                  >
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </SafeAreaView>
+        </Animated.View>
       </Modal>
     </DrawerContext.Provider>
     </ExerciseDataProvider>
@@ -108,12 +152,15 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   overlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.4)',
-    flexDirection: 'row',
   },
   drawer: {
-    width: SCREEN_WIDTH * 0.72,
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: DRAWER_WIDTH,
     paddingTop: 20,
     shadowColor: '#000',
     shadowOffset: { width: 2, height: 0 },

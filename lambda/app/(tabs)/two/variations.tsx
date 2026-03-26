@@ -6,6 +6,7 @@ import { useExerciseData } from '@/lib/ExerciseDataContext';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import supabase from '@/lib/supabase';
+import { useAsyncGuard } from '@/lib/asyncGuard';
 import T from '@/constants/Theme';
 
 interface Variation {
@@ -16,6 +17,7 @@ interface Variation {
 }
 
 export default function VariationsScreen() {
+  const guard = useAsyncGuard();
   const { variations, variationTypes, refreshVariations } = useExerciseData();
   const [name, setName]     = useState('');
   const [typeId, setTypeId] = useState<number | null>(variationTypes[0]?.variation_type_id ?? null);
@@ -24,7 +26,7 @@ export default function VariationsScreen() {
 
   const typeOptions = variationTypes.map((vt) => ({ label: vt.variation_type_name, value: vt.variation_type_id }));
 
-  async function create() {
+  function create() { return guard(async () => {
     if (!name.trim()) return Alert.alert('Name required');
     if (!typeId) return Alert.alert('Select a variation type');
     setCreating(true);
@@ -36,9 +38,9 @@ export default function VariationsScreen() {
     if (error) return Alert.alert('Error', error.message);
     setName('');
     refreshVariations();
-  }
+  }); }
 
-  async function saveEdit() {
+  function saveEdit() { return guard(async () => {
     if (!editVar?.exercise_variation_name.trim()) return;
     const { error } = await supabase
       .from('dim_exercise_variation')
@@ -50,15 +52,15 @@ export default function VariationsScreen() {
     if (error) return Alert.alert('Error', error.message);
     setEditVar(null);
     refreshVariations();
-  }
+  }); }
 
   function confirmDelete(id: number) {
     Alert.alert('Delete Variation', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
+      { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
         await supabase.from('dim_exercise_variation').update({ is_active: false }).eq('exercise_variation_id', id);
         refreshVariations();
-      }},
+      })},
     ]);
   }
 

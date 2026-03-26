@@ -14,6 +14,7 @@ import { DropdownSelect, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData, ExerciseDetail, AssignedVariation } from '@/lib/ExerciseDataContext';
 import { useAuthContext } from '@/lib/AuthContext';
 import supabase from '@/lib/supabase';
+import { useAsyncGuard } from '@/lib/asyncGuard';
 import T from '@/constants/Theme';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -42,6 +43,7 @@ function formatValues(arr: number[] | null): string {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function WorkoutLogScreen() {
+  const guard = useAsyncGuard();
   const { user } = useAuthContext();
   const { exercises, exerciseDetailMap } = useExerciseData();
 
@@ -115,7 +117,7 @@ export default function WorkoutLogScreen() {
     setter(updated);
   }
 
-  async function startWorkout() {
+  function startWorkout() { return guard(async () => {
     if (!user) return;
     setStartLoading(true);
     const { data, error } = await supabase
@@ -130,7 +132,7 @@ export default function WorkoutLogScreen() {
     setStartNotes('');
     await AsyncStorage.setItem(WORKOUT_ID_KEY, String(id));
     setSets([]);
-  }
+  }); }
 
   function confirmEndWorkout() {
     Alert.alert('End Workout', 'Are you sure you want to end this workout?', [
@@ -139,7 +141,7 @@ export default function WorkoutLogScreen() {
     ]);
   }
 
-  async function endWorkout() {
+  function endWorkout() { return guard(async () => {
     if (!currentWorkoutId) return;
     setEndLoading(true);
     if (endNotes.trim()) {
@@ -150,9 +152,9 @@ export default function WorkoutLogScreen() {
     setCurrentWorkoutId(null); setEndNotes(''); setSets([]);
     setSelectedExId(null); setSelectedEx(null); setWeight(''); setRepsOrDuration(''); setSetNotes(''); setSelectedVarIds([]);
     Alert.alert('Workout saved!');
-  }
+  }); }
 
-  async function logSet() {
+  function logSet() { return guard(async () => {
     if (!currentWorkoutId || !selectedExId || !selectedEx) return Alert.alert('Select an exercise first');
     if (!repsOrDuration.trim()) {
       return Alert.alert(
@@ -180,9 +182,9 @@ export default function WorkoutLogScreen() {
     if (error) return Alert.alert('Error', error.message);
     setWeight(''); setRepsOrDuration(''); setSetNotes(''); setSelectedVarIds([]);
     loadSets(currentWorkoutId);
-  }
+  }); }
 
-  async function openEditSet(s: WorkoutSet) {
+  function openEditSet(s: WorkoutSet) { return guard(async () => {
     setEditingSet(s);
     setEditWeight(s.workout_set_weight != null ? String(s.workout_set_weight) : '');
     const vals = s.workout_set_reps?.length ? s.workout_set_reps : s.workout_set_duration_seconds ?? [];
@@ -191,9 +193,9 @@ export default function WorkoutLogScreen() {
     setEditEx(exerciseDetailMap[s.exercise_id] ?? null);
     const { data: svData } = await supabase.from('fact_set_variation').select('exercise_variation_id').eq('workout_set_id', s.workout_set_id);
     setEditVarIds(svData ? svData.map((r: any) => r.exercise_variation_id) : []);
-  }
+  }); }
 
-  async function saveEditSet() {
+  function saveEditSet() { return guard(async () => {
     if (!editingSet || !editEx) return;
     const values = parseValues(editRepsOrDuration);
     const isReps = editEx.exercise_volume_type === 'reps';
@@ -216,16 +218,16 @@ export default function WorkoutLogScreen() {
     if (error) return Alert.alert('Error', error.message);
     setEditingSet(null); setEditEx(null);
     if (currentWorkoutId) loadSets(currentWorkoutId);
-  }
+  }); }
 
-  async function deleteSet(setId: number) {
+  function deleteSet(setId: number) {
     Alert.alert('Delete Set', 'Remove this set?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
+      { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
         await supabase.from('fact_set_variation').delete().eq('workout_set_id', setId);
         await supabase.from('fact_workout_set').delete().eq('workout_set_id', setId);
         if (currentWorkoutId) loadSets(currentWorkoutId);
-      }},
+      })},
     ]);
   }
 

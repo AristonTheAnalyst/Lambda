@@ -10,7 +10,7 @@ import { Link } from 'expo-router';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import { useAuthContext } from '@/lib/AuthContext';
-import { withGuard } from '@/lib/asyncGuard';
+import { useAsyncGuard } from '@/lib/asyncGuard';
 import { signupSchema, getFieldErrors } from '@/lib/validation';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
@@ -37,7 +37,7 @@ export default function SignupScreen() {
     return () => clearInterval(cooldownRef.current!);
   }, [cooldown > 0]);
 
-  const handleSignup = () => withGuard(async () => {
+  const handleSignup = () => guard(async () => {
     if (cooldown > 0) return;
     const result = signupSchema.safeParse({ email, password, confirmPassword });
     if (!result.success) { setFieldErrors(getFieldErrors(result.error)); return; }
@@ -46,7 +46,7 @@ export default function SignupScreen() {
     if (error) { Alert.alert('Signup Failed', error.message); setCooldown(30); }
   });
 
-  const handleGoogle = () => withGuard(async () => {
+  const handleGoogle = () => guard(async () => {
     setSocialLoading('google');
     try {
       const { error } = await signInWithGoogle();
@@ -54,7 +54,7 @@ export default function SignupScreen() {
     } finally { setSocialLoading(null); }
   });
 
-  const handleApple = () => withGuard(async () => {
+  const handleApple = () => guard(async () => {
     setSocialLoading('apple');
     try {
       const { error } = await signInWithApple();
@@ -62,6 +62,7 @@ export default function SignupScreen() {
     } finally { setSocialLoading(null); }
   });
 
+  const guard = useAsyncGuard();
   const isLoading    = loading || socialLoading !== null;
   const isCoolingDown = cooldown > 0;
 

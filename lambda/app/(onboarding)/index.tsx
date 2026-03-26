@@ -15,6 +15,7 @@ import { DropdownSelect } from '@/components/FormControls';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import DatePickerField from '@/components/DatePickerField';
+import { useAsyncGuard } from '@/lib/asyncGuard';
 import T from '@/constants/Theme';
 
 const GENDER_OPTIONS = [
@@ -32,10 +33,11 @@ export default function OnboardingScreen() {
   const [height, setHeight]       = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading]     = useState(false);
+  const guard = useAsyncGuard();
   const { refreshProfile }        = useAuthContext();
   const router                    = useRouter();
 
-  const handleCompleteOnboarding = async () => {
+  const handleCompleteOnboarding = () => guard(async () => {
     const result = onboardingSchema.safeParse({ name: name.trim(), lastname, dateOfBirth, gender, height });
     if (!result.success) { setFieldErrors(getFieldErrors(result.error)); return; }
     setFieldErrors({});
@@ -66,7 +68,7 @@ export default function OnboardingScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  });
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>

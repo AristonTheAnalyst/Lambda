@@ -6,9 +6,11 @@ import { DropdownSelect } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
 import Button from '@/components/Button';
 import supabase from '@/lib/supabase';
+import { useAsyncGuard } from '@/lib/asyncGuard';
 import T from '@/constants/Theme';
 
 export default function AssignVariationsScreen() {
+  const guard = useAsyncGuard();
   const { exercises, variations, refreshExerciseDetails } = useExerciseData();
   const [assignExId, setAssignExId]         = useState<number | null>(null);
   const [selectedVarIds, setSelectedVarIds] = useState<number[]>([]);
@@ -40,7 +42,7 @@ export default function AssignVariationsScreen() {
     );
   }
 
-  async function save() {
+  function save() { return guard(async () => {
     if (!assignExId) return Alert.alert('Select an exercise first');
     setSaving(true);
     await supabase.from('bridge_exercise_variation').delete().eq('exercise_id', assignExId);
@@ -52,7 +54,7 @@ export default function AssignVariationsScreen() {
     setSaving(false);
     refreshExerciseDetails();
     Alert.alert('Saved', 'Variations assigned successfully.');
-  }
+  }); }
 
   const grouped = variations.reduce<Record<string, typeof variations>>((acc, v) => {
     if (!acc[v.variation_type_name]) acc[v.variation_type_name] = [];

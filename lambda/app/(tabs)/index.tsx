@@ -13,6 +13,7 @@ import PageHeader from '@/components/PageHeader';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import DatePickerField from '@/components/DatePickerField';
+import { useAsyncGuard } from '@/lib/asyncGuard';
 import T from '@/constants/Theme';
 
 const GENDER_OPTIONS = [
@@ -23,6 +24,7 @@ const GENDER_OPTIONS = [
 ];
 
 export default function ProfileScreen() {
+  const guard = useAsyncGuard();
   const { user, profile, signOut, refreshProfile } = useAuthContext();
 
   const [editing, setEditing]     = useState(false);
@@ -42,7 +44,7 @@ export default function ProfileScreen() {
     setEditing(true);
   };
 
-  const handleSave = async () => {
+  const handleSave = () => guard(async () => {
     if (!name.trim()) { Alert.alert('Error', 'First name is required.'); return; }
     setSaving(true);
     try {
@@ -64,15 +66,15 @@ export default function ProfileScreen() {
     } finally {
       setSaving(false);
     }
-  };
+  });
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', onPress: async () => {
+      { text: 'Logout', onPress: () => guard(async () => {
         const { error } = await signOut();
         if (error) Alert.alert('Error', 'Failed to logout: ' + error.message);
-      }},
+      })},
     ]);
   };
 
@@ -82,7 +84,7 @@ export default function ProfileScreen() {
       'This will permanently delete your account and all associated data. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: async () => {
+        { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
           try {
             const { data: { session } } = await supabase.auth.getSession();
             const response = await fetch(
@@ -98,7 +100,7 @@ export default function ProfileScreen() {
           } catch {
             Alert.alert('Error', 'Failed to delete account. Please try again.');
           }
-        }},
+        })},
       ],
     );
   };
