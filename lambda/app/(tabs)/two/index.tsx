@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { navGuard } from '@/lib/asyncGuard';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Text, XStack, YStack } from 'tamagui';
 import PageHeader from '@/components/PageHeader';
@@ -34,7 +35,7 @@ export default function AdminExercisesHub() {
       <PageHeader title="Exercise Configuration" />
       <YStack padding={T.space.xl} gap={T.space.md}>
         {SECTIONS.map((s) => (
-          <Card key={s.route} onPress={() => router.push(s.route as any)}>
+          <Card key={s.route} onPress={() => navGuard(() => router.push(s.route as any))}>
             <XStack alignItems="center" gap={T.space.lg}>
               <XStack
                 width={44}

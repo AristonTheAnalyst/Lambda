@@ -21,6 +21,7 @@ import T from '@/constants/Theme';
 import { ExerciseDataProvider } from '@/lib/ExerciseDataContext';
 import { DrawerContext } from '@/lib/DrawerContext';
 import HamburgerButton from '@/components/HamburgerButton';
+import { navGuard } from '@/lib/asyncGuard';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DRAWER_WIDTH = SCREEN_WIDTH * 0.72;
@@ -63,8 +64,10 @@ export default function TabLayout() {
   }, []);
 
   const navTo = useCallback((route: string) => {
-    closeDrawer();
-    router.push(route as any);
+    navGuard(() => {
+      closeDrawer();
+      router.push(route as any);
+    });
   }, [closeDrawer, router]);
 
   const overlayStyle = useAnimatedStyle(() => ({

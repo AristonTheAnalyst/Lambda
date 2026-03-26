@@ -15,3 +15,16 @@ export function useAsyncGuard() {
     try { return await fn(); } finally { busy.current = false; }
   }, []);
 }
+
+/**
+ * Module-level navigation guard — blocks duplicate navigation calls for 500ms
+ * (the duration of a screen transition). Use this to wrap router.push/replace
+ * calls so that rapid taps don't trigger multiple navigations.
+ */
+let _navBusy = false;
+export function navGuard(fn: () => void): void {
+  if (_navBusy) return;
+  _navBusy = true;
+  fn();
+  setTimeout(() => { _navBusy = false; }, 500);
+}
