@@ -4,7 +4,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
 } from 'react-native';
 import { Spinner, Text, XStack, YStack } from 'tamagui';
 import PageHeader from '@/components/PageHeader';
@@ -246,8 +245,8 @@ export default function WorkoutLogScreen() {
 
         {/* ── No active workout ── */}
         {!currentWorkoutId && (
-          <YStack gap="$md">
-            <Text fontSize="$xl" fontWeight="700" color="$color">Start a Workout</Text>
+          <YStack gap={T.space.md}>
+            <Text fontSize={T.fontSize.xl} fontWeight="700" color={T.primary}>Start a Workout</Text>
             <Input placeholder="Workout notes (optional)" value={startNotes} onChangeText={setStartNotes} />
             <Button label="Start Workout" onPress={startWorkout} loading={startLoading} />
           </YStack>
@@ -256,9 +255,9 @@ export default function WorkoutLogScreen() {
         {/* ── Active workout ── */}
         {currentWorkoutId && (
           <>
-            <Text fontSize="$xl" fontWeight="700" marginBottom="$md" color="$color">Log a Set</Text>
+            <Text fontSize={T.fontSize.xl} fontWeight="700" marginBottom={T.space.md} color={T.primary}>Log a Set</Text>
 
-            <Text fontSize="$sm" fontWeight="500" marginBottom="$xs" color="$color">Exercise</Text>
+            <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
             <DropdownSelect
               options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.exercise_id }))}
               value={selectedExId}
@@ -267,7 +266,7 @@ export default function WorkoutLogScreen() {
             />
 
             {selectedEx && (
-              <YStack gap="$md" marginTop="$md">
+              <YStack gap={T.space.md} marginTop={T.space.md}>
                 <Input label="Weight (optional)" placeholder="kg" keyboardType="decimal-pad" value={weight} onChangeText={setWeight} />
                 <Input
                   label={selectedEx.exercise_volume_type === 'reps' ? 'Reps' : 'Duration (seconds)'}
@@ -279,7 +278,7 @@ export default function WorkoutLogScreen() {
                 {selectedEx.assigned_variations.length > 0 &&
                   Object.entries(groupByType(selectedEx.assigned_variations)).map(([typeName, vars]) => (
                     <YStack key={typeName}>
-                      <Text fontSize="$sm" fontWeight="500" marginBottom="$xs" color="$color">{typeName}</Text>
+                      <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>{typeName}</Text>
                       <DropdownSelect
                         options={[
                           { label: 'None', value: null },
@@ -297,11 +296,11 @@ export default function WorkoutLogScreen() {
             )}
 
             {/* ── Sets table ── */}
-            <Text fontSize="$xl" fontWeight="700" marginTop="$xl" marginBottom="$sm" color="$color">Sets this workout</Text>
+            <Text fontSize={T.fontSize.xl} fontWeight="700" marginTop={T.space.xl} marginBottom={T.space.sm} color={T.primary}>Sets this workout</Text>
             {setsLoading ? (
-              <Spinner size="large" color="$accent" marginTop="$md" />
+              <Spinner size="large" color={T.accent} marginTop={T.space.md} />
             ) : sets.length === 0 ? (
-              <Text color="$muted" marginTop="$sm">No sets logged yet.</Text>
+              <Text color={T.muted} marginTop={T.space.sm}>No sets logged yet.</Text>
             ) : (
               sets.map((s) => {
                 const exName = exerciseDetailMap[s.exercise_id]?.exercise_name ?? `#${s.exercise_id}`;
@@ -309,39 +308,39 @@ export default function WorkoutLogScreen() {
                   ? formatValues(s.workout_set_reps)
                   : s.workout_set_duration_seconds?.length ? `${formatValues(s.workout_set_duration_seconds)}s` : '—';
                 return (
-                  <YStack key={s.workout_set_id} borderBottomWidth={0.5} borderBottomColor="$borderColor" paddingVertical="$sm">
-                    <XStack alignItems="flex-start" gap="$sm">
-                      <Text fontWeight="700" fontSize={15} marginTop={1} color="$accent">#{s.workout_set_number}</Text>
+                  <YStack key={s.workout_set_id} borderBottomWidth={0.5} borderBottomColor={T.border} paddingVertical={T.space.sm}>
+                    <XStack alignItems="flex-start" gap={T.space.sm}>
+                      <Text fontWeight="700" fontSize={15} marginTop={1} color={T.accent}>#{s.workout_set_number}</Text>
                       <YStack flex={1}>
-                        <Text fontSize={15} fontWeight="500" color="$color">{exName}</Text>
-                        <Text fontSize="$xs" marginTop="$xs" color="$muted">
+                        <Text fontSize={15} fontWeight="500" color={T.primary}>{exName}</Text>
+                        <Text fontSize={T.fontSize.xs} marginTop={T.space.xs} color={T.muted}>
                           {s.workout_set_weight != null ? `${s.workout_set_weight}kg · ` : ''}{repsStr}
                           {s.workout_set_notes ? ` · ${s.workout_set_notes}` : ''}
                         </Text>
                       </YStack>
                     </XStack>
-                    <XStack gap="$sm" marginTop={T.space.xs + 2}>
+                    <XStack gap={T.space.sm} marginTop={T.space.xs + 2}>
                       <XStack
-                        paddingHorizontal="$sm"
+                        paddingHorizontal={T.space.sm}
                         paddingVertical={T.space.xs + 1}
-                        borderRadius="$sm"
-                        backgroundColor="$accentBg"
+                        borderRadius={T.radius.sm}
+                        backgroundColor={T.accentBg}
                         pressStyle={{ opacity: 0.7 }}
                         onPress={() => openEditSet(s)}
                         cursor="pointer"
                       >
-                        <Text fontSize="$sm" fontWeight="500" color="$accent">Edit</Text>
+                        <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.accent}>Edit</Text>
                       </XStack>
                       <XStack
-                        paddingHorizontal="$sm"
+                        paddingHorizontal={T.space.sm}
                         paddingVertical={T.space.xs + 1}
-                        borderRadius="$sm"
-                        backgroundColor="$dangerBg"
+                        borderRadius={T.radius.sm}
+                        backgroundColor={T.dangerBg}
                         pressStyle={{ opacity: 0.7 }}
                         onPress={() => deleteSet(s.workout_set_id)}
                         cursor="pointer"
                       >
-                        <Text fontSize="$sm" fontWeight="500" color="$danger">Del</Text>
+                        <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
                       </XStack>
                     </XStack>
                   </YStack>
@@ -350,7 +349,7 @@ export default function WorkoutLogScreen() {
             )}
 
             {/* ── End workout ── */}
-            <YStack marginTop="$xxl" paddingTop="$lg" borderTopWidth={0.5} borderTopColor="$borderColor" gap="$md">
+            <YStack marginTop={T.space.xxl} paddingTop={T.space.lg} borderTopWidth={0.5} borderTopColor={T.border} gap={T.space.md}>
               <Input label="Final notes (optional)" placeholder="Notes…" value={endNotes} onChangeText={setEndNotes} />
               <Button label="End Workout" onPress={confirmEndWorkout} loading={endLoading} variant="danger" />
             </YStack>
@@ -361,15 +360,15 @@ export default function WorkoutLogScreen() {
       {/* ── Edit Set Modal ── */}
       <SlideUpModal visible={!!editingSet} onClose={() => setEditingSet(null)}>
         <YStack
-          backgroundColor="$surface"
-          borderTopLeftRadius="$lg"
-          borderTopRightRadius="$lg"
-          padding="$xl"
+          backgroundColor={T.surface}
+          borderTopLeftRadius={T.radius.lg}
+          borderTopRightRadius={T.radius.lg}
+          padding={T.space.xl}
           maxHeight="85%"
         >
           <ScrollView keyboardShouldPersistTaps="handled">
-            <YStack gap="$md">
-              <Text fontSize="$lg" fontWeight="700" color="$color">Edit Set</Text>
+            <YStack gap={T.space.md}>
+              <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Edit Set</Text>
               <Input label="Weight (optional)" placeholder="kg" keyboardType="decimal-pad" value={editWeight} onChangeText={setEditWeight} />
               {editEx && (
                 <>
@@ -383,7 +382,7 @@ export default function WorkoutLogScreen() {
                   {editEx.assigned_variations.length > 0 &&
                     Object.entries(groupByType(editEx.assigned_variations)).map(([typeName, vars]) => (
                       <YStack key={typeName}>
-                        <Text fontSize="$sm" fontWeight="500" marginBottom="$xs" color="$color">{typeName}</Text>
+                        <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>{typeName}</Text>
                         <DropdownSelect
                           options={[
                             { label: 'None', value: null },
@@ -398,7 +397,7 @@ export default function WorkoutLogScreen() {
                 </>
               )}
               <Input label="Notes (optional)" placeholder="Notes…" value={editNotes} onChangeText={setEditNotes} />
-              <XStack gap="$sm">
+              <XStack gap={T.space.sm}>
                 <YStack flex={1}><Button label="Save" onPress={saveEditSet} loading={editLoading} /></YStack>
                 <YStack flex={1}><Button label="Cancel" onPress={() => setEditingSet(null)} variant="ghost" /></YStack>
               </XStack>

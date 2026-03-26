@@ -1,7 +1,8 @@
 import { ReactNode } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Separator, Stack, Text, XStack, YStack } from 'tamagui';
+import { Separator, Text, XStack, YStack } from 'tamagui';
 import HamburgerButton from './HamburgerButton';
+import T from '@/constants/Theme';
 
 interface Props {
   title: string;
@@ -15,7 +16,7 @@ export default function PageHeader({ title, right }: Props) {
     <YStack>
       <XStack
         paddingTop={insets.top}
-        backgroundColor="$background"
+        backgroundColor={T.bg}
         alignItems="center"
         justifyContent="space-between"
       >
@@ -24,11 +25,11 @@ export default function PageHeader({ title, right }: Props) {
           <HamburgerButton />
         </XStack>
 
-        {/* Center — title (absolutely fills remaining space, pointer-events off) */}
+        {/* Center — title */}
         <Text
           fontSize={20}
           fontWeight="600"
-          color="$color"
+          color={T.primary}
           flex={1}
           textAlign="center"
           pointerEvents="none"
@@ -37,11 +38,11 @@ export default function PageHeader({ title, right }: Props) {
         </Text>
 
         {/* Right — optional slot */}
-        <XStack width={73} justifyContent="flex-end" paddingRight="$lg" alignItems="center">
+        <XStack width={73} justifyContent="flex-end" paddingRight={T.space.lg} alignItems="center">
           {right ?? null}
         </XStack>
       </XStack>
-      <Separator borderColor="$borderColor" />
+      <Separator borderColor={T.border} />
     </YStack>
   );
 }

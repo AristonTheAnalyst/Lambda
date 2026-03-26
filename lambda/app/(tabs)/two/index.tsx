@@ -30,25 +30,25 @@ export default function AdminExercisesHub() {
   const router = useRouter();
 
   return (
-    <YStack flex={1} backgroundColor="$background">
+    <YStack flex={1} backgroundColor={T.bg}>
       <PageHeader title="Exercise Configuration" />
-      <YStack padding="$xl" gap="$md">
+      <YStack padding={T.space.xl} gap={T.space.md}>
         {SECTIONS.map((s) => (
           <Card key={s.route} onPress={() => router.push(s.route as any)}>
-            <XStack alignItems="center" gap="$lg">
+            <XStack alignItems="center" gap={T.space.lg}>
               <XStack
                 width={44}
                 height={44}
-                borderRadius="$md"
-                backgroundColor="$accentBg"
+                borderRadius={T.radius.md}
+                backgroundColor={T.accentBg}
                 alignItems="center"
                 justifyContent="center"
               >
                 <FontAwesome name={s.icon} size={22} color={T.accent} />
               </XStack>
               <YStack flex={1}>
-                <Text fontSize="$lg" fontWeight="600" color="$color" marginBottom="$xs">{s.label}</Text>
-                <Text fontSize="$sm" color="$muted">{s.description}</Text>
+                <Text fontSize={T.fontSize.lg} fontWeight="600" color={T.primary} marginBottom={T.space.xs}>{s.label}</Text>
+                <Text fontSize={T.fontSize.sm} color={T.muted}>{s.description}</Text>
               </YStack>
               <FontAwesome name="chevron-right" size={14} color={T.muted} />
             </XStack>

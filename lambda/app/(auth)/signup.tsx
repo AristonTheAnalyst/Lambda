@@ -62,7 +62,7 @@ export default function SignupScreen() {
     } finally { setSocialLoading(null); }
   });
 
-  const isLoading   = loading || socialLoading !== null;
+  const isLoading    = loading || socialLoading !== null;
   const isCoolingDown = cooldown > 0;
 
   return (
@@ -72,14 +72,14 @@ export default function SignupScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView showsVerticalScrollIndicator={false}>
-          <YStack paddingHorizontal="$xl" gap="$lg" paddingBottom="$xxl">
+          <YStack paddingHorizontal={T.space.xl} gap={T.space.lg} paddingBottom={T.space.xxl}>
 
-            <YStack alignItems="center" marginBottom="$xxl" marginTop="$xl">
-              <Text fontSize={32} fontWeight="bold" marginBottom="$sm" color="$color">Lambda</Text>
-              <Text fontSize="$lg" color="$muted">Create Account</Text>
+            <YStack alignItems="center" marginBottom={T.space.xxl} marginTop={T.space.xl}>
+              <Text fontSize={32} fontWeight="bold" marginBottom={T.space.sm} color={T.primary}>Lambda</Text>
+              <Text fontSize={T.fontSize.lg} color={T.muted}>Create Account</Text>
             </YStack>
 
-            <YStack gap="$lg">
+            <YStack gap={T.space.lg}>
               {/* Apple Sign-Up (iOS only) */}
               {Platform.OS === 'ios' && (
                 <AppleAuthentication.AppleAuthenticationButton
@@ -94,27 +94,27 @@ export default function SignupScreen() {
               {/* Google Sign-Up */}
               <XStack
                 height={48}
-                borderRadius="$md"
+                borderRadius={T.radius.md}
                 borderWidth={1}
-                borderColor="$borderColor"
+                borderColor={T.border}
                 alignItems="center"
                 justifyContent="center"
-                backgroundColor="$surface"
+                backgroundColor={T.surface}
                 opacity={socialLoading === 'google' ? 0.6 : 1}
                 pressStyle={{ opacity: 0.75 }}
                 onPress={isLoading ? undefined : handleGoogle}
                 cursor="pointer"
               >
                 {socialLoading === 'google'
-                  ? <Spinner size="small" color="$color" />
-                  : <Text color="$color" fontSize="$md" fontWeight="600">Continue with Google</Text>
+                  ? <Spinner size="small" color={T.primary} />
+                  : <Text color={T.primary} fontSize={T.fontSize.md} fontWeight="600">Continue with Google</Text>
                 }
               </XStack>
 
-              <XStack alignItems="center" gap="$sm" marginVertical="$xs">
-                <Separator flex={1} borderColor="$borderColor" />
-                <Text fontSize="$sm" color="$muted">or</Text>
-                <Separator flex={1} borderColor="$borderColor" />
+              <XStack alignItems="center" gap={T.space.sm} marginVertical={T.space.xs}>
+                <Separator flex={1} borderColor={T.border} />
+                <Text fontSize={T.fontSize.sm} color={T.muted}>or</Text>
+                <Separator flex={1} borderColor={T.border} />
               </XStack>
 
               <Input
@@ -155,10 +155,10 @@ export default function SignupScreen() {
                 loading={loading}
               />
 
-              <XStack justifyContent="center" marginTop="$sm">
-                <Text fontSize="$sm" color="$muted">Already have an account? </Text>
+              <XStack justifyContent="center" marginTop={T.space.sm}>
+                <Text fontSize={T.fontSize.sm} color={T.muted}>Already have an account? </Text>
                 <Link href="/(auth)/login">
-                  <Text color="$accent" fontSize="$sm" fontWeight="600">Login</Text>
+                  <Text color={T.accent} fontSize={T.fontSize.sm} fontWeight="600">Login</Text>
                 </Link>
               </XStack>
             </YStack>

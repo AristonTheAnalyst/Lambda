@@ -69,56 +69,56 @@ export default function VariationsScreen() {
       keyboardShouldPersistTaps="handled"
     >
       {/* ── Create form ── */}
-      <Text fontSize="$lg" fontWeight="700" color="$color" marginBottom="$md">New Variation</Text>
+      <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>New Variation</Text>
       <Input placeholder="Variation name" value={name} onChangeText={setName} />
 
-      <Text fontSize="$sm" fontWeight="500" color="$color" marginTop="$md" marginBottom="$xs">Variation type</Text>
+      <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginTop={T.space.md} marginBottom={T.space.xs}>Variation type</Text>
       <DropdownSelect options={typeOptions} value={typeId} onChange={setTypeId} placeholder="Select type…" />
 
-      <YStack marginTop="$md">
+      <YStack marginTop={T.space.md}>
         <Button label="Add Variation" onPress={create} loading={creating} />
       </YStack>
 
       {/* ── List ── */}
-      <Text fontSize="$lg" fontWeight="700" color="$color" marginTop="$xxl" marginBottom="$md">All Variations</Text>
+      <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginTop={T.space.xxl} marginBottom={T.space.md}>All Variations</Text>
       {variations.length === 0 ? (
-        <Text color="$muted" padding="$xs">No variations yet.</Text>
+        <Text color={T.muted} padding={T.space.xs}>No variations yet.</Text>
       ) : (
         variations.map((v) => (
           <XStack
             key={v.exercise_variation_id}
             alignItems="center"
-            paddingVertical="$md"
+            paddingVertical={T.space.md}
             borderBottomWidth={0.5}
-            borderBottomColor="$borderColor"
+            borderBottomColor={T.border}
           >
             <YStack flex={1}>
-              <Text fontSize={15} color="$color">{v.exercise_variation_name}</Text>
-              <Text fontSize="$xs" color="$muted" marginTop="$xs">{v.variation_type_name}</Text>
+              <Text fontSize={15} color={T.primary}>{v.exercise_variation_name}</Text>
+              <Text fontSize={T.fontSize.xs} color={T.muted} marginTop={T.space.xs}>{v.variation_type_name}</Text>
             </YStack>
             <XStack
-              paddingHorizontal="$sm"
+              paddingHorizontal={T.space.sm}
               paddingVertical={T.space.xs + 2}
-              marginLeft="$sm"
-              borderRadius="$sm"
-              backgroundColor="$accentBg"
+              marginLeft={T.space.sm}
+              borderRadius={T.radius.sm}
+              backgroundColor={T.accentBg}
               pressStyle={{ opacity: 0.7 }}
               onPress={() => setEditVar({ ...v })}
               cursor="pointer"
             >
-              <Text fontSize="$sm" fontWeight="500" color="$accent">Edit</Text>
+              <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.accent}>Edit</Text>
             </XStack>
             <XStack
-              paddingHorizontal="$sm"
+              paddingHorizontal={T.space.sm}
               paddingVertical={T.space.xs + 2}
-              marginLeft="$sm"
-              borderRadius="$sm"
-              backgroundColor="$dangerBg"
+              marginLeft={T.space.sm}
+              borderRadius={T.radius.sm}
+              backgroundColor={T.dangerBg}
               pressStyle={{ opacity: 0.7 }}
               onPress={() => confirmDelete(v.exercise_variation_id)}
               cursor="pointer"
             >
-              <Text fontSize="$sm" fontWeight="500" color="$danger">Del</Text>
+              <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
             </XStack>
           </XStack>
         ))
@@ -128,26 +128,26 @@ export default function VariationsScreen() {
       {/* ── Edit modal ── */}
       <SlideUpModal visible={!!editVar} onClose={() => setEditVar(null)}>
         <YStack
-          backgroundColor="$surface"
-          borderTopLeftRadius="$lg"
-          borderTopRightRadius="$lg"
-          padding="$xl"
-          paddingBottom="$xxl"
+          backgroundColor={T.surface}
+          borderTopLeftRadius={T.radius.lg}
+          borderTopRightRadius={T.radius.lg}
+          padding={T.space.xl}
+          paddingBottom={T.space.xxl}
         >
-          <Text fontSize="$lg" fontWeight="700" color="$color" marginBottom="$md">Edit Variation</Text>
+          <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>Edit Variation</Text>
           <Input
             value={editVar?.exercise_variation_name ?? ''}
             onChangeText={(t) => setEditVar((v) => v ? { ...v, exercise_variation_name: t } : v)}
             placeholder="Variation name"
           />
-          <Text fontSize="$sm" fontWeight="500" color="$color" marginTop="$md" marginBottom="$xs">Variation type</Text>
+          <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginTop={T.space.md} marginBottom={T.space.xs}>Variation type</Text>
           <DropdownSelect
             options={typeOptions}
             value={editVar?.variation_type_id ?? null}
             onChange={(v) => setEditVar((e) => e ? { ...e, variation_type_id: v } : e)}
             placeholder="Select type…"
           />
-          <XStack gap="$sm" marginTop="$sm">
+          <XStack gap={T.space.sm} marginTop={T.space.sm}>
             <YStack flex={1}><Button label="Save" onPress={saveEdit} /></YStack>
             <YStack flex={1}><Button label="Cancel" onPress={() => setEditVar(null)} variant="ghost" /></YStack>
           </XStack>

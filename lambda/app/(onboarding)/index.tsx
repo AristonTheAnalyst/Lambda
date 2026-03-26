@@ -72,14 +72,14 @@ export default function OnboardingScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView showsVerticalScrollIndicator={false}>
-          <YStack paddingHorizontal="$xl" paddingTop="$xl">
+          <YStack paddingHorizontal={T.space.xl} paddingTop={T.space.xl}>
 
-            <YStack alignItems="center" marginBottom="$xxl">
-              <Text fontSize={32} fontWeight="bold" marginBottom="$sm" color="$color">Welcome to Lambda</Text>
-              <Text fontSize="$md" color="$muted">Let's set up your profile</Text>
+            <YStack alignItems="center" marginBottom={T.space.xxl}>
+              <Text fontSize={32} fontWeight="bold" marginBottom={T.space.sm} color={T.primary}>Welcome to Lambda</Text>
+              <Text fontSize={T.fontSize.md} color={T.muted}>Let's set up your profile</Text>
             </YStack>
 
-            <YStack gap="$lg" paddingBottom="$xxl">
+            <YStack gap={T.space.lg} paddingBottom={T.space.xxl}>
               <Input
                 label="First Name *"
                 value={name}
@@ -97,8 +97,8 @@ export default function OnboardingScreen() {
                 editable={!loading}
               />
 
-              <YStack gap="$xs">
-                <Text color="$color" fontSize="$sm" fontWeight="600">Date of Birth</Text>
+              <YStack gap={T.space.xs}>
+                <Text color={T.primary} fontSize={T.fontSize.sm} fontWeight="600">Date of Birth</Text>
                 <DatePickerField
                   value={dateOfBirth}
                   onChangeDate={(v) => { setDateOfBirth(v); setFieldErrors((e) => ({ ...e, dateOfBirth: '' })); }}
@@ -106,8 +106,8 @@ export default function OnboardingScreen() {
                 />
               </YStack>
 
-              <YStack gap="$xs">
-                <Text color="$color" fontSize="$sm" fontWeight="600">Gender</Text>
+              <YStack gap={T.space.xs}>
+                <Text color={T.primary} fontSize={T.fontSize.sm} fontWeight="600">Gender</Text>
                 <DropdownSelect
                   options={GENDER_OPTIONS}
                   value={gender}
@@ -133,7 +133,7 @@ export default function OnboardingScreen() {
                 disabled={loading}
               />
 
-              <Text fontSize="$xs" color="$muted" textAlign="center">* Required field</Text>
+              <Text fontSize={T.fontSize.xs} color={T.muted} textAlign="center">* Required field</Text>
             </YStack>
 
           </YStack>

@@ -18,6 +18,7 @@
     "@supabase/supabase-js": "^2.95.3",
     "@tamagui/animations-reanimated": "^2.0.0-rc.31",
     "@tamagui/config": "^2.0.0-rc.31",
+    "@tamagui/portal": "^2.0.0-rc.31",
     "expo": "~54.0.33",
     "expo-apple-authentication": "~8.0.8",
     "expo-auth-session": "~7.0.10",

@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
-import { Button as TamaguiButton, Spinner, Stack, Text, styled } from 'tamagui';
+import { Button as TamaguiButton, Spinner, YStack, Text, styled } from 'tamagui';
+import T from '@/constants/Theme';
 
 const isGlassSupported = Platform.OS === 'ios' && Number(Platform.Version) >= 26;
 
@@ -15,9 +16,9 @@ if (isGlassSupported) {
 // ─── Styled variants ──────────────────────────────────────────────────────────
 
 const Base = styled(TamaguiButton, {
-  borderRadius: '$md',
-  paddingVertical: '$md',
-  paddingHorizontal: '$lg',
+  borderRadius: T.radius.md,
+  paddingVertical: T.space.md,
+  paddingHorizontal: T.space.lg,
   alignItems: 'center',
   justifyContent: 'center',
   height: 'auto',
@@ -25,18 +26,18 @@ const Base = styled(TamaguiButton, {
   variants: {
     variant: {
       primary: {
-        backgroundColor: '$accent',
+        backgroundColor: T.accent,
         borderWidth: 0,
         pressStyle: { opacity: 0.75 },
       },
       ghost: {
         backgroundColor: 'transparent',
         borderWidth: 1,
-        borderColor: '$accent',
+        borderColor: T.accent,
         pressStyle: { opacity: 0.75 },
       },
       danger: {
-        backgroundColor: '$danger',
+        backgroundColor: T.danger,
         borderWidth: 0,
         pressStyle: { opacity: 0.75 },
       },
@@ -65,27 +66,27 @@ export default function Button({
   disabled = false,
   loading = false,
 }: ButtonProps) {
-  const isDisabled = disabled || loading;
-  const effective  = variant === 'glass' ? 'primary' : variant;
-  const spinnerColor = effective === 'ghost' ? '$accent' : '$accentText';
-  const labelColor   = effective === 'ghost' ? '$accent' : '$accentText';
+  const isDisabled   = disabled || loading;
+  const effective    = variant === 'glass' ? 'primary' : variant;
+  const spinnerColor = effective === 'ghost' ? T.accent : T.accentText;
+  const labelColor   = effective === 'ghost' ? T.accent : T.accentText;
 
   // Glass variant on iOS 26+
   if (variant === 'glass' && isGlassSupported && GlassView) {
     return (
-      <Stack borderRadius="$md" overflow="hidden" opacity={isDisabled ? 0.45 : 1}>
+      <YStack borderRadius={T.radius.md} overflow="hidden" opacity={isDisabled ? 0.45 : 1}>
         <GlassView
           glassEffectStyle="systemMaterial"
-          tintColor="#bb7423"
+          tintColor={T.accent}
           onTouchEnd={isDisabled ? undefined : onPress}
-          style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 16 }}
+          style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: T.space.md, paddingHorizontal: T.space.lg }}
         >
           {loading
-            ? <Spinner size="small" color="$accentText" />
-            : <Text color="$accentText" fontSize="$md" fontWeight="600">{label}</Text>
+            ? <Spinner size="small" color={T.accentText} />
+            : <Text color={T.accentText} fontSize={T.fontSize.md} fontWeight="600">{label}</Text>
           }
         </GlassView>
-      </Stack>
+      </YStack>
     );
   }
 
@@ -98,7 +99,7 @@ export default function Button({
     >
       {loading
         ? <Spinner size="small" color={spinnerColor} />
-        : <Text color={labelColor} fontSize="$md" fontWeight="600">{label}</Text>
+        : <Text color={labelColor} fontSize={T.fontSize.md} fontWeight="600">{label}</Text>
       }
     </Base>
   );

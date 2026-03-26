@@ -73,61 +73,61 @@ export default function ExercisesScreen() {
       keyboardShouldPersistTaps="handled"
     >
       {/* ── Create form ── */}
-      <Text fontSize="$lg" fontWeight="700" color="$color" marginBottom="$md">New Exercise</Text>
+      <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>New Exercise</Text>
       <Input placeholder="Exercise name" value={name} onChangeText={setName} />
 
-      <Text fontSize="$sm" fontWeight="500" color="$color" marginTop="$md" marginBottom="$xs">Volume type</Text>
+      <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginTop={T.space.md} marginBottom={T.space.xs}>Volume type</Text>
       <SegmentedControl options={VOLUME_OPTIONS} value={volume} onChange={setVolume} />
 
-      <Text fontSize="$sm" fontWeight="500" color="$color" marginTop="$md" marginBottom="$xs">Intensity type</Text>
+      <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginTop={T.space.md} marginBottom={T.space.xs}>Intensity type</Text>
       <SegmentedControl options={INTENSITY_OPTIONS} value={intensity} onChange={setIntensity} />
 
-      <YStack marginTop="$md">
+      <YStack marginTop={T.space.md}>
         <Button label="Create Exercise" onPress={create} loading={creating} />
       </YStack>
 
       {/* ── List ── */}
-      <Text fontSize="$lg" fontWeight="700" color="$color" marginTop="$xxl" marginBottom="$md">All Exercises</Text>
+      <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginTop={T.space.xxl} marginBottom={T.space.md}>All Exercises</Text>
       {exercises.length === 0 ? (
-        <Text color="$muted" padding="$xs">No exercises yet.</Text>
+        <Text color={T.muted} padding={T.space.xs}>No exercises yet.</Text>
       ) : (
         exercises.map((ex) => (
           <XStack
             key={ex.exercise_id}
             alignItems="center"
-            paddingVertical="$md"
+            paddingVertical={T.space.md}
             borderBottomWidth={0.5}
-            borderBottomColor="$borderColor"
+            borderBottomColor={T.border}
           >
             <YStack flex={1}>
-              <Text fontSize={15} color="$color">{ex.exercise_name}</Text>
-              <Text fontSize="$xs" color="$muted" marginTop="$xs">
+              <Text fontSize={15} color={T.primary}>{ex.exercise_name}</Text>
+              <Text fontSize={T.fontSize.xs} color={T.muted} marginTop={T.space.xs}>
                 {ex.exercise_volume_type} · {ex.exercise_intensity_type}
               </Text>
             </YStack>
             <XStack
-              paddingHorizontal="$sm"
+              paddingHorizontal={T.space.sm}
               paddingVertical={T.space.xs + 2}
-              marginLeft="$sm"
-              borderRadius="$sm"
-              backgroundColor="$accentBg"
+              marginLeft={T.space.sm}
+              borderRadius={T.radius.sm}
+              backgroundColor={T.accentBg}
               pressStyle={{ opacity: 0.7 }}
               onPress={() => setEditEx({ ...ex })}
               cursor="pointer"
             >
-              <Text fontSize="$sm" fontWeight="500" color="$accent">Edit</Text>
+              <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.accent}>Edit</Text>
             </XStack>
             <XStack
-              paddingHorizontal="$sm"
+              paddingHorizontal={T.space.sm}
               paddingVertical={T.space.xs + 2}
-              marginLeft="$sm"
-              borderRadius="$sm"
-              backgroundColor="$dangerBg"
+              marginLeft={T.space.sm}
+              borderRadius={T.radius.sm}
+              backgroundColor={T.dangerBg}
               pressStyle={{ opacity: 0.7 }}
               onPress={() => confirmDelete(ex.exercise_id)}
               cursor="pointer"
             >
-              <Text fontSize="$sm" fontWeight="500" color="$danger">Del</Text>
+              <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
             </XStack>
           </XStack>
         ))
@@ -137,31 +137,31 @@ export default function ExercisesScreen() {
       {/* ── Edit modal ── */}
       <SlideUpModal visible={!!editEx} onClose={() => setEditEx(null)}>
         <YStack
-          backgroundColor="$surface"
-          borderTopLeftRadius="$lg"
-          borderTopRightRadius="$lg"
-          padding="$xl"
-          paddingBottom="$xxl"
+          backgroundColor={T.surface}
+          borderTopLeftRadius={T.radius.lg}
+          borderTopRightRadius={T.radius.lg}
+          padding={T.space.xl}
+          paddingBottom={T.space.xxl}
         >
-          <Text fontSize="$lg" fontWeight="700" color="$color" marginBottom="$md">Edit Exercise</Text>
+          <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>Edit Exercise</Text>
           <Input
             value={editEx?.exercise_name ?? ''}
             onChangeText={(t) => setEditEx((e) => e ? { ...e, exercise_name: t } : e)}
             placeholder="Exercise name"
           />
-          <Text fontSize="$sm" fontWeight="500" color="$color" marginTop="$md" marginBottom="$xs">Volume type</Text>
+          <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginTop={T.space.md} marginBottom={T.space.xs}>Volume type</Text>
           <SegmentedControl
             options={VOLUME_OPTIONS}
             value={editEx?.exercise_volume_type ?? 'reps'}
             onChange={(v) => setEditEx((e) => e ? { ...e, exercise_volume_type: v } : e)}
           />
-          <Text fontSize="$sm" fontWeight="500" color="$color" marginTop="$md" marginBottom="$xs">Intensity type</Text>
+          <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginTop={T.space.md} marginBottom={T.space.xs}>Intensity type</Text>
           <SegmentedControl
             options={INTENSITY_OPTIONS}
             value={editEx?.exercise_intensity_type ?? 'weight'}
             onChange={(v) => setEditEx((e) => e ? { ...e, exercise_intensity_type: v } : e)}
           />
-          <XStack gap="$sm" marginTop="$sm">
+          <XStack gap={T.space.sm} marginTop={T.space.sm}>
             <YStack flex={1}><Button label="Save" onPress={saveEdit} /></YStack>
             <YStack flex={1}><Button label="Cancel" onPress={() => setEditEx(null)} variant="ghost" /></YStack>
           </XStack>

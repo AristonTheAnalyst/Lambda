@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Platform } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { Sheet, Stack, Text, YStack } from 'tamagui';
+import { Sheet, Text, YStack } from 'tamagui';
 import Button from '@/components/Button';
 import T from '@/constants/Theme';
 
@@ -42,21 +42,21 @@ export default function DatePickerField({
   const displayText = value ? formatDisplay(value) : '';
 
   const triggerContent = (
-    <Stack
-      backgroundColor="$surface"
+    <YStack
+      backgroundColor={T.surface}
       borderWidth={1}
-      borderColor="$borderColor"
-      borderRadius="$md"
-      padding="$md"
+      borderColor={T.border}
+      borderRadius={T.radius.md}
+      padding={T.space.md}
       opacity={editable ? 1 : 0.5}
       pressStyle={editable ? { opacity: 0.7 } : undefined}
       onPress={editable ? () => { setStaged(toDate(value)); setOpen(true); } : undefined}
       cursor={editable ? 'pointer' : 'default'}
     >
-      <Text fontSize="$md" color={displayText ? '$color' : '$muted'}>
+      <Text fontSize={T.fontSize.md} color={displayText ? T.primary : T.muted}>
         {displayText || placeholder}
       </Text>
-    </Stack>
+    </YStack>
   );
 
   // ── Android: native dialog ─────────────────────────────────────────────
@@ -100,10 +100,10 @@ export default function DatePickerField({
           exitStyle={{ opacity: 0 }}
           backgroundColor="rgba(0,0,0,0.6)"
         />
-        <Sheet.Frame backgroundColor="$surface">
+        <Sheet.Frame backgroundColor={T.surface}>
           {/* Handle */}
-          <YStack alignItems="center" paddingTop="$sm" paddingBottom="$xs">
-            <YStack width={36} height={4} borderRadius={2} backgroundColor="$borderColor" />
+          <YStack alignItems="center" paddingTop={T.space.sm} paddingBottom={T.space.xs}>
+            <YStack width={36} height={4} borderRadius={2} backgroundColor={T.border} />
           </YStack>
 
           <DateTimePicker
@@ -119,7 +119,7 @@ export default function DatePickerField({
             style={{ height: 200 }}
           />
 
-          <YStack paddingHorizontal="$xl" paddingTop="$sm" paddingBottom="$xl">
+          <YStack paddingHorizontal={T.space.xl} paddingTop={T.space.sm} paddingBottom={T.space.xl}>
             <Button
               label="Done"
               onPress={() => { onChangeDate(toISO(staged)); setOpen(false); }}

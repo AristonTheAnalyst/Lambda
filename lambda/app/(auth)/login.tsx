@@ -65,7 +65,7 @@ export default function LoginScreen() {
     } finally { setSocialLoading(null); }
   });
 
-  const isLoading   = loading || socialLoading !== null;
+  const isLoading    = loading || socialLoading !== null;
   const isCoolingDown = cooldown > 0;
 
   return (
@@ -74,31 +74,31 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <YStack flex={1} justifyContent="center" paddingHorizontal="$xl" gap="$lg">
+        <YStack flex={1} justifyContent="center" paddingHorizontal={T.space.xl} gap={T.space.lg}>
 
           {/* Session expired banner */}
           {sessionExpired && (
             <YStack
-              backgroundColor="$accentBg"
-              borderColor="$accent"
+              backgroundColor={T.accentBg}
+              borderColor={T.accent}
               borderWidth={1}
-              borderRadius="$md"
-              padding="$md"
+              borderRadius={T.radius.md}
+              padding={T.space.md}
             >
-              <Text color="$accent" fontSize="$sm" textAlign="center">
+              <Text color={T.accent} fontSize={T.fontSize.sm} textAlign="center">
                 Your session expired. Please log in again.
               </Text>
             </YStack>
           )}
 
           {/* Header */}
-          <YStack alignItems="center" marginBottom="$xxl">
-            <Text fontSize={32} fontWeight="bold" marginBottom="$sm" color="$color">Lambda</Text>
-            <Text fontSize="$lg" color="$muted">Login</Text>
+          <YStack alignItems="center" marginBottom={T.space.xxl}>
+            <Text fontSize={32} fontWeight="bold" marginBottom={T.space.sm} color={T.primary}>Lambda</Text>
+            <Text fontSize={T.fontSize.lg} color={T.muted}>Login</Text>
           </YStack>
 
           {/* Form */}
-          <YStack gap="$lg">
+          <YStack gap={T.space.lg}>
             <Input
               label="Email"
               value={email}
@@ -127,10 +127,10 @@ export default function LoginScreen() {
               loading={loading}
             />
 
-            <XStack alignItems="center" gap="$sm" marginVertical="$xs">
-              <Separator flex={1} borderColor="$borderColor" />
-              <Text fontSize="$sm" color="$muted">or</Text>
-              <Separator flex={1} borderColor="$borderColor" />
+            <XStack alignItems="center" gap={T.space.sm} marginVertical={T.space.xs}>
+              <Separator flex={1} borderColor={T.border} />
+              <Text fontSize={T.fontSize.sm} color={T.muted}>or</Text>
+              <Separator flex={1} borderColor={T.border} />
             </XStack>
 
             {/* Apple Sign-In (iOS only, uses native component) */}
@@ -147,27 +147,27 @@ export default function LoginScreen() {
             {/* Google Sign-In */}
             <XStack
               height={48}
-              borderRadius="$md"
+              borderRadius={T.radius.md}
               borderWidth={1}
-              borderColor="$borderColor"
+              borderColor={T.border}
               alignItems="center"
               justifyContent="center"
-              backgroundColor="$surface"
+              backgroundColor={T.surface}
               opacity={socialLoading === 'google' ? 0.6 : 1}
               pressStyle={{ opacity: 0.75 }}
               onPress={isLoading ? undefined : handleGoogle}
               cursor="pointer"
             >
               {socialLoading === 'google'
-                ? <Spinner size="small" color="$color" />
-                : <Text color="$color" fontSize="$md" fontWeight="600">Sign in with Google</Text>
+                ? <Spinner size="small" color={T.primary} />
+                : <Text color={T.primary} fontSize={T.fontSize.md} fontWeight="600">Sign in with Google</Text>
               }
             </XStack>
 
-            <XStack justifyContent="center" marginTop="$sm">
-              <Text fontSize="$sm" color="$muted">Don't have an account? </Text>
+            <XStack justifyContent="center" marginTop={T.space.sm}>
+              <Text fontSize={T.fontSize.sm} color={T.muted}>Don't have an account? </Text>
               <Link href="/(auth)/signup">
-                <Text color="$accent" fontSize="$sm" fontWeight="600">Sign up</Text>
+                <Text color={T.accent} fontSize={T.fontSize.sm} fontWeight="600">Sign up</Text>
               </Link>
             </XStack>
           </YStack>

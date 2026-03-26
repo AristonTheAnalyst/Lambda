@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
-import { Stack, styled } from 'tamagui';
+import { YStack, styled } from 'tamagui';
+import T from '@/constants/Theme';
 
 const isGlassSupported = Platform.OS === 'ios' && Number(Platform.Version) >= 26;
 
@@ -14,12 +15,12 @@ if (isGlassSupported) {
 
 // ─── Styled card ──────────────────────────────────────────────────────────────
 
-const StyledCard = styled(Stack, {
-  backgroundColor: '$surface',
+const StyledCard = styled(YStack, {
+  backgroundColor: T.surface,
   borderWidth: 1,
-  borderColor: '$borderColor',
-  borderRadius: '$md',
-  padding: '$md',
+  borderColor: T.border,
+  borderRadius: T.radius.md,
+  padding: T.space.md,
 
   variants: {
     pressable: {
@@ -41,16 +42,16 @@ interface CardProps {
 export default function Card({ children, onPress, variant = 'default' }: CardProps) {
   if (variant === 'glass' && isGlassSupported && GlassView) {
     return (
-      <Stack
-        borderRadius="$md"
+      <YStack
+        borderRadius={T.radius.md}
         overflow="hidden"
         pressStyle={onPress ? { opacity: 0.8 } : undefined}
         onPress={onPress}
       >
-        <GlassView glassEffectStyle="systemMaterial" style={{ borderRadius: 8, padding: 12 }}>
+        <GlassView glassEffectStyle="systemMaterial" style={{ borderRadius: T.radius.md, padding: T.space.md }}>
           {children}
         </GlassView>
-      </Stack>
+      </YStack>
     );
   }
 

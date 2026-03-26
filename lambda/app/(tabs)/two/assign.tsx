@@ -66,7 +66,7 @@ export default function AssignVariationsScreen() {
       contentContainerStyle={{ padding: T.space.lg }}
       keyboardShouldPersistTaps="handled"
     >
-      <Text fontSize="$sm" fontWeight="500" color="$color" marginTop="$xs" marginBottom="$xs">Exercise</Text>
+      <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginTop={T.space.xs} marginBottom={T.space.xs}>Exercise</Text>
       <DropdownSelect
         options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.exercise_id }))}
         value={assignExId}
@@ -76,7 +76,7 @@ export default function AssignVariationsScreen() {
 
       {assignExId && (
         <>
-          <Text fontSize="$lg" fontWeight="700" color="$color" marginTop="$xl" marginBottom="$sm">
+          <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginTop={T.space.xl} marginBottom={T.space.sm}>
             Select Variations
           </Text>
 
@@ -88,25 +88,25 @@ export default function AssignVariationsScreen() {
               <YStack
                 key={typeName}
                 borderWidth={1}
-                borderColor="$borderColor"
-                borderRadius="$md"
-                marginBottom="$sm"
+                borderColor={T.border}
+                borderRadius={T.radius.md}
+                marginBottom={T.space.sm}
                 overflow="hidden"
               >
                 {/* Type header row */}
                 <XStack
                   alignItems="center"
-                  paddingVertical="$md"
-                  paddingHorizontal="$md"
-                  backgroundColor="$surface"
+                  paddingVertical={T.space.md}
+                  paddingHorizontal={T.space.md}
+                  backgroundColor={T.surface}
                   pressStyle={{ opacity: 0.7 }}
                   onPress={() => toggleType(typeName)}
                   cursor="pointer"
                 >
                   <YStack flex={1}>
-                    <Text fontSize={15} fontWeight="600" color="$color">{typeName}</Text>
+                    <Text fontSize={15} fontWeight="600" color={T.primary}>{typeName}</Text>
                     {!isExpanded && selectedCount > 0 && (
-                      <Text fontSize="$xs" color="$accent" marginTop="$xs">{selectedCount} selected</Text>
+                      <Text fontSize={T.fontSize.xs} color={T.accent} marginTop={T.space.xs}>{selectedCount} selected</Text>
                     )}
                   </YStack>
                   <FontAwesome
@@ -118,15 +118,15 @@ export default function AssignVariationsScreen() {
 
                 {/* Variation rows */}
                 {isExpanded && (
-                  <YStack paddingHorizontal="$md" paddingBottom="$xs" backgroundColor="$background">
+                  <YStack paddingHorizontal={T.space.md} paddingBottom={T.space.xs} backgroundColor={T.bg}>
                     {vars.map((v) => {
                       const checked = selectedVarIds.includes(v.exercise_variation_id);
                       return (
                         <XStack
                           key={v.exercise_variation_id}
                           alignItems="center"
-                          paddingVertical="$sm"
-                          gap="$md"
+                          paddingVertical={T.space.sm}
+                          gap={T.space.md}
                           pressStyle={{ opacity: 0.7 }}
                           onPress={() => toggle(v.exercise_variation_id)}
                           cursor="pointer"
@@ -134,16 +134,16 @@ export default function AssignVariationsScreen() {
                           <XStack
                             width={22}
                             height={22}
-                            borderRadius="$sm"
+                            borderRadius={T.radius.sm}
                             borderWidth={2}
-                            borderColor="$accent"
+                            borderColor={T.accent}
                             alignItems="center"
                             justifyContent="center"
-                            backgroundColor={checked ? '$accent' : 'transparent'}
+                            backgroundColor={checked ? T.accent : 'transparent'}
                           >
-                            {checked && <Text color="$accentText" fontSize="$xs">✓</Text>}
+                            {checked && <Text color={T.accentText} fontSize={T.fontSize.xs}>✓</Text>}
                           </XStack>
-                          <Text fontSize={15} color="$color">{v.exercise_variation_name}</Text>
+                          <Text fontSize={15} color={T.primary}>{v.exercise_variation_name}</Text>
                         </XStack>
                       );
                     })}
@@ -153,7 +153,7 @@ export default function AssignVariationsScreen() {
             );
           })}
 
-          <YStack marginTop="$lg">
+          <YStack marginTop={T.space.lg}>
             <Button label="Save Assignments" onPress={save} loading={saving} />
           </YStack>
         </>

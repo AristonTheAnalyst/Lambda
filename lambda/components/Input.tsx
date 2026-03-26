@@ -1,26 +1,27 @@
 import { Platform } from 'react-native';
 import { Input as TamaguiInput, Text, YStack, styled } from 'tamagui';
+import T from '@/constants/Theme';
 
 // ─── Styled input ─────────────────────────────────────────────────────────────
 
 const StyledInput = styled(TamaguiInput, {
-  backgroundColor: '$surface',
+  backgroundColor: T.surface,
   borderWidth: 1,
-  borderColor: '$borderColor',
-  borderRadius: '$md',
-  padding: '$md',
-  color: '$color',
-  fontSize: '$md',
-  placeholderTextColor: '$muted',
+  borderColor: T.border,
+  borderRadius: T.radius.md,
+  padding: T.space.md,
+  color: T.primary,
+  fontSize: T.fontSize.md,
+  placeholderTextColor: T.muted,
 
   focusStyle: {
-    borderColor: '$accent',
+    borderColor: T.accent,
     outlineWidth: 0,
   },
 
   variants: {
     errored: {
-      true: { borderColor: '$dangerBorder' },
+      true: { borderColor: T.dangerBorder },
     },
     isMultiline: {
       true: { minHeight: 96, textAlignVertical: 'top' },
@@ -63,8 +64,8 @@ export default function Input({
   autoCorrect,
 }: InputProps) {
   return (
-    <YStack gap="$xs">
-      {label ? <Text color="$color" fontSize="$sm" fontWeight="600">{label}</Text> : null}
+    <YStack gap={T.space.xs}>
+      {label ? <Text color={T.primary} fontSize={T.fontSize.sm} fontWeight="600">{label}</Text> : null}
       <StyledInput
         value={value}
         onChangeText={onChangeText}
@@ -81,7 +82,7 @@ export default function Input({
         keyboardAppearance={Platform.OS === 'ios' ? 'dark' : undefined}
         returnKeyType={Platform.OS === 'ios' ? (multiline ? 'default' : 'done') : undefined}
       />
-      {error ? <Text color="$danger" fontSize="$xs">{error}</Text> : null}
+      {error ? <Text color={T.danger} fontSize={T.fontSize.xs}>{error}</Text> : null}
     </YStack>
   );
 }
