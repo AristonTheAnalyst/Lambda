@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Alert, ScrollView } from 'react-native';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Text, XStack, YStack } from 'tamagui';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DropdownSelect } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
+import GlassButton from '@/components/GlassButton';
 import Button from '@/components/Button';
 import supabase from '@/lib/supabase';
 import { useAsyncGuard } from '@/lib/asyncGuard';
@@ -11,6 +13,8 @@ import T from '@/constants/Theme';
 
 export default function AssignVariationsScreen() {
   const guard = useAsyncGuard();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { exercises, variations, refreshExerciseDetails } = useExerciseData();
   const [assignExId, setAssignExId]         = useState<number | null>(null);
   const [selectedVarIds, setSelectedVarIds] = useState<number[]>([]);
@@ -63,8 +67,14 @@ export default function AssignVariationsScreen() {
   }, {});
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: T.bg }}
+    <YStack flex={1} backgroundColor={T.bg}>
+      <XStack paddingTop={insets.top} paddingHorizontal={T.space.md} paddingBottom={T.space.sm} alignItems="center">
+        <XStack minWidth={80}><GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} /></XStack>
+        <Text flex={1} textAlign="center" color={T.primary} fontSize={T.fontSize.xl} fontWeight="600">Assign Variations</Text>
+        <XStack width={80} />
+      </XStack>
+      <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={{ padding: T.space.lg }}
         keyboardShouldPersistTaps="handled"
       >
@@ -163,5 +173,6 @@ export default function AssignVariationsScreen() {
 
       <YStack height={T.space.xxl} />
     </ScrollView>
+    </YStack>
   );
 }

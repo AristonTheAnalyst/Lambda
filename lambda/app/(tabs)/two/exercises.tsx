@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { Alert, ScrollView } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SegmentedControl, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
+import GlassButton from '@/components/GlassButton';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import supabase from '@/lib/supabase';
@@ -22,6 +25,8 @@ const INTENSITY_OPTIONS = [{ label: 'Weight', value: 'weight' }, { label: 'Dista
 
 export default function ExercisesScreen() {
   const guard = useAsyncGuard();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { exercises, refreshExercises } = useExerciseData();
   const [name, setName]       = useState('');
   const [volume, setVolume]   = useState('reps');
@@ -69,10 +74,16 @@ export default function ExercisesScreen() {
   }
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: T.bg }}
-      contentContainerStyle={{ padding: T.space.lg }}
-      keyboardShouldPersistTaps="handled"
+    <YStack flex={1} backgroundColor={T.bg}>
+      <XStack paddingTop={insets.top} paddingHorizontal={T.space.md} paddingBottom={T.space.sm} alignItems="center">
+        <XStack minWidth={80}><GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} /></XStack>
+        <Text flex={1} textAlign="center" color={T.primary} fontSize={T.fontSize.xl} fontWeight="600">Exercises</Text>
+        <XStack width={80} />
+      </XStack>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: T.space.lg }}
+        keyboardShouldPersistTaps="handled"
       >
       {/* ── Create form ── */}
       <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>New Exercise</Text>
@@ -170,5 +181,6 @@ export default function ExercisesScreen() {
         </YStack>
       </SlideUpModal>
     </ScrollView>
+    </YStack>
   );
 }

@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { Alert, ScrollView } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DropdownSelect, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
+import GlassButton from '@/components/GlassButton';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import supabase from '@/lib/supabase';
@@ -18,6 +21,8 @@ interface Variation {
 
 export default function VariationsScreen() {
   const guard = useAsyncGuard();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { variations, variationTypes, refreshVariations } = useExerciseData();
   const [name, setName]     = useState('');
   const [typeId, setTypeId] = useState<number | null>(variationTypes[0]?.variation_type_id ?? null);
@@ -65,8 +70,14 @@ export default function VariationsScreen() {
   }
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: T.bg }}
+    <YStack flex={1} backgroundColor={T.bg}>
+      <XStack paddingTop={insets.top} paddingHorizontal={T.space.md} paddingBottom={T.space.sm} alignItems="center">
+        <XStack minWidth={80}><GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} /></XStack>
+        <Text flex={1} textAlign="center" color={T.primary} fontSize={T.fontSize.xl} fontWeight="600">Variations</Text>
+        <XStack width={80} />
+      </XStack>
+      <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={{ padding: T.space.lg }}
         keyboardShouldPersistTaps="handled"
       >
@@ -156,5 +167,6 @@ export default function VariationsScreen() {
         </YStack>
       </SlideUpModal>
     </ScrollView>
+    </YStack>
   );
 }
