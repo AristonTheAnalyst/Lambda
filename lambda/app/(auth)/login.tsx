@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View,
-  TextInput,
   TouchableOpacity,
   Text,
   StyleSheet,
@@ -16,6 +15,8 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { useAuthContext } from '@/lib/AuthContext';
 import { withGuard } from '@/lib/asyncGuard';
 import { loginSchema, getFieldErrors } from '@/lib/validation';
+import Button from '@/components/Button';
+import Input from '@/components/Input';
 import T from '@/constants/Theme';
 
 export default function LoginScreen() {
@@ -87,47 +88,33 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={[styles.input, fieldErrors.email && styles.inputError]}
-              placeholder="Enter your email"
-              placeholderTextColor={T.muted}
-              value={email}
-              onChangeText={(v) => { setEmail(v); setFieldErrors((e) => ({ ...e, email: '' })); }}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              editable={!isLoading}
-            />
-            {fieldErrors.email ? <Text style={styles.errorText}>{fieldErrors.email}</Text> : null}
-          </View>
+          <Input
+            label="Email"
+            value={email}
+            onChangeText={(v) => { setEmail(v); setFieldErrors((e) => ({ ...e, email: '' })); }}
+            placeholder="Enter your email"
+            error={fieldErrors.email}
+            editable={!isLoading}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={[styles.input, fieldErrors.password && styles.inputError]}
-              placeholder="Enter your password"
-              placeholderTextColor={T.muted}
-              value={password}
-              onChangeText={(v) => { setPassword(v); setFieldErrors((e) => ({ ...e, password: '' })); }}
-              secureTextEntry
-              editable={!isLoading}
-            />
-            {fieldErrors.password ? <Text style={styles.errorText}>{fieldErrors.password}</Text> : null}
-          </View>
+          <Input
+            label="Password"
+            value={password}
+            onChangeText={(v) => { setPassword(v); setFieldErrors((e) => ({ ...e, password: '' })); }}
+            placeholder="Enter your password"
+            error={fieldErrors.password}
+            editable={!isLoading}
+            secureTextEntry
+          />
 
-          <TouchableOpacity
-            style={[styles.button, { opacity: isLoading || isCoolingDown ? 0.6 : 1 }]}
+          <Button
+            label={isCoolingDown ? `Try again in ${cooldown}s` : 'Login'}
             onPress={handleLogin}
-            disabled={isLoading || isCoolingDown}>
-            {loading ? (
-              <ActivityIndicator color={T.accentText} />
-            ) : isCoolingDown ? (
-              <Text style={styles.buttonText}>Try again in {cooldown}s</Text>
-            ) : (
-              <Text style={styles.buttonText}>Login</Text>
-            )}
-          </TouchableOpacity>
+            disabled={isLoading || isCoolingDown}
+            loading={loading}
+          />
 
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
@@ -139,7 +126,7 @@ export default function LoginScreen() {
             <AppleAuthentication.AppleAuthenticationButton
               buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
               buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-              cornerRadius={8}
+              cornerRadius={T.radius.md}
               style={[styles.appleButton, { opacity: socialLoading === 'apple' ? 0.6 : 1 }]}
               onPress={handleApple}
             />
@@ -170,57 +157,35 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: T.bg },
-  content: { flex: 1, justifyContent: 'center', paddingHorizontal: 20 },
-  header: { marginBottom: 40, alignItems: 'center' },
-  title: { fontSize: 32, fontWeight: 'bold', marginBottom: 8, color: T.primary },
-  subtitle: { fontSize: 18, color: T.muted },
-  form: { gap: 16 },
-  inputContainer: { gap: 8 },
-  label: { fontSize: 16, fontWeight: '600', color: T.primary },
-  input: {
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: T.border,
-    backgroundColor: T.surface,
-    color: T.primary,
-  },
-  inputError: { borderColor: T.danger },
-  button: {
-    backgroundColor: T.accent,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  buttonText: { color: T.accentText, fontSize: 16, fontWeight: '600' },
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 4 },
+  content: { flex: 1, justifyContent: 'center', paddingHorizontal: T.space.xl },
+  header: { marginBottom: T.space.xxl, alignItems: 'center' },
+  title: { fontSize: 32, fontWeight: 'bold', marginBottom: T.space.sm, color: T.primary },
+  subtitle: { fontSize: T.fontSize.lg, color: T.muted },
+  form: { gap: T.space.lg },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.sm, marginVertical: T.space.xs },
   dividerLine: { flex: 1, height: 1, backgroundColor: T.border },
-  dividerText: { fontSize: 13, color: T.muted },
-  appleButton: { height: 48, borderRadius: 8 },
+  dividerText: { fontSize: T.fontSize.sm, color: T.muted },
+  appleButton: { height: 48, borderRadius: T.radius.md },
   googleButton: {
     height: 48,
-    borderRadius: 8,
+    borderRadius: T.radius.md,
     borderWidth: 1,
     borderColor: T.border,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: T.surface,
   },
-  googleButtonText: { color: T.primary, fontSize: 16, fontWeight: '600' },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
-  footerText: { fontSize: 14, color: T.muted },
-  link: { color: T.accent, fontSize: 14, fontWeight: '600' },
-  errorText: { color: T.danger, fontSize: 13, marginTop: 2 },
+  googleButtonText: { color: T.primary, fontSize: T.fontSize.md, fontWeight: '600' },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: T.space.sm },
+  footerText: { fontSize: T.fontSize.sm, color: T.muted },
+  link: { color: T.accent, fontSize: T.fontSize.sm, fontWeight: '600' },
   expiredBanner: {
     backgroundColor: T.accentBg,
     borderColor: T.accent,
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    borderRadius: T.radius.md,
+    padding: T.space.md,
+    marginBottom: T.space.lg,
   },
-  expiredBannerText: { color: T.accent, fontSize: 14, textAlign: 'center' },
+  expiredBannerText: { color: T.accent, fontSize: T.fontSize.sm, textAlign: 'center' },
 });

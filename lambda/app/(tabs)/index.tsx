@@ -1,20 +1,21 @@
 import { useState } from 'react';
 import {
   View,
-  TextInput,
-  TouchableOpacity,
   Text,
   StyleSheet,
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import supabase from '@/lib/supabase';
 import { useAuthContext } from '@/lib/AuthContext';
 import { DropdownSelect } from '@/components/FormControls';
 import PageHeader from '@/components/PageHeader';
+import Button from '@/components/Button';
+import Input from '@/components/Input';
+import DatePickerField from '@/components/DatePickerField';
 import T from '@/constants/Theme';
 
 const GENDER_OPTIONS = [
@@ -127,9 +128,7 @@ export default function ProfileScreen() {
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>First Name</Text>
               {editing ? (
-                <TextInput style={styles.input} value={name} onChangeText={setName}
-                  placeholder="Enter first name" placeholderTextColor={T.muted}
-                  editable={!saving} />
+                <Input value={name} onChangeText={setName} placeholder="Enter first name" editable={!saving} />
               ) : (
                 <Text style={styles.value}>{profile?.user_name || '—'}</Text>
               )}
@@ -138,9 +137,7 @@ export default function ProfileScreen() {
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Last Name</Text>
               {editing ? (
-                <TextInput style={styles.input} value={lastname} onChangeText={setLastname}
-                  placeholder="Enter last name (optional)" placeholderTextColor={T.muted}
-                  editable={!saving} />
+                <Input value={lastname} onChangeText={setLastname} placeholder="Enter last name (optional)" editable={!saving} />
               ) : (
                 <Text style={styles.value}>{profile?.user_lastname || '—'}</Text>
               )}
@@ -149,9 +146,7 @@ export default function ProfileScreen() {
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Date of Birth</Text>
               {editing ? (
-                <TextInput style={styles.input} value={dateOfBirth} onChangeText={setDateOfBirth}
-                  placeholder="YYYY-MM-DD (optional)" placeholderTextColor={T.muted}
-                  editable={!saving} />
+                <DatePickerField value={dateOfBirth} onChangeDate={setDateOfBirth} editable={!saving} />
               ) : (
                 <Text style={styles.value}>{profile?.user_date_of_birth || '—'}</Text>
               )}
@@ -174,9 +169,13 @@ export default function ProfileScreen() {
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Height (cm)</Text>
               {editing ? (
-                <TextInput style={styles.input} value={height} onChangeText={setHeight}
-                  placeholder="Enter height in cm (optional)" placeholderTextColor={T.muted}
-                  keyboardType="number-pad" editable={!saving} />
+                <Input
+                  value={height}
+                  onChangeText={setHeight}
+                  placeholder="Enter height in cm (optional)"
+                  keyboardType="number-pad"
+                  editable={!saving}
+                />
               ) : (
                 <Text style={styles.value}>
                   {profile?.user_height_cm ? `${profile.user_height_cm} cm` : '—'}
@@ -186,23 +185,14 @@ export default function ProfileScreen() {
 
             {editing ? (
               <View style={styles.editActions}>
-                <TouchableOpacity style={[styles.saveButton, { opacity: saving ? 0.6 : 1 }]}
-                  onPress={handleSave} disabled={saving}>
-                  {saving ? <ActivityIndicator color={T.accentText} /> : <Text style={styles.saveButtonText}>Save</Text>}
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.cancelButton} onPress={() => setEditing(false)} disabled={saving}>
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
+                <Button label="Save" onPress={handleSave} loading={saving} disabled={saving} />
+                <Button label="Cancel" onPress={() => setEditing(false)} variant="ghost" disabled={saving} />
               </View>
             ) : (
-              <>
-                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                  <Text style={styles.logoutButtonText}>Logout</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
-                  <Text style={styles.deleteButtonText}>Delete Account</Text>
-                </TouchableOpacity>
-              </>
+              <View style={styles.accountActions}>
+                <Button label="Logout" onPress={handleLogout} />
+                <Button label="Delete Account" onPress={handleDeleteAccount} variant="danger" />
+              </View>
             )}
           </View>
         </ScrollView>
@@ -214,28 +204,16 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: T.bg },
   flex: { flex: 1 },
-  content: { padding: 20 },
-  editButton: { color: T.accent, fontSize: 16, fontWeight: '600' },
-  field: { marginBottom: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: T.border },
-  fieldLabel: { fontSize: 12, marginBottom: 6, color: T.muted },
-  value: { fontSize: 16, fontWeight: '500', color: T.primary },
-  input: {
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: T.border,
-    backgroundColor: T.surface,
-    color: T.primary,
+  content: { padding: T.space.xl },
+  editButton: { color: T.accent, fontSize: T.fontSize.md, fontWeight: '600' },
+  field: {
+    marginBottom: T.space.lg,
+    paddingBottom: T.space.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: T.border,
   },
-  editActions: { gap: 12, marginTop: 8 },
-  saveButton: { backgroundColor: T.accent, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
-  saveButtonText: { color: T.accentText, fontSize: 16, fontWeight: '600' },
-  cancelButton: { borderWidth: 1, borderColor: T.border, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
-  cancelButtonText: { color: T.muted, fontSize: 16, fontWeight: '600' },
-  logoutButton: { backgroundColor: T.accent, paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 32 },
-  logoutButtonText: { color: T.accentText, fontSize: 16, fontWeight: '600' },
-  deleteButton: { borderWidth: 1, borderColor: T.dangerBorder, paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 12 },
-  deleteButtonText: { color: T.danger, fontSize: 16, fontWeight: '600' },
+  fieldLabel: { fontSize: T.fontSize.xs, marginBottom: T.space.xs, color: T.muted },
+  value: { fontSize: T.fontSize.md, fontWeight: '500', color: T.primary },
+  editActions: { gap: T.space.md, marginTop: T.space.sm },
+  accountActions: { gap: T.space.md, marginTop: T.space.xxl },
 });

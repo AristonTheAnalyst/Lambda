@@ -2,15 +2,15 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   Alert,
   ScrollView,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native';
 import { SegmentedControl, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
+import Button from '@/components/Button';
+import Input from '@/components/Input';
 import supabase from '@/lib/supabase';
 import T from '@/constants/Theme';
 
@@ -76,10 +76,8 @@ export default function ExercisesScreen() {
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       {/* ── Create form ── */}
       <Text style={styles.sectionTitle}>New Exercise</Text>
-      <TextInput
-        style={styles.input}
+      <Input
         placeholder="Exercise name"
-        placeholderTextColor={T.muted}
         value={name}
         onChangeText={setName}
       />
@@ -87,18 +85,18 @@ export default function ExercisesScreen() {
       <SegmentedControl options={VOLUME_OPTIONS} value={volume} onChange={setVolume} />
       <Text style={styles.label}>Intensity type</Text>
       <SegmentedControl options={INTENSITY_OPTIONS} value={intensity} onChange={setIntensity} />
-      <TouchableOpacity style={styles.btn} onPress={create} disabled={creating}>
-        {creating ? <ActivityIndicator color={T.accentText} /> : <Text style={styles.btnText}>Create Exercise</Text>}
-      </TouchableOpacity>
+      <View style={styles.btnRow}>
+        <Button label="Create Exercise" onPress={create} loading={creating} />
+      </View>
 
       {/* ── List ── */}
-      <Text style={[styles.sectionTitle, { marginTop: 28 }]}>All Exercises</Text>
+      <Text style={[styles.sectionTitle, { marginTop: T.space.xxl }]}>All Exercises</Text>
       {exercises.length === 0 ? (
         <Text style={styles.empty}>No exercises yet.</Text>
       ) : (
         exercises.map((ex) => (
           <View key={ex.exercise_id} style={styles.row}>
-            <View style={{ flex: 1 }}>
+            <View style={styles.rowInfo}>
               <Text style={styles.rowName}>{ex.exercise_name}</Text>
               <Text style={styles.rowSub}>{ex.exercise_volume_type} · {ex.exercise_intensity_type}</Text>
             </View>
@@ -111,18 +109,16 @@ export default function ExercisesScreen() {
           </View>
         ))
       )}
-      <View style={{ height: 40 }} />
+      <View style={{ height: T.space.xxl }} />
 
       {/* ── Edit modal ── */}
       <SlideUpModal visible={!!editEx} onClose={() => setEditEx(null)}>
         <View style={styles.modalBox}>
           <Text style={styles.modalTitle}>Edit Exercise</Text>
-          <TextInput
-            style={styles.input}
+          <Input
             value={editEx?.exercise_name ?? ''}
             onChangeText={(t) => setEditEx((e) => e ? { ...e, exercise_name: t } : e)}
             placeholder="Exercise name"
-            placeholderTextColor={T.muted}
           />
           <Text style={styles.label}>Volume type</Text>
           <SegmentedControl
@@ -137,12 +133,12 @@ export default function ExercisesScreen() {
             onChange={(v) => setEditEx((e) => e ? { ...e, exercise_intensity_type: v } : e)}
           />
           <View style={styles.modalBtns}>
-            <TouchableOpacity style={[styles.btn, { flex: 1, marginRight: 8 }]} onPress={saveEdit}>
-              <Text style={styles.btnText}>Save</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.btnOutline, { flex: 1 }]} onPress={() => setEditEx(null)}>
-              <Text style={styles.btnOutlineText}>Cancel</Text>
-            </TouchableOpacity>
+            <View style={styles.modalBtnFlex}>
+              <Button label="Save" onPress={saveEdit} />
+            </View>
+            <View style={styles.modalBtnFlex}>
+              <Button label="Cancel" onPress={() => setEditEx(null)} variant="ghost" />
+            </View>
           </View>
         </View>
       </SlideUpModal>
@@ -151,25 +147,26 @@ export default function ExercisesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: T.bg, padding: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: T.primary, marginBottom: 12 },
-  label: { fontSize: 13, fontWeight: '500', color: T.primary, marginTop: 12, marginBottom: 4 },
-  input: {
-    borderWidth: 1, borderColor: T.border, borderRadius: 8,
-    padding: 12, fontSize: 15, backgroundColor: T.surface, color: T.primary, marginBottom: 4,
+  container: { flex: 1, backgroundColor: T.bg, padding: T.space.lg },
+  sectionTitle: { fontSize: T.fontSize.lg, fontWeight: '700', color: T.primary, marginBottom: T.space.md },
+  label: { fontSize: T.fontSize.sm, fontWeight: '500', color: T.primary, marginTop: T.space.md, marginBottom: T.space.xs },
+  btnRow: { marginTop: T.space.md },
+  empty: { color: T.muted, padding: T.space.xs },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: T.space.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: T.border,
   },
-  btn: { backgroundColor: T.accent, borderRadius: 8, padding: 13, alignItems: 'center', marginTop: 12 },
-  btnText: { color: T.accentText, fontWeight: '600', fontSize: 15 },
-  btnOutline: { borderWidth: 1, borderColor: T.border, borderRadius: 8, padding: 13, alignItems: 'center', marginTop: 12 },
-  btnOutlineText: { color: T.muted, fontWeight: '600', fontSize: 15 },
-  empty: { color: T.muted, padding: 4 },
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.border },
-  rowName: { fontSize: 15, color: T.primary },
-  rowSub: { fontSize: 12, color: T.muted, marginTop: 2 },
-  rowBtn: { paddingHorizontal: 10, paddingVertical: 6, marginLeft: 8, borderRadius: 6, backgroundColor: T.accentBg },
+  rowInfo: { flex: 1 },
+  rowName: { fontSize: T.fontSize.md - 1, color: T.primary },
+  rowSub: { fontSize: T.fontSize.xs, color: T.muted, marginTop: T.space.xs },
+  rowBtn: { paddingHorizontal: T.space.sm, paddingVertical: T.space.xs + 2, marginLeft: T.space.sm, borderRadius: T.radius.sm, backgroundColor: T.accentBg },
   rowBtnDanger: { backgroundColor: T.dangerBg },
-  rowBtnText: { fontSize: 13, fontWeight: '500', color: T.accent },
-  modalBox: { backgroundColor: T.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, paddingBottom: 40 },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: T.primary, marginBottom: 12 },
-  modalBtns: { flexDirection: 'row', marginTop: 4 },
+  rowBtnText: { fontSize: T.fontSize.sm, fontWeight: '500', color: T.accent },
+  modalBox: { backgroundColor: T.surface, borderTopLeftRadius: T.radius.lg, borderTopRightRadius: T.radius.lg, padding: T.space.xl, paddingBottom: T.space.xxl },
+  modalTitle: { fontSize: T.fontSize.lg, fontWeight: '700', color: T.primary, marginBottom: T.space.md },
+  modalBtns: { flexDirection: 'row', gap: T.space.sm, marginTop: T.space.sm },
+  modalBtnFlex: { flex: 1 },
 });

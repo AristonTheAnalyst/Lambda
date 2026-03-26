@@ -2,15 +2,15 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   Alert,
   ScrollView,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native';
 import { DropdownSelect, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
+import Button from '@/components/Button';
+import Input from '@/components/Input';
 import supabase from '@/lib/supabase';
 import T from '@/constants/Theme';
 
@@ -72,10 +72,8 @@ export default function VariationsScreen() {
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       {/* ── Create form ── */}
       <Text style={styles.sectionTitle}>New Variation</Text>
-      <TextInput
-        style={styles.input}
+      <Input
         placeholder="Variation name"
-        placeholderTextColor={T.muted}
         value={name}
         onChangeText={setName}
       />
@@ -86,18 +84,18 @@ export default function VariationsScreen() {
         onChange={setTypeId}
         placeholder="Select type…"
       />
-      <TouchableOpacity style={styles.btn} onPress={create} disabled={creating}>
-        {creating ? <ActivityIndicator color={T.accentText} /> : <Text style={styles.btnText}>Add Variation</Text>}
-      </TouchableOpacity>
+      <View style={styles.btnRow}>
+        <Button label="Add Variation" onPress={create} loading={creating} />
+      </View>
 
       {/* ── List ── */}
-      <Text style={[styles.sectionTitle, { marginTop: 28 }]}>All Variations</Text>
+      <Text style={[styles.sectionTitle, { marginTop: T.space.xxl }]}>All Variations</Text>
       {variations.length === 0 ? (
         <Text style={styles.empty}>No variations yet.</Text>
       ) : (
         variations.map((v) => (
           <View key={v.exercise_variation_id} style={styles.row}>
-            <View style={{ flex: 1 }}>
+            <View style={styles.rowInfo}>
               <Text style={styles.rowName}>{v.exercise_variation_name}</Text>
               <Text style={styles.rowSub}>{v.variation_type_name}</Text>
             </View>
@@ -110,18 +108,16 @@ export default function VariationsScreen() {
           </View>
         ))
       )}
-      <View style={{ height: 40 }} />
+      <View style={{ height: T.space.xxl }} />
 
       {/* ── Edit modal ── */}
       <SlideUpModal visible={!!editVar} onClose={() => setEditVar(null)}>
         <View style={styles.modalBox}>
           <Text style={styles.modalTitle}>Edit Variation</Text>
-          <TextInput
-            style={styles.input}
+          <Input
             value={editVar?.exercise_variation_name ?? ''}
             onChangeText={(t) => setEditVar((v) => v ? { ...v, exercise_variation_name: t } : v)}
             placeholder="Variation name"
-            placeholderTextColor={T.muted}
           />
           <Text style={styles.label}>Variation type</Text>
           <DropdownSelect
@@ -131,12 +127,12 @@ export default function VariationsScreen() {
             placeholder="Select type…"
           />
           <View style={styles.modalBtns}>
-            <TouchableOpacity style={[styles.btn, { flex: 1, marginRight: 8 }]} onPress={saveEdit}>
-              <Text style={styles.btnText}>Save</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.btnOutline, { flex: 1 }]} onPress={() => setEditVar(null)}>
-              <Text style={styles.btnOutlineText}>Cancel</Text>
-            </TouchableOpacity>
+            <View style={styles.modalBtnFlex}>
+              <Button label="Save" onPress={saveEdit} />
+            </View>
+            <View style={styles.modalBtnFlex}>
+              <Button label="Cancel" onPress={() => setEditVar(null)} variant="ghost" />
+            </View>
           </View>
         </View>
       </SlideUpModal>
@@ -145,25 +141,26 @@ export default function VariationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: T.bg, padding: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: T.primary, marginBottom: 12 },
-  label: { fontSize: 13, fontWeight: '500', color: T.primary, marginTop: 12, marginBottom: 4 },
-  input: {
-    borderWidth: 1, borderColor: T.border, borderRadius: 8,
-    padding: 12, fontSize: 15, backgroundColor: T.surface, color: T.primary, marginBottom: 4,
+  container: { flex: 1, backgroundColor: T.bg, padding: T.space.lg },
+  sectionTitle: { fontSize: T.fontSize.lg, fontWeight: '700', color: T.primary, marginBottom: T.space.md },
+  label: { fontSize: T.fontSize.sm, fontWeight: '500', color: T.primary, marginTop: T.space.md, marginBottom: T.space.xs },
+  btnRow: { marginTop: T.space.md },
+  empty: { color: T.muted, padding: T.space.xs },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: T.space.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: T.border,
   },
-  btn: { backgroundColor: T.accent, borderRadius: 8, padding: 13, alignItems: 'center', marginTop: 12 },
-  btnText: { color: T.accentText, fontWeight: '600', fontSize: 15 },
-  btnOutline: { borderWidth: 1, borderColor: T.border, borderRadius: 8, padding: 13, alignItems: 'center', marginTop: 12 },
-  btnOutlineText: { color: T.muted, fontWeight: '600', fontSize: 15 },
-  empty: { color: T.muted, padding: 4 },
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.border },
-  rowName: { fontSize: 15, color: T.primary },
-  rowSub: { fontSize: 12, color: T.muted, marginTop: 2 },
-  rowBtn: { paddingHorizontal: 10, paddingVertical: 6, marginLeft: 8, borderRadius: 6, backgroundColor: T.accentBg },
+  rowInfo: { flex: 1 },
+  rowName: { fontSize: T.fontSize.md - 1, color: T.primary },
+  rowSub: { fontSize: T.fontSize.xs, color: T.muted, marginTop: T.space.xs },
+  rowBtn: { paddingHorizontal: T.space.sm, paddingVertical: T.space.xs + 2, marginLeft: T.space.sm, borderRadius: T.radius.sm, backgroundColor: T.accentBg },
   rowBtnDanger: { backgroundColor: T.dangerBg },
-  rowBtnText: { fontSize: 13, fontWeight: '500', color: T.accent },
-  modalBox: { backgroundColor: T.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, paddingBottom: 40 },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: T.primary, marginBottom: 12 },
-  modalBtns: { flexDirection: 'row', marginTop: 4 },
+  rowBtnText: { fontSize: T.fontSize.sm, fontWeight: '500', color: T.accent },
+  modalBox: { backgroundColor: T.surface, borderTopLeftRadius: T.radius.lg, borderTopRightRadius: T.radius.lg, padding: T.space.xl, paddingBottom: T.space.xxl },
+  modalTitle: { fontSize: T.fontSize.lg, fontWeight: '700', color: T.primary, marginBottom: T.space.md },
+  modalBtns: { flexDirection: 'row', gap: T.space.sm, marginTop: T.space.sm },
+  modalBtnFlex: { flex: 1 },
 });

@@ -6,11 +6,11 @@ import {
   Modal,
   FlatList,
   StyleSheet,
-  SafeAreaView,
   Animated,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import T from '@/constants/Theme';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -150,6 +150,7 @@ export function DropdownSelect<T = any>({
 }: DropdownSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
+  const insets = useSafeAreaInsets();
 
   return (
     <>
@@ -164,7 +165,7 @@ export function DropdownSelect<T = any>({
       </TouchableOpacity>
 
       <SlideUpModal visible={open} onClose={() => setOpen(false)}>
-        <SafeAreaView style={drop.sheet}>
+        <View style={[drop.sheet, { paddingBottom: insets.bottom }]}>
           <View style={drop.handle} />
           <FlatList
             data={options}
@@ -187,7 +188,7 @@ export function DropdownSelect<T = any>({
               );
             }}
           />
-        </SafeAreaView>
+        </View>
       </SlideUpModal>
     </>
   );
@@ -215,8 +216,7 @@ const drop = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    maxHeight: '55%',
-    paddingBottom: 16,
+    maxHeight: '75%',
     backgroundColor: T.surface,
   },
   handle: {

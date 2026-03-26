@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View,
-  TextInput,
   TouchableOpacity,
   Text,
   StyleSheet,
@@ -17,6 +16,8 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { useAuthContext } from '@/lib/AuthContext';
 import { withGuard } from '@/lib/asyncGuard';
 import { signupSchema, getFieldErrors } from '@/lib/validation';
+import Button from '@/components/Button';
+import Input from '@/components/Input';
 import T from '@/constants/Theme';
 
 export default function SignupScreen() {
@@ -82,7 +83,7 @@ export default function SignupScreen() {
               <AppleAuthentication.AppleAuthenticationButton
                 buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
                 buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                cornerRadius={8}
+                cornerRadius={T.radius.md}
                 style={[styles.appleButton, { opacity: socialLoading === 'apple' ? 0.6 : 1 }]}
                 onPress={handleApple}
               />
@@ -105,61 +106,43 @@ export default function SignupScreen() {
               <View style={styles.dividerLine} />
             </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={[styles.input, fieldErrors.email && styles.inputError]}
-                placeholder="Enter your email"
-                placeholderTextColor={T.muted}
-                value={email}
-                onChangeText={(v) => { setEmail(v); setFieldErrors((e) => ({ ...e, email: '' })); }}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                editable={!isLoading}
-              />
-              {fieldErrors.email ? <Text style={styles.errorText}>{fieldErrors.email}</Text> : null}
-            </View>
+            <Input
+              label="Email"
+              value={email}
+              onChangeText={(v) => { setEmail(v); setFieldErrors((e) => ({ ...e, email: '' })); }}
+              placeholder="Enter your email"
+              error={fieldErrors.email}
+              editable={!isLoading}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={[styles.input, fieldErrors.password && styles.inputError]}
-                placeholder="Enter password (min 6 characters)"
-                placeholderTextColor={T.muted}
-                value={password}
-                onChangeText={(v) => { setPassword(v); setFieldErrors((e) => ({ ...e, password: '' })); }}
-                secureTextEntry
-                editable={!isLoading}
-              />
-              {fieldErrors.password ? <Text style={styles.errorText}>{fieldErrors.password}</Text> : null}
-            </View>
+            <Input
+              label="Password"
+              value={password}
+              onChangeText={(v) => { setPassword(v); setFieldErrors((e) => ({ ...e, password: '' })); }}
+              placeholder="Enter password (min 6 characters)"
+              error={fieldErrors.password}
+              editable={!isLoading}
+              secureTextEntry
+            />
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Confirm Password</Text>
-              <TextInput
-                style={[styles.input, fieldErrors.confirmPassword && styles.inputError]}
-                placeholder="Confirm your password"
-                placeholderTextColor={T.muted}
-                value={confirmPassword}
-                onChangeText={(v) => { setConfirmPassword(v); setFieldErrors((e) => ({ ...e, confirmPassword: '' })); }}
-                secureTextEntry
-                editable={!isLoading}
-              />
-              {fieldErrors.confirmPassword ? <Text style={styles.errorText}>{fieldErrors.confirmPassword}</Text> : null}
-            </View>
+            <Input
+              label="Confirm Password"
+              value={confirmPassword}
+              onChangeText={(v) => { setConfirmPassword(v); setFieldErrors((e) => ({ ...e, confirmPassword: '' })); }}
+              placeholder="Confirm your password"
+              error={fieldErrors.confirmPassword}
+              editable={!isLoading}
+              secureTextEntry
+            />
 
-            <TouchableOpacity
-              style={[styles.button, { opacity: isLoading || isCoolingDown ? 0.6 : 1 }]}
+            <Button
+              label={isCoolingDown ? `Try again in ${cooldown}s` : 'Sign Up'}
               onPress={handleSignup}
-              disabled={isLoading || isCoolingDown}>
-              {loading ? (
-                <ActivityIndicator color={T.accentText} />
-              ) : isCoolingDown ? (
-                <Text style={styles.buttonText}>Try again in {cooldown}s</Text>
-              ) : (
-                <Text style={styles.buttonText}>Sign Up</Text>
-              )}
-            </TouchableOpacity>
+              disabled={isLoading || isCoolingDown}
+              loading={loading}
+            />
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account? </Text>
@@ -176,48 +159,26 @@ export default function SignupScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: T.bg },
-  content: { flex: 1, justifyContent: 'center', paddingHorizontal: 20 },
-  header: { marginBottom: 40, alignItems: 'center' },
-  title: { fontSize: 32, fontWeight: 'bold', marginBottom: 8, color: T.primary },
-  subtitle: { fontSize: 18, color: T.muted },
-  form: { gap: 16 },
-  inputContainer: { gap: 8 },
-  label: { fontSize: 16, fontWeight: '600', color: T.primary },
-  input: {
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: T.border,
-    backgroundColor: T.surface,
-    color: T.primary,
-  },
-  inputError: { borderColor: T.danger },
-  button: {
-    backgroundColor: T.accent,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  buttonText: { color: T.accentText, fontSize: 16, fontWeight: '600' },
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 4 },
+  content: { flex: 1, justifyContent: 'center', paddingHorizontal: T.space.xl },
+  header: { marginBottom: T.space.xxl, alignItems: 'center', marginTop: T.space.xl },
+  title: { fontSize: 32, fontWeight: 'bold', marginBottom: T.space.sm, color: T.primary },
+  subtitle: { fontSize: T.fontSize.lg, color: T.muted },
+  form: { gap: T.space.lg, paddingBottom: T.space.xxl },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.sm, marginVertical: T.space.xs },
   dividerLine: { flex: 1, height: 1, backgroundColor: T.border },
-  dividerText: { fontSize: 13, color: T.muted },
-  appleButton: { height: 48, borderRadius: 8 },
+  dividerText: { fontSize: T.fontSize.sm, color: T.muted },
+  appleButton: { height: 48, borderRadius: T.radius.md },
   googleButton: {
     height: 48,
-    borderRadius: 8,
+    borderRadius: T.radius.md,
     borderWidth: 1,
     borderColor: T.border,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: T.surface,
   },
-  googleButtonText: { color: T.primary, fontSize: 16, fontWeight: '600' },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
-  footerText: { fontSize: 14, color: T.muted },
-  link: { color: T.accent, fontSize: 14, fontWeight: '600' },
-  errorText: { color: T.danger, fontSize: 13, marginTop: 2 },
+  googleButtonText: { color: T.primary, fontSize: T.fontSize.md, fontWeight: '600' },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: T.space.sm },
+  footerText: { fontSize: T.fontSize.sm, color: T.muted },
+  link: { color: T.accent, fontSize: T.fontSize.sm, fontWeight: '600' },
 });

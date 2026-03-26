@@ -6,11 +6,11 @@ import {
   Alert,
   ScrollView,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DropdownSelect } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
+import Button from '@/components/Button';
 import supabase from '@/lib/supabase';
 import T from '@/constants/Theme';
 
@@ -78,7 +78,7 @@ export default function AssignVariationsScreen() {
 
       {assignExId && (
         <>
-          <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Select Variations</Text>
+          <Text style={[styles.sectionTitle, { marginTop: T.space.xl }]}>Select Variations</Text>
 
           {Object.entries(grouped).map(([typeName, vars]) => {
             const isExpanded = expandedTypes.has(typeName);
@@ -87,7 +87,7 @@ export default function AssignVariationsScreen() {
             return (
               <View key={typeName} style={styles.typeBlock}>
                 <TouchableOpacity style={styles.typeRow} onPress={() => toggleType(typeName)} activeOpacity={0.7}>
-                  <View style={{ flex: 1 }}>
+                  <View style={styles.typeRowText}>
                     <Text style={styles.typeName}>{typeName}</Text>
                     {!isExpanded && selectedCount > 0 && (
                       <Text style={styles.selectedHint}>{selectedCount} selected</Text>
@@ -110,7 +110,7 @@ export default function AssignVariationsScreen() {
                           style={styles.checkRow}
                           onPress={() => toggle(v.exercise_variation_id)}>
                           <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
-                            {checked && <Text style={{ color: T.accentText, fontSize: 12 }}>✓</Text>}
+                            {checked && <Text style={styles.checkmark}>✓</Text>}
                           </View>
                           <Text style={styles.checkLabel}>{v.exercise_variation_name}</Text>
                         </TouchableOpacity>
@@ -122,41 +122,51 @@ export default function AssignVariationsScreen() {
             );
           })}
 
-          <TouchableOpacity style={[styles.btn, { marginTop: 20 }]} onPress={save} disabled={saving}>
-            {saving ? <ActivityIndicator color={T.accentText} /> : <Text style={styles.btnText}>Save Assignments</Text>}
-          </TouchableOpacity>
+          <View style={styles.btnRow}>
+            <Button label="Save Assignments" onPress={save} loading={saving} />
+          </View>
         </>
       )}
 
-      <View style={{ height: 40 }} />
+      <View style={{ height: T.space.xxl }} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: T.bg, padding: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: T.primary, marginBottom: 8 },
-  label: { fontSize: 13, fontWeight: '500', color: T.primary, marginTop: 4, marginBottom: 4 },
+  container: { flex: 1, backgroundColor: T.bg, padding: T.space.lg },
+  sectionTitle: { fontSize: T.fontSize.lg, fontWeight: '700', color: T.primary, marginBottom: T.space.sm },
+  label: { fontSize: T.fontSize.sm, fontWeight: '500', color: T.primary, marginTop: T.space.xs, marginBottom: T.space.xs },
   typeBlock: {
-    borderWidth: 1, borderColor: T.border, borderRadius: 10,
-    marginBottom: 8, overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: T.border,
+    borderRadius: T.radius.md,
+    marginBottom: T.space.sm,
+    overflow: 'hidden',
   },
   typeRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 14, paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: T.space.md,
+    paddingHorizontal: T.space.md,
     backgroundColor: T.surface,
   },
-  typeName: { fontSize: 15, fontWeight: '600', color: T.primary },
-  selectedHint: { fontSize: 12, color: T.accent, marginTop: 2 },
-  varList: { paddingHorizontal: 14, paddingBottom: 6, backgroundColor: T.bg },
-  checkRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 14 },
+  typeRowText: { flex: 1 },
+  typeName: { fontSize: T.fontSize.md - 1, fontWeight: '600', color: T.primary },
+  selectedHint: { fontSize: T.fontSize.xs, color: T.accent, marginTop: T.space.xs },
+  varList: { paddingHorizontal: T.space.md, paddingBottom: T.space.xs, backgroundColor: T.bg },
+  checkRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: T.space.sm, gap: T.space.md },
   checkbox: {
-    width: 22, height: 22, borderRadius: 4,
-    borderWidth: 2, borderColor: T.accent,
-    alignItems: 'center', justifyContent: 'center',
+    width: 22,
+    height: 22,
+    borderRadius: T.radius.sm,
+    borderWidth: 2,
+    borderColor: T.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   checkboxChecked: { backgroundColor: T.accent },
-  checkLabel: { fontSize: 15, color: T.primary },
-  btn: { backgroundColor: T.accent, borderRadius: 8, padding: 13, alignItems: 'center' },
-  btnText: { color: T.accentText, fontWeight: '600', fontSize: 15 },
+  checkmark: { color: T.accentText, fontSize: T.fontSize.xs },
+  checkLabel: { fontSize: T.fontSize.md - 1, color: T.primary },
+  btnRow: { marginTop: T.space.lg },
 });
