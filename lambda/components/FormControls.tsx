@@ -171,9 +171,8 @@ export function DropdownSelect<T = any>({
         open={open}
         onOpenChange={(o: boolean) => { if (!o) setOpen(false); }}
         animation="medium"
-        snapPoints={[75]}
+        snapPoints={searchable ? [88] : [75]}
         disableDrag
-        moveOnKeyboardChange
         zIndex={100_000}
       >
         <Sheet.Overlay
