@@ -316,9 +316,9 @@ export default function VariationsScreen() {
             onChangeText={(t) => setEditVar((v) => v ? { ...v, variation_name: t } : v)}
             placeholder="Variation name"
           />
-          <XStack gap={T.space.sm} marginTop={T.space.md}>
-            <YStack flex={1}><Button label="Save" onPress={saveEdit} /></YStack>
-            <YStack flex={1}><Button label="Cancel" onPress={() => setEditVar(null)} variant="ghost" /></YStack>
+          <XStack gap={T.space.sm} marginTop={T.space.md} justifyContent="center">
+            <Button label="Save" onPress={saveEdit} />
+            <Button label="Cancel" onPress={() => setEditVar(null)} variant="ghost" />
           </XStack>
         </YStack>
       </SlideUpModal>

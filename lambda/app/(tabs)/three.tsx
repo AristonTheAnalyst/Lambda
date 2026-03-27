@@ -375,9 +375,9 @@ export default function WorkoutLogScreen() {
                 </>
               )}
               <Input label="Notes (optional)" placeholder="Notes…" value={editNotes} onChangeText={setEditNotes} />
-              <XStack gap={T.space.sm}>
-                <YStack flex={1}><Button label="Save" onPress={saveEditSet} loading={editLoading} /></YStack>
-                <YStack flex={1}><Button label="Cancel" onPress={() => setEditingSet(null)} variant="ghost" /></YStack>
+              <XStack gap={T.space.sm} justifyContent="center">
+                <Button label="Save" onPress={saveEditSet} loading={editLoading} />
+                <Button label="Cancel" onPress={() => setEditingSet(null)} variant="ghost" />
               </XStack>
               <YStack height={T.space.xl} />
             </YStack>

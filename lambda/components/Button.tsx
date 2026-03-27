@@ -55,6 +55,7 @@ interface ButtonProps {
   variant?: 'primary' | 'glass' | 'ghost' | 'danger';
   disabled?: boolean;
   loading?: boolean;
+  fullWidth?: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -65,14 +66,16 @@ export default function Button({
   variant = 'primary',
   disabled = false,
   loading = false,
+  fullWidth = false,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
   const effective  = variant === 'glass' ? 'primary' : variant;
+  const self       = fullWidth ? 'stretch' : 'center';
 
   // Glass variant on iOS 26+
   if (variant === 'glass' && isGlassSupported && GlassView) {
     return (
-      <View style={{ alignSelf: 'center', borderRadius: 999, overflow: 'hidden', opacity: isDisabled ? 0.45 : 1 }}>
+      <View style={{ alignSelf: self, borderRadius: 999, overflow: 'hidden', opacity: isDisabled ? 0.45 : 1 }}>
         <GlassView
           glassEffectStyle="systemMaterial"
           tintColor={T.accent}
@@ -92,7 +95,7 @@ export default function Button({
   const labelColor   = effective === 'ghost' ? T.accent : T.accentText;
 
   return (
-    <View style={{ alignSelf: 'center' }}>
+    <View style={{ alignSelf: self }}>
       <Base variant={effective} onPress={onPress} disabled={isDisabled} opacity={isDisabled ? 0.45 : 1}>
         {loading
           ? <ActivityIndicator size="small" color={spinnerColor} />

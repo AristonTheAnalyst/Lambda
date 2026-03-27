@@ -51,6 +51,8 @@ export function SegmentedControl<T extends string>({
     <XStack
       backgroundColor={T.surface}
       borderRadius={T.radius.sm}
+      borderWidth={1}
+      borderColor={T.border}
       padding={T.space.xs}
       marginBottom={T.space.xs}
     >

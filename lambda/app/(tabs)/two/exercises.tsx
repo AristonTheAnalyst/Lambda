@@ -168,9 +168,9 @@ export default function ExercisesScreen() {
             value={editEx?.exercise_volume_type ?? 'reps'}
             onChange={(v) => setEditEx((e) => e ? { ...e, exercise_volume_type: v } : e)}
           />
-          <XStack gap={T.space.sm} marginTop={T.space.md}>
-            <YStack flex={1}><Button label="Save" onPress={saveEdit} /></YStack>
-            <YStack flex={1}><Button label="Cancel" onPress={() => setEditEx(null)} variant="ghost" /></YStack>
+          <XStack gap={T.space.sm} marginTop={T.space.md} justifyContent="center">
+            <Button label="Save" onPress={saveEdit} />
+            <Button label="Cancel" onPress={() => setEditEx(null)} variant="ghost" />
           </XStack>
         </YStack>
       </SlideUpModal>
