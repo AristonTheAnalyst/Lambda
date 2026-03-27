@@ -23,77 +23,118 @@ export default function VariationsScreen() {
   const openEdit = useUIGuard();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { exercises, refreshExerciseDetails, refreshVariations } = useExerciseData();
+  const { exercises, exerciseDetailMap, refreshExerciseDetails, refreshVariations } = useExerciseData();
   const { user } = useAuthContext();
 
-  const [selectedExId, setSelectedExId] = useState<number | null>(null);
-  const [assignedVars, setAssignedVars] = useState<Variation[]>([]);
-  const [loadingVars, setLoadingVars]   = useState(false);
-  const [addMode, setAddMode]           = useState<'existing' | 'new'>('existing');
-  const [existingVars, setExistingVars] = useState<Variation[]>([]);
+  const [selectedExIds, setSelectedExIds] = useState<number[]>([]);
+  const [assignedVars, setAssignedVars]   = useState<Variation[]>([]);
+  const [commonVars, setCommonVars]       = useState<Variation[]>([]);
+  const [loadingVars, setLoadingVars]     = useState(false);
+  const [addMode, setAddMode]             = useState<'existing' | 'new'>('existing');
+  const [existingVars, setExistingVars]   = useState<Variation[]>([]);
   const [selectedExistingIds, setSelectedExistingIds] = useState<number[]>([]);
-  const [newName, setNewName]           = useState('');
-  const [adding, setAdding]             = useState(false);
-  const [editVar, setEditVar]           = useState<Variation | null>(null);
+  const [newName, setNewName]             = useState('');
+  const [adding, setAdding]               = useState(false);
+  const [editVar, setEditVar]             = useState<Variation | null>(null);
 
-  const loadAssigned = useCallback(async (exId: number) => {
+  const singleExId = selectedExIds.length === 1 ? selectedExIds[0] : null;
+
+  const loadForExercises = useCallback(async (exIds: number[]) => {
+    if (!exIds.length) { setAssignedVars([]); setCommonVars([]); setExistingVars([]); return; }
     setLoadingVars(true);
-    const [assignedRes, allRes] = await Promise.all([
-      supabase
-        .from('user_custom_exercise_variation_bridge')
-        .select('user_custom_variation(custom_variation_id, variation_name)')
-        .eq('custom_exercise_id', exId),
-      supabase
-        .from('user_custom_variation')
-        .select('custom_variation_id, variation_name')
-        .eq('is_active', true),
-    ]);
+
+    if (exIds.length === 1) {
+      // Single exercise: show assigned + filtered existing
+      const [assignedRes, allRes] = await Promise.all([
+        supabase
+          .from('user_custom_exercise_variation_bridge')
+          .select('user_custom_variation(custom_variation_id, variation_name)')
+          .eq('custom_exercise_id', exIds[0]),
+        supabase
+          .from('user_custom_variation')
+          .select('custom_variation_id, variation_name')
+          .eq('is_active', true),
+      ]);
+      const assigned: Variation[] = assignedRes.data
+        ? assignedRes.data.flatMap((r: any) => r.user_custom_variation ? [r.user_custom_variation] : [])
+        : [];
+      setAssignedVars(assigned);
+      setCommonVars([]);
+      const assignedIds = new Set(assigned.map((v) => v.custom_variation_id));
+      const seenNames = new Set<string>();
+      setExistingVars(
+        (allRes.data ?? []).filter((v: any) => {
+          if (assignedIds.has(v.custom_variation_id)) return false;
+          if (seenNames.has(v.variation_name)) return false;
+          seenNames.add(v.variation_name);
+          return true;
+        })
+      );
+    } else {
+      // Multiple exercises: compute intersection + show all active for existing picker
+      const [bridgeRes, allRes] = await Promise.all([
+        supabase
+          .from('user_custom_exercise_variation_bridge')
+          .select('custom_exercise_id, user_custom_variation(custom_variation_id, variation_name)')
+          .in('custom_exercise_id', exIds),
+        supabase
+          .from('user_custom_variation')
+          .select('custom_variation_id, variation_name')
+          .eq('is_active', true),
+      ]);
+
+      // Group bridge rows by variation_id → count how many exercises have it
+      const countByVar = new Map<number, Variation>();
+      const exCount = new Map<number, Set<number>>(); // varId → set of exIds that have it
+      (bridgeRes.data ?? []).forEach((r: any) => {
+        const v = r.user_custom_variation;
+        if (!v) return;
+        if (!exCount.has(v.custom_variation_id)) exCount.set(v.custom_variation_id, new Set());
+        exCount.get(v.custom_variation_id)!.add(r.custom_exercise_id);
+        countByVar.set(v.custom_variation_id, v);
+      });
+      const common = [...exCount.entries()]
+        .filter(([, exSet]) => exSet.size === exIds.length)
+        .map(([varId]) => countByVar.get(varId)!);
+      setCommonVars(common);
+
+      const commonIds = new Set(common.map((v) => v.custom_variation_id));
+      const seenNames = new Set<string>();
+      setExistingVars(
+        (allRes.data ?? []).filter((v: any) => {
+          if (commonIds.has(v.custom_variation_id)) return false;
+          if (seenNames.has(v.variation_name)) return false;
+          seenNames.add(v.variation_name);
+          return true;
+        })
+      );
+      setAssignedVars([]);
+    }
+
     setLoadingVars(false);
-
-    const assigned: Variation[] = assignedRes.data
-      ? assignedRes.data.flatMap((r: any) => r.user_custom_variation ? [r.user_custom_variation] : [])
-      : [];
-    setAssignedVars(assigned);
-
-    const assignedIds = new Set(assigned.map((v) => v.custom_variation_id));
-    const seenNames = new Set<string>();
-    setExistingVars(
-      (allRes.data ?? []).filter((v: any) => {
-        if (assignedIds.has(v.custom_variation_id)) return false;
-        if (seenNames.has(v.variation_name)) return false;
-        seenNames.add(v.variation_name);
-        return true;
-      })
-    );
     setSelectedExistingIds([]);
   }, []);
 
   useEffect(() => {
-    if (!selectedExId) { setAssignedVars([]); return; }
-    loadAssigned(selectedExId);
-  }, [selectedExId]);
+    loadForExercises(selectedExIds);
+  }, [selectedExIds]);
 
-  function onSelectExercise(exId: number | null) {
-    setSelectedExId(exId);
+  function onSelectExercises(ids: number[]) {
+    setSelectedExIds(ids);
     setNewName('');
     setSelectedExistingIds([]);
     setAddMode('existing');
   }
 
   function add() { return guard(async () => {
-    if (!selectedExId || !user) return;
+    if (!selectedExIds.length || !user) return;
     setAdding(true);
+
+    let varIds: number[] = [];
 
     if (addMode === 'existing') {
       if (!selectedExistingIds.length) { setAdding(false); return Alert.alert('Select a variation'); }
-      const rows = selectedExistingIds.map((id) => ({
-        custom_exercise_id: selectedExId,
-        custom_variation_id: id,
-        user_id: user.id,
-      }));
-      const { error } = await supabase.from('user_custom_exercise_variation_bridge').insert(rows);
-      if (error) { setAdding(false); return Alert.alert('Error', error.message); }
-      setSelectedExistingIds([]);
+      varIds = selectedExistingIds;
     } else {
       if (!newName.trim()) { setAdding(false); return Alert.alert('Name required'); }
 
@@ -121,39 +162,45 @@ export default function VariationsScreen() {
         if (error || !data) { setAdding(false); return Alert.alert('Error', error?.message ?? 'Failed to create variation'); }
         varId = data.custom_variation_id;
       }
-
-      const { data: bridgeExists } = await supabase
-        .from('user_custom_exercise_variation_bridge')
-        .select('custom_exercise_id')
-        .eq('custom_exercise_id', selectedExId)
-        .eq('custom_variation_id', varId)
-        .maybeSingle();
-
-      if (!bridgeExists) {
-        await supabase.from('user_custom_exercise_variation_bridge').insert({
-          custom_exercise_id: selectedExId,
-          custom_variation_id: varId,
-          user_id: user.id,
-        });
-      }
+      varIds = [varId];
       setNewName('');
     }
 
+    // Insert bridge rows for every exercise × variation combination, skipping existing ones
+    for (const exId of selectedExIds) {
+      for (const varId of varIds) {
+        const { data: exists } = await supabase
+          .from('user_custom_exercise_variation_bridge')
+          .select('custom_exercise_id')
+          .eq('custom_exercise_id', exId)
+          .eq('custom_variation_id', varId)
+          .maybeSingle();
+        if (!exists) {
+          await supabase.from('user_custom_exercise_variation_bridge').insert({
+            custom_exercise_id: exId,
+            custom_variation_id: varId,
+            user_id: user.id,
+          });
+        }
+      }
+    }
+
+    if (addMode === 'existing') setSelectedExistingIds([]);
     setAdding(false);
-    loadAssigned(selectedExId);
+    loadForExercises(selectedExIds);
     refreshExerciseDetails();
     refreshVariations();
   }); }
 
   function saveEdit() { return guard(async () => {
-    if (!editVar?.variation_name.trim() || !selectedExId) return;
+    if (!editVar?.variation_name.trim() || !singleExId) return;
     const { error } = await supabase
       .from('user_custom_variation')
       .update({ variation_name: editVar.variation_name })
       .eq('custom_variation_id', editVar.custom_variation_id);
     if (error) return Alert.alert('Error', error.message);
     setEditVar(null);
-    loadAssigned(selectedExId);
+    loadForExercises(selectedExIds);
     refreshExerciseDetails();
     refreshVariations();
   }); }
@@ -162,12 +209,12 @@ export default function VariationsScreen() {
     Alert.alert('Remove Variation', 'Remove this variation from the exercise?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: () => guard(async () => {
-        if (!selectedExId) return;
+        if (!singleExId) return;
         await supabase.from('user_custom_exercise_variation_bridge')
           .delete()
-          .eq('custom_exercise_id', selectedExId)
+          .eq('custom_exercise_id', singleExId)
           .eq('custom_variation_id', varId);
-        loadAssigned(selectedExId);
+        loadForExercises(selectedExIds);
         refreshExerciseDetails();
         refreshVariations();
       })},
@@ -191,59 +238,125 @@ export default function VariationsScreen() {
         {/* ── Exercise selector ── */}
         <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginBottom={T.space.xs}>Exercise</Text>
         <DropdownSelect
-          options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
-          value={selectedExId}
-          onChange={onSelectExercise}
+          options={exercises.map((ex) => {
+            const count = exerciseDetailMap[ex.custom_exercise_id]?.assigned_variations.length ?? 0;
+            const label = count === 0 ? ex.exercise_name : `${ex.exercise_name} (${count} ${count === 1 ? 'Variation' : 'Variations'})`;
+            return { label, value: ex.custom_exercise_id };
+          })}
+          multiSelect
+          selectedValues={selectedExIds}
+          onChangeMulti={onSelectExercises}
           placeholder="Select exercise…"
+          searchable
         />
 
-        {selectedExId && (
+        {selectedExIds.length > 0 && (
           <YStack marginTop={T.space.xl}>
 
-            {/* ── Assigned variations list ── */}
-            {loadingVars ? (
-              <Spinner size="small" color={T.accent} alignSelf="center" marginBottom={T.space.lg} />
-            ) : assignedVars.length === 0 ? (
-              <Text color={T.muted} fontSize={T.fontSize.sm} marginBottom={T.space.lg}>
-                No variations yet. Add one below.
-              </Text>
-            ) : (
+            {/* ── Assigned variations list — single exercise only ── */}
+            {singleExId && (
+              loadingVars ? (
+                <Spinner size="small" color={T.accent} alignSelf="center" marginBottom={T.space.lg} />
+              ) : assignedVars.length === 0 ? (
+                <Text color={T.muted} fontSize={T.fontSize.sm} marginBottom={T.space.lg}>
+                  No variations yet. Add one below.
+                </Text>
+              ) : (
+                <YStack marginBottom={T.space.lg}>
+                  {assignedVars.map((v, i) => (
+                    <XStack
+                      key={v.custom_variation_id}
+                      alignItems="center"
+                      paddingVertical={T.space.md}
+                      borderBottomWidth={i < assignedVars.length - 1 ? 0.5 : 0}
+                      borderBottomColor={T.border}
+                    >
+                      <Text flex={1} fontSize={15} color={T.primary}>{v.variation_name}</Text>
+                      <XStack
+                        paddingHorizontal={T.space.sm}
+                        paddingVertical={T.space.xs + 2}
+                        marginLeft={T.space.sm}
+                        borderRadius={T.radius.sm}
+                        backgroundColor={T.accentBg}
+                        pressStyle={{ opacity: 0.7 }}
+                        onPress={() => openEdit(() => setEditVar({ ...v }))}
+                        cursor="pointer"
+                      >
+                        <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.accent}>Edit</Text>
+                      </XStack>
+                      <XStack
+                        paddingHorizontal={T.space.sm}
+                        paddingVertical={T.space.xs + 2}
+                        marginLeft={T.space.sm}
+                        borderRadius={T.radius.sm}
+                        backgroundColor={T.dangerBg}
+                        pressStyle={{ opacity: 0.7 }}
+                        onPress={() => confirmRemove(v.custom_variation_id)}
+                        cursor="pointer"
+                      >
+                        <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
+                      </XStack>
+                    </XStack>
+                  ))}
+                </YStack>
+              )
+            )}
+
+            {/* ── Common variations — multiple exercises only ── */}
+            {selectedExIds.length > 1 && (
               <YStack marginBottom={T.space.lg}>
-                {assignedVars.map((v, i) => (
-                  <XStack
-                    key={v.custom_variation_id}
-                    alignItems="center"
-                    paddingVertical={T.space.md}
-                    borderBottomWidth={i < assignedVars.length - 1 ? 0.5 : 0}
-                    borderBottomColor={T.border}
-                  >
-                    <Text flex={1} fontSize={15} color={T.primary}>{v.variation_name}</Text>
-                    <XStack
-                      paddingHorizontal={T.space.sm}
-                      paddingVertical={T.space.xs + 2}
-                      marginLeft={T.space.sm}
-                      borderRadius={T.radius.sm}
-                      backgroundColor={T.accentBg}
-                      pressStyle={{ opacity: 0.7 }}
-                      onPress={() => openEdit(() => setEditVar({ ...v }))}
-                      cursor="pointer"
-                    >
-                      <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.accent}>Edit</Text>
-                    </XStack>
-                    <XStack
-                      paddingHorizontal={T.space.sm}
-                      paddingVertical={T.space.xs + 2}
-                      marginLeft={T.space.sm}
-                      borderRadius={T.radius.sm}
-                      backgroundColor={T.dangerBg}
-                      pressStyle={{ opacity: 0.7 }}
-                      onPress={() => confirmRemove(v.custom_variation_id)}
-                      cursor="pointer"
-                    >
-                      <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
-                    </XStack>
-                  </XStack>
-                ))}
+                {loadingVars ? (
+                  <Spinner size="small" color={T.accent} alignSelf="center" />
+                ) : (
+                  <>
+                    <Text fontSize={T.fontSize.sm} fontWeight="600" color={T.muted} marginBottom={T.space.sm}>
+                      Common to all selected
+                    </Text>
+                    {commonVars.length === 0 ? (
+                      <Text color={T.muted} fontSize={T.fontSize.sm}>No shared variations.</Text>
+                    ) : (
+                      commonVars.map((v, i) => (
+                        <XStack
+                          key={v.custom_variation_id}
+                          alignItems="center"
+                          paddingVertical={T.space.md}
+                          borderBottomWidth={i < commonVars.length - 1 ? 0.5 : 0}
+                          borderBottomColor={T.border}
+                        >
+                          <Text flex={1} fontSize={15} color={T.primary}>{v.variation_name}</Text>
+                          <XStack
+                            paddingHorizontal={T.space.sm}
+                            paddingVertical={T.space.xs + 2}
+                            marginLeft={T.space.sm}
+                            borderRadius={T.radius.sm}
+                            backgroundColor={T.dangerBg}
+                            pressStyle={{ opacity: 0.7 }}
+                            onPress={() => Alert.alert(
+                              'Remove from all',
+                              `Remove "${v.variation_name}" from all selected exercises?`,
+                              [
+                                { text: 'Cancel', style: 'cancel' },
+                                { text: 'Remove', style: 'destructive', onPress: () => guard(async () => {
+                                  for (const exId of selectedExIds) {
+                                    await supabase.from('user_custom_exercise_variation_bridge')
+                                      .delete()
+                                      .eq('custom_exercise_id', exId)
+                                      .eq('custom_variation_id', v.custom_variation_id);
+                                  }
+                                  loadForExercises(selectedExIds);
+                                  refreshExerciseDetails();
+                                })},
+                              ]
+                            )}
+                            cursor="pointer"
+                          >
+                            <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
+                          </XStack>
+                        </XStack>
+                      ))
+                    )}
+                  </>
+                )}
               </YStack>
             )}
 
@@ -274,7 +387,11 @@ export default function VariationsScreen() {
             </YStack>
             <YStack marginTop={T.space.sm}>
               <Button
-                label={addMode === 'existing' && selectedExistingIds.length > 1 ? 'Add Variations' : 'Add Variation'}
+                label={
+                  (addMode === 'existing' && selectedExistingIds.length > 1) || selectedExIds.length > 1
+                    ? 'Add Variations'
+                    : 'Add Variation'
+                }
                 onPress={add}
                 loading={adding}
               />
