@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Alert, ScrollView } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -183,20 +184,27 @@ export default function VariationExercisesScreen() {
         <Text flex={1} textAlign="center" color={T.primary} fontSize={T.fontSize.xl} fontWeight="600">
           Variations
         </Text>
-        <XStack minWidth={80} justifyContent="flex-end">
-          <Text
-            fontSize={T.fontSize.sm} fontWeight="600" color={T.accent}
-            onPress={() => router.back()} cursor="pointer"
-          >
-            By Exercise
-          </Text>
-        </XStack>
+        <XStack width={80} />
       </XStack>
       <Separator borderColor={T.border} />
+      <XStack justifyContent="center" paddingVertical={T.space.md}>
+        <XStack backgroundColor={T.surface} borderRadius={T.radius.sm} padding={3} gap={3}>
+          <XStack
+            paddingHorizontal={T.space.md} paddingVertical={6} borderRadius={T.radius.sm - 1}
+            pressStyle={{ opacity: 0.7 }} cursor="pointer"
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); router.back(); }}
+          >
+            <Text fontSize={T.fontSize.sm} fontWeight="600" color={T.muted}>Exercise</Text>
+          </XStack>
+          <XStack paddingHorizontal={T.space.md} paddingVertical={6} borderRadius={T.radius.sm - 1} backgroundColor={T.accent}>
+            <Text fontSize={T.fontSize.sm} fontWeight="600" color={T.accentText}>Variation</Text>
+          </XStack>
+        </XStack>
+      </XStack>
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: T.space.lg }}
+        contentContainerStyle={{ paddingHorizontal: T.space.lg, paddingBottom: T.space.lg }}
         keyboardShouldPersistTaps="handled"
       >
         <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginBottom={T.space.xs}>Variation</Text>
