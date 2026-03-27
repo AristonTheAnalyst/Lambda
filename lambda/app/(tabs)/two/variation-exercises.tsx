@@ -5,7 +5,6 @@ import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DropdownSelect } from '@/components/FormControls';
-import Input from '@/components/Input';
 import { useExerciseData, Exercise } from '@/lib/ExerciseDataContext';
 import { useAuthContext } from '@/lib/AuthContext';
 import GlassButton from '@/components/GlassButton';
@@ -54,18 +53,16 @@ export default function VariationExercisesScreen() {
   const guard = useAsyncGuard();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { exercises, variations, exerciseDetailMap, refreshExerciseDetails, refreshVariations } = useExerciseData();
+  const { exercises, variations, exerciseDetailMap, refreshExerciseDetails } = useExerciseData();
   const { user } = useAuthContext();
 
-  const [selectedVarIds, setSelectedVarIds]             = useState<number[]>([]);
-  const [assignedExes, setAssignedExes]                 = useState<Exercise[]>([]);
-  const [commonExes, setCommonExes]                     = useState<Exercise[]>([]);
-  const [loadingVar, setLoadingVar]                     = useState(false);
-  const [existingExes, setExistingExes]                 = useState<Exercise[]>([]);
+  const [selectedVarIds, setSelectedVarIds]               = useState<number[]>([]);
+  const [assignedExes, setAssignedExes]                   = useState<Exercise[]>([]);
+  const [commonExes, setCommonExes]                       = useState<Exercise[]>([]);
+  const [loadingVar, setLoadingVar]                       = useState(false);
+  const [existingExes, setExistingExes]                   = useState<Exercise[]>([]);
   const [selectedExistingExIds, setSelectedExistingExIds] = useState<number[]>([]);
-  const [addingEx, setAddingEx]                         = useState(false);
-  const [newVarName, setNewVarName]                     = useState('');
-  const [creatingVar, setCreatingVar]                   = useState(false);
+  const [addingEx, setAddingEx]                           = useState(false);
 
   const singleVarId = selectedVarIds.length === 1 ? selectedVarIds[0] : null;
 
@@ -168,21 +165,6 @@ export default function VariationExercisesScreen() {
       ]
     );
   }
-
-  function createVar() { return guard(async () => {
-    if (!user) return;
-    const trimmed = newVarName.trim();
-    if (!trimmed) return Alert.alert('Name required');
-    const duplicate = variations.find((v) => v.variation_name.toLowerCase() === trimmed.toLowerCase());
-    if (duplicate) return Alert.alert('Already exists', `"${duplicate.variation_name}" already exists.`);
-    setCreatingVar(true);
-    const { error } = await supabase.from('user_custom_variation')
-      .insert({ user_id: user.id, variation_name: trimmed });
-    setCreatingVar(false);
-    if (error) return Alert.alert('Error', error.message);
-    setNewVarName('');
-    refreshVariations();
-  }); }
 
   return (
     <YStack flex={1} backgroundColor={T.bg}>
@@ -288,13 +270,6 @@ export default function VariationExercisesScreen() {
             </YStack>
           </YStack>
         )}
-
-        <Separator borderColor={T.border} marginTop={T.space.xl} marginBottom={T.space.lg} />
-        <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>New Variation</Text>
-        <Input placeholder="Variation name" value={newVarName} onChangeText={setNewVarName} />
-        <YStack marginTop={T.space.md}>
-          <Button label="Create Variation" onPress={createVar} loading={creatingVar} />
-        </YStack>
 
         <YStack height={T.space.xxl} />
       </ScrollView>

@@ -1,10 +1,10 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Alert, ScrollView } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { DropdownSelect, SegmentedControl, SlideUpModal } from '@/components/FormControls';
+import { DropdownSelect, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
 import { useAuthContext } from '@/lib/AuthContext';
 import GlassButton from '@/components/GlassButton';
@@ -69,16 +69,14 @@ export default function VariationsScreen() {
   const { exercises, exerciseDetailMap, refreshExerciseDetails, refreshVariations } = useExerciseData();
   const { user } = useAuthContext();
 
-  const [selectedExIds, setSelectedExIds]               = useState<number[]>([]);
-  const [assignedVars, setAssignedVars]                 = useState<Variation[]>([]);
-  const [commonVars, setCommonVars]                     = useState<Variation[]>([]);
-  const [loadingEx, setLoadingEx]                       = useState(false);
-  const [addMode, setAddMode]                           = useState<'existing' | 'new'>('existing');
-  const [existingVars, setExistingVars]                 = useState<Variation[]>([]);
+  const [selectedExIds, setSelectedExIds]                   = useState<number[]>([]);
+  const [assignedVars, setAssignedVars]                     = useState<Variation[]>([]);
+  const [commonVars, setCommonVars]                         = useState<Variation[]>([]);
+  const [loadingEx, setLoadingEx]                           = useState(false);
+  const [existingVars, setExistingVars]                     = useState<Variation[]>([]);
   const [selectedExistingVarIds, setSelectedExistingVarIds] = useState<number[]>([]);
-  const [newVarName, setNewVarName]                     = useState('');
-  const [addingVar, setAddingVar]                       = useState(false);
-  const [editVar, setEditVar]                           = useState<Variation | null>(null);
+  const [addingVar, setAddingVar]                           = useState(false);
+  const [editVar, setEditVar]                               = useState<Variation | null>(null);
 
   const singleExId = selectedExIds.length === 1 ? selectedExIds[0] : null;
 
@@ -139,39 +137,11 @@ export default function VariationsScreen() {
 
   function addVar() { return guard(async () => {
     if (!selectedExIds.length || !user) return;
+    if (!selectedExistingVarIds.length) return Alert.alert('Select a variation');
     setAddingVar(true);
-    let varIds: number[] = [];
-
-    if (addMode === 'existing') {
-      if (!selectedExistingVarIds.length) { setAddingVar(false); return Alert.alert('Select a variation'); }
-      varIds = selectedExistingVarIds;
-    } else {
-      if (!newVarName.trim()) { setAddingVar(false); return Alert.alert('Name required'); }
-      const { data: existing } = await supabase.from('user_custom_variation')
-        .select('custom_variation_id, is_active')
-        .eq('user_id', user.id)
-        .ilike('variation_name', newVarName.trim())
-        .maybeSingle();
-      let varId: number;
-      if (existing) {
-        varId = existing.custom_variation_id;
-        if (!existing.is_active) {
-          await supabase.from('user_custom_variation').update({ is_active: true }).eq('custom_variation_id', varId);
-        }
-      } else {
-        const { data, error } = await supabase.from('user_custom_variation')
-          .insert({ user_id: user.id, variation_name: newVarName.trim() })
-          .select('custom_variation_id')
-          .single();
-        if (error || !data) { setAddingVar(false); return Alert.alert('Error', error?.message ?? 'Failed'); }
-        varId = data.custom_variation_id;
-      }
-      varIds = [varId];
-      setNewVarName('');
-    }
 
     for (const exId of selectedExIds) {
-      for (const varId of varIds) {
+      for (const varId of selectedExistingVarIds) {
         const { data: exists } = await supabase.from('user_custom_exercise_variation_bridge')
           .select('custom_exercise_id')
           .eq('custom_exercise_id', exId)
@@ -187,7 +157,7 @@ export default function VariationsScreen() {
       }
     }
 
-    if (addMode === 'existing') setSelectedExistingVarIds([]);
+    setSelectedExistingVarIds([]);
     setAddingVar(false);
     loadForExercises(selectedExIds);
     refreshExerciseDetails();
@@ -272,12 +242,7 @@ export default function VariationsScreen() {
           })}
           multiSelect
           selectedValues={selectedExIds}
-          onChangeMulti={(ids) => {
-            setSelectedExIds(ids);
-            setNewVarName('');
-            setSelectedExistingVarIds([]);
-            setAddMode('existing');
-          }}
+          onChangeMulti={(ids) => { setSelectedExIds(ids); setSelectedExistingVarIds([]); }}
           placeholder="Select exercise…"
           searchable
         />
@@ -313,35 +278,22 @@ export default function VariationsScreen() {
             )}
 
             <Separator borderColor={T.border} marginBottom={T.space.lg} />
-            <SegmentedControl
-              options={[{ label: 'Existing', value: 'existing' }, { label: 'New', value: 'new' }]}
-              value={addMode}
-              onChange={(v) => { setAddMode(v as 'existing' | 'new'); setSelectedExistingVarIds([]); setNewVarName(''); }}
-            />
-            <YStack marginTop={T.space.md}>
-              {addMode === 'existing'
-                ? existingVars.length === 0
-                  ? <Text color={T.muted} fontSize={T.fontSize.sm}>No other variations available.</Text>
-                  : <DropdownSelect
-                      options={existingVars.map((v) => ({ label: v.variation_name, value: v.custom_variation_id }))}
-                      multiSelect
-                      selectedValues={selectedExistingVarIds}
-                      onChangeMulti={setSelectedExistingVarIds}
-                      placeholder="Select existing variations…"
-                      searchable
-                    />
-                : <Input placeholder="Variation name" value={newVarName} onChangeText={setNewVarName} />
-              }
-            </YStack>
+            {existingVars.length === 0
+              ? <Text color={T.muted} fontSize={T.fontSize.sm}>No other variations available.</Text>
+              : <DropdownSelect
+                  options={existingVars.map((v) => ({ label: v.variation_name, value: v.custom_variation_id }))}
+                  multiSelect
+                  selectedValues={selectedExistingVarIds}
+                  onChangeMulti={setSelectedExistingVarIds}
+                  placeholder="Select variations to add…"
+                  searchable
+                />
+            }
             <YStack marginTop={T.space.sm}>
               <Button
-                label={(addMode === 'existing' && selectedExistingVarIds.length > 1) || selectedExIds.length > 1
-                  ? 'Add Variations' : 'Add Variation'}
+                label={selectedExistingVarIds.length > 1 || selectedExIds.length > 1 ? 'Add Variations' : 'Add Variation'}
                 onPress={addVar}
                 loading={addingVar}
-                disabled={addingVar || (addMode === 'new' && [...assignedVars, ...commonVars].some(
-                  (v) => v.variation_name.toLowerCase() === newVarName.trim().toLowerCase()
-                ))}
               />
             </YStack>
           </YStack>
