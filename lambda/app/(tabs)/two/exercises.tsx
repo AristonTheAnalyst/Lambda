@@ -4,6 +4,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SegmentedControl, SlideUpModal } from '@/components/FormControls';
+import { Separator } from 'tamagui';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
 import GlassButton from '@/components/GlassButton';
 import Button from '@/components/Button';
@@ -76,6 +77,7 @@ export default function ExercisesScreen() {
         <Text flex={1} textAlign="center" color={T.primary} fontSize={T.fontSize.xl} fontWeight="600">Exercises</Text>
         <XStack width={80} />
       </XStack>
+      <Separator borderColor={T.border} />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: T.space.lg }}

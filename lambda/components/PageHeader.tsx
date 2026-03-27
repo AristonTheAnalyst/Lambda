@@ -17,12 +17,13 @@ export default function PageHeader({ title, left, right }: Props) {
     <YStack>
       <XStack
         paddingTop={insets.top}
+        style={{ paddingBottom: T.space.sm }}
         backgroundColor={T.bg}
         alignItems="center"
         justifyContent="space-between"
       >
         {/* Left — hamburger or custom */}
-        <XStack width={73} alignItems="center">
+        <XStack width={73} alignItems="center" paddingLeft={T.space.md}>
           {left ?? <HamburgerButton />}
         </XStack>
 

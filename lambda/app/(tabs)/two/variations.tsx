@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Alert, ScrollView } from 'react-native';
-import { Spinner, Text, XStack, YStack } from 'tamagui';
+import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DropdownSelect, SlideUpModal } from '@/components/FormControls';
@@ -117,6 +117,7 @@ export default function VariationsScreen() {
         <Text flex={1} textAlign="center" color={T.primary} fontSize={T.fontSize.xl} fontWeight="600">Variations</Text>
         <XStack width={80} />
       </XStack>
+      <Separator borderColor={T.border} />
 
       <ScrollView
         style={{ flex: 1 }}

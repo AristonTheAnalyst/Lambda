@@ -20,7 +20,6 @@ import { Tabs, useRouter, usePathname } from 'expo-router';
 import T from '@/constants/Theme';
 import { ExerciseDataProvider } from '@/lib/ExerciseDataContext';
 import { DrawerContext } from '@/lib/DrawerContext';
-import HamburgerButton from '@/components/HamburgerButton';
 import { navGuard } from '@/hooks/useNavGuard';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -82,12 +81,7 @@ export default function TabLayout() {
     <ExerciseDataProvider>
     <DrawerContext.Provider value={{ openDrawer }}>
       <Tabs
-        screenOptions={{
-          tabBarStyle: { display: 'none' },
-          headerLeft: () => <HamburgerButton />,
-          headerStyle: { backgroundColor: T.bg },
-          headerTitleStyle: { color: T.primary },
-        }}>
+        screenOptions={{ tabBarStyle: { display: 'none' } }}>
         <Tabs.Screen name="index" options={{ headerShown: false }} />
         <Tabs.Screen name="two" options={{ headerShown: false }} />
         <Tabs.Screen name="three" options={{ headerShown: false }} />
