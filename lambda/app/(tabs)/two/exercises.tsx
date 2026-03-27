@@ -34,6 +34,7 @@ export default function ExercisesScreen() {
   const [search, setSearch]     = useState('');
   const [volume, setVolume]     = useState('reps');
   const [creating, setCreating] = useState(false);
+  const [createVisible, setCreateVisible] = useState(false);
   const [editEx, setEditEx]     = useState<Exercise | null>(null);
 
   function create() { return guard(async () => {
@@ -58,6 +59,7 @@ export default function ExercisesScreen() {
         .eq('custom_exercise_id', existing.custom_exercise_id);
       setCreating(false);
       setName('');
+      setCreateVisible(false);
       return refreshExercises();
     }
 
@@ -69,6 +71,7 @@ export default function ExercisesScreen() {
     setCreating(false);
     if (error) return Alert.alert('Error', error.message);
     setName('');
+    setCreateVisible(false);
     refreshExercises();
   }); }
 
@@ -108,23 +111,13 @@ export default function ExercisesScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: T.space.lg }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-      {/* ── Create form ── */}
-      <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>New Exercise</Text>
-      <Input placeholder="Exercise name" value={name} onChangeText={setName} />
-
-      <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginTop={T.space.md} marginBottom={T.space.xs}>Volume type</Text>
-      <SegmentedControl options={VOLUME_OPTIONS} value={volume} onChange={setVolume} />
-
-      <YStack marginTop={T.space.lg}>
-        <Button label="Create Exercise" onPress={create} loading={creating} />
-      </YStack>
-
       {/* ── List ── */}
-      <XStack alignItems="center" marginTop={T.space.lg} marginBottom={T.space.md}>
+      <XStack alignItems="center" marginBottom={T.space.md}>
         <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} flex={1}>All Exercises</Text>
         {exercises.length > 0 && (
-          <XStack backgroundColor={T.surface} borderRadius={T.radius.md} paddingHorizontal={T.space.sm} alignItems="center" height={34} minWidth={130}>
+          <XStack backgroundColor={T.surface} borderRadius={T.radius.md} paddingHorizontal={T.space.sm} alignItems="center" height={34} minWidth={130} marginRight={T.space.sm}>
             <TextInput
               placeholder="Search…"
               placeholderTextColor={T.muted}
@@ -134,6 +127,7 @@ export default function ExercisesScreen() {
             />
           </XStack>
         )}
+        <GlassButton icon="plus" iconSize={14} onPress={() => { setName(''); setVolume('reps'); setCreateVisible(true); }} />
       </XStack>
       {exercises.length === 0 ? (
         <Text color={T.muted} padding={T.space.xs}>No exercises yet.</Text>
@@ -162,6 +156,26 @@ export default function ExercisesScreen() {
         ))
       )}
       <YStack height={T.space.xxl} />
+
+      {/* ── Create modal ── */}
+      <SlideUpModal visible={createVisible} onClose={() => setCreateVisible(false)}>
+        <YStack
+          backgroundColor={T.surface}
+          borderTopLeftRadius={T.radius.lg}
+          borderTopRightRadius={T.radius.lg}
+          padding={T.space.xl}
+          paddingBottom={T.space.xxl}
+        >
+          <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>New Exercise</Text>
+          <Input placeholder="Exercise name" value={name} onChangeText={setName} />
+          <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginTop={T.space.md} marginBottom={T.space.xs}>Volume type</Text>
+          <SegmentedControl options={VOLUME_OPTIONS} value={volume} onChange={setVolume} />
+          <XStack gap={T.space.sm} marginTop={T.space.md} justifyContent="center">
+            <Button label="Create" onPress={create} loading={creating} />
+            <Button label="Cancel" onPress={() => setCreateVisible(false)} variant="ghost" />
+          </XStack>
+        </YStack>
+      </SlideUpModal>
 
       {/* ── Edit modal ── */}
       <SlideUpModal visible={!!editEx} onClose={() => setEditEx(null)}>

@@ -158,6 +158,7 @@ export default function WorkoutDetailScreen() {
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: T.space.lg, paddingBottom: T.space.xxl }}
+          showsVerticalScrollIndicator={false}
         >
           {/* Date */}
           {workout && (
@@ -259,7 +260,7 @@ export default function WorkoutDetailScreen() {
           padding={T.space.xl}
           maxHeight="85%"
         >
-          <ScrollView keyboardShouldPersistTaps="handled">
+          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <YStack gap={T.space.md}>
               <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Edit Set</Text>
               {editingSet && (() => {

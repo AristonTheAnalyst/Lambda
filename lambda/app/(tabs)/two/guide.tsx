@@ -22,6 +22,7 @@ export default function UserGuideScreen() {
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: T.space.lg, paddingBottom: T.space.xxl }}
+        showsVerticalScrollIndicator={false}
       >
         <Text fontSize={T.fontSize.xxl} fontWeight="700" color={T.primary} marginBottom={T.space.sm}>
           Getting Started

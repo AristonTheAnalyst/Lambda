@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Alert,
+  Keyboard,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Spinner, Text, XStack, YStack } from 'tamagui';
+import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import PageHeader from '@/components/PageHeader';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
@@ -14,6 +15,7 @@ import { DropdownSelect, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData, ExerciseDetail } from '@/lib/ExerciseDataContext';
 import { useAuthContext } from '@/lib/AuthContext';
 import supabase from '@/lib/supabase';
+import GlassButton from '@/components/GlassButton';
 import { useAsyncGuard } from '@/lib/asyncGuard';
 import T from '@/constants/Theme';
 
@@ -169,6 +171,7 @@ export default function WorkoutLogScreen() {
   }); }
 
   function openEditSet(s: WorkoutSet) { return guard(async () => {
+    Keyboard.dismiss();
     setEditingSet(s);
     setEditWeight(s.workout_set_weight != null ? String(s.workout_set_weight) : '');
     const vals = s.workout_set_reps?.length ? s.workout_set_reps : s.workout_set_duration_seconds ?? [];
@@ -216,6 +219,7 @@ export default function WorkoutLogScreen() {
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: T.space.lg, paddingBottom: T.space.xxl }}
+        showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
 
@@ -231,8 +235,6 @@ export default function WorkoutLogScreen() {
         {/* ── Active workout ── */}
         {currentWorkoutId && (
           <>
-            <Text fontSize={T.fontSize.xl} fontWeight="700" marginBottom={T.space.md} color={T.primary}>Log a Set</Text>
-
             <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
             <DropdownSelect
               options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
@@ -271,7 +273,8 @@ export default function WorkoutLogScreen() {
             )}
 
             {/* ── Sets table ── */}
-            <Text fontSize={T.fontSize.xl} fontWeight="700" marginTop={T.space.xl} marginBottom={T.space.sm} color={T.primary}>Sets this workout</Text>
+            <Separator borderColor={T.border} marginTop={T.space.xl} marginBottom={T.space.xl} />
+            <Text fontSize={T.fontSize.xl} fontWeight="700" marginBottom={T.space.sm} color={T.primary}>Sets this workout</Text>
             {setsLoading ? (
               <Spinner size="large" color={T.accent} marginTop={T.space.md} />
             ) : sets.length === 0 ? (
@@ -299,28 +302,8 @@ export default function WorkoutLogScreen() {
                       </Text>
                     </YStack>
                     <XStack gap={T.space.sm}>
-                      <XStack
-                        paddingHorizontal={T.space.sm}
-                        paddingVertical={T.space.xs + 1}
-                        borderRadius={T.radius.sm}
-                        backgroundColor={T.accentBg}
-                        pressStyle={{ opacity: 0.7 }}
-                        onPress={() => openEditSet(s)}
-                        cursor="pointer"
-                      >
-                        <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.accent}>Edit</Text>
-                      </XStack>
-                      <XStack
-                        paddingHorizontal={T.space.sm}
-                        paddingVertical={T.space.xs + 1}
-                        borderRadius={T.radius.sm}
-                        backgroundColor={T.dangerBg}
-                        pressStyle={{ opacity: 0.7 }}
-                        onPress={() => deleteSet(s.workout_set_id)}
-                        cursor="pointer"
-                      >
-                        <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
-                      </XStack>
+                      <GlassButton icon="pencil" iconSize={14} onPress={() => openEditSet(s)} />
+                      <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => deleteSet(s.workout_set_id)} />
                     </XStack>
                   </XStack>
                 );
@@ -328,7 +311,7 @@ export default function WorkoutLogScreen() {
             )}
 
             {/* ── End workout ── */}
-            <YStack marginTop={T.space.xxl} paddingTop={T.space.lg} borderTopWidth={0.5} borderTopColor={T.border} gap={T.space.md}>
+            <YStack marginTop={T.space.xxl} paddingTop={T.space.lg} gap={T.space.md}>
               <Input label="Final notes (optional)" placeholder="Notes…" value={endNotes} onChangeText={setEndNotes} />
               <Button label="End Workout" onPress={confirmEndWorkout} loading={endLoading} variant="danger" />
             </YStack>
@@ -345,7 +328,7 @@ export default function WorkoutLogScreen() {
           padding={T.space.xl}
           maxHeight="85%"
         >
-          <ScrollView keyboardShouldPersistTaps="handled">
+          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <YStack gap={T.space.md}>
               <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Edit Set</Text>
               <Input label="Weight (optional)" placeholder="kg" keyboardType="decimal-pad" value={editWeight} onChangeText={setEditWeight} />

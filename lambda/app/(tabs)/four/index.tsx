@@ -96,6 +96,7 @@ export default function TrainingLogsScreen() {
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: T.space.lg, paddingBottom: T.space.xxl }}
+          showsVerticalScrollIndicator={false}
         >
           {workouts.length === 0 ? (
             <Text color={T.muted} fontSize={T.fontSize.md} marginTop={T.space.md}>

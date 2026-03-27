@@ -230,6 +230,7 @@ export default function VariationsScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingHorizontal: T.space.lg, paddingBottom: T.space.lg }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginBottom={T.space.xs}>Exercise</Text>
         <DropdownSelect

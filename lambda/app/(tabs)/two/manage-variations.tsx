@@ -30,6 +30,7 @@ export default function ManageVariationsScreen() {
   const [name, setName]         = useState('');
   const [search, setSearch]     = useState('');
   const [creating, setCreating] = useState(false);
+  const [createVisible, setCreateVisible] = useState(false);
   const [editVar, setEditVar]   = useState<Variation | null>(null);
 
   function create() { return guard(async () => {
@@ -54,6 +55,7 @@ export default function ManageVariationsScreen() {
         .eq('custom_variation_id', existing.custom_variation_id);
       setCreating(false);
       setName('');
+      setCreateVisible(false);
       return refreshVariations();
     }
 
@@ -64,6 +66,7 @@ export default function ManageVariationsScreen() {
     setCreating(false);
     if (error) return Alert.alert('Error', error.message);
     setName('');
+    setCreateVisible(false);
     refreshVariations();
   }); }
 
@@ -100,19 +103,13 @@ export default function ManageVariationsScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: T.space.lg }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* ── Create form ── */}
-        <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>New Variation</Text>
-        <Input placeholder="Variation name" value={name} onChangeText={setName} />
-        <YStack marginTop={T.space.lg}>
-          <Button label="Create Variation" onPress={create} loading={creating} />
-        </YStack>
-
         {/* ── List ── */}
-        <XStack alignItems="center" marginTop={T.space.lg} marginBottom={T.space.md}>
+        <XStack alignItems="center" marginBottom={T.space.md}>
           <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} flex={1}>All Variations</Text>
           {variations.length > 0 && (
-            <XStack backgroundColor={T.surface} borderRadius={T.radius.md} paddingHorizontal={T.space.sm} alignItems="center" height={34} minWidth={130}>
+            <XStack backgroundColor={T.surface} borderRadius={T.radius.md} paddingHorizontal={T.space.sm} alignItems="center" height={34} minWidth={130} marginRight={T.space.sm}>
               <TextInput
                 placeholder="Search…"
                 placeholderTextColor={T.muted}
@@ -122,6 +119,7 @@ export default function ManageVariationsScreen() {
               />
             </XStack>
           )}
+          <GlassButton icon="plus" iconSize={14} onPress={() => { setName(''); setCreateVisible(true); }} />
         </XStack>
         {variations.length === 0 ? (
           <Text color={T.muted} padding={T.space.xs}>No variations yet.</Text>
@@ -147,6 +145,24 @@ export default function ManageVariationsScreen() {
           ))
         )}
         <YStack height={T.space.xxl} />
+
+        {/* ── Create modal ── */}
+        <SlideUpModal visible={createVisible} onClose={() => setCreateVisible(false)}>
+          <YStack
+            backgroundColor={T.surface}
+            borderTopLeftRadius={T.radius.lg}
+            borderTopRightRadius={T.radius.lg}
+            padding={T.space.xl}
+            paddingBottom={T.space.xxl}
+          >
+            <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>New Variation</Text>
+            <Input placeholder="Variation name" value={name} onChangeText={setName} />
+            <XStack gap={T.space.sm} marginTop={T.space.md} justifyContent="center">
+              <Button label="Create" onPress={create} loading={creating} />
+              <Button label="Cancel" onPress={() => setCreateVisible(false)} variant="ghost" />
+            </XStack>
+          </YStack>
+        </SlideUpModal>
 
         {/* ── Edit modal ── */}
         <SlideUpModal visible={!!editVar} onClose={() => setEditVar(null)}>
