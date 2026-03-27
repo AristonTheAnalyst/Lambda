@@ -1,5 +1,5 @@
-import { Platform, TouchableOpacity } from 'react-native';
-import { Button as TamaguiButton, Spinner, YStack, Text, styled } from 'tamagui';
+import { ActivityIndicator, Platform, Text as RNText, View } from 'react-native';
+import { Button as TamaguiButton, styled } from 'tamagui';
 import T from '@/constants/Theme';
 
 const isGlassSupported = Platform.OS === 'ios' && Number(Platform.Version) >= 26;
@@ -13,7 +13,7 @@ if (isGlassSupported) {
   }
 }
 
-// ─── Styled variants ──────────────────────────────────────────────────────────
+// ─── Styled base ──────────────────────────────────────────────────────────────
 
 const Base = styled(TamaguiButton, {
   borderRadius: 999,
@@ -52,63 +52,9 @@ const Base = styled(TamaguiButton, {
 interface ButtonProps {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'glass' | 'glass-primary' | 'glass-danger' | 'ghost' | 'danger';
+  variant?: 'primary' | 'glass' | 'ghost' | 'danger';
   disabled?: boolean;
   loading?: boolean;
-}
-
-// ─── Glass render helper ──────────────────────────────────────────────────────
-
-function GlassButtonBody({
-  label, loading, tintColor, isDisabled, onPress,
-}: {
-  label: string; loading: boolean; tintColor: string; isDisabled: boolean; onPress: () => void;
-}) {
-  if (isGlassSupported && GlassView) {
-    return (
-      <YStack borderRadius={T.radius.md} overflow="hidden" opacity={isDisabled ? 0.45 : 1}>
-        <GlassView
-          glassEffectStyle="systemMaterial"
-          tintColor={tintColor}
-          onTouchEnd={isDisabled ? undefined : onPress}
-          style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: T.space.md, paddingHorizontal: T.space.lg }}
-        >
-          {loading
-            ? <Spinner size="small" color={T.accentText} />
-            : <Text color={T.accentText} fontSize={T.fontSize.md} fontWeight="600">{label}</Text>
-          }
-        </GlassView>
-      </YStack>
-    );
-  }
-
-  // Fallback — translucent tinted capsule
-  const borderColor = tintColor === T.danger ? T.danger : T.accent;
-  const bgColor     = tintColor === T.danger ? 'rgba(192,57,43,0.18)' : 'rgba(187,116,35,0.18)';
-  const textColor   = tintColor === T.danger ? T.danger : T.accent;
-  return (
-    <TouchableOpacity
-      onPress={isDisabled ? undefined : onPress}
-      disabled={isDisabled}
-      activeOpacity={0.75}
-      style={{
-        borderRadius: T.radius.md,
-        paddingVertical: T.space.md,
-        paddingHorizontal: T.space.lg,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: bgColor,
-        borderWidth: 1,
-        borderColor,
-        opacity: isDisabled ? 0.45 : 1,
-      }}
-    >
-      {loading
-        ? <Spinner size="small" color={textColor} />
-        : <Text color={textColor} fontSize={T.fontSize.md} fontWeight="600">{label}</Text>
-      }
-    </TouchableOpacity>
-  );
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -121,29 +67,38 @@ export default function Button({
   loading = false,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
+  const effective  = variant === 'glass' ? 'primary' : variant;
 
-  if (variant === 'glass' || variant === 'glass-primary') {
-    return <GlassButtonBody label={label} loading={loading} tintColor={T.accent} isDisabled={isDisabled} onPress={onPress} />;
+  // Glass variant on iOS 26+
+  if (variant === 'glass' && isGlassSupported && GlassView) {
+    return (
+      <View style={{ alignSelf: 'center', borderRadius: 999, overflow: 'hidden', opacity: isDisabled ? 0.45 : 1 }}>
+        <GlassView
+          glassEffectStyle="systemMaterial"
+          tintColor={T.accent}
+          onTouchEnd={isDisabled ? undefined : onPress}
+          style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: T.space.md, paddingHorizontal: T.space.lg }}
+        >
+          {loading
+            ? <ActivityIndicator size="small" color={T.accentText} />
+            : <RNText style={{ color: T.accentText, fontSize: T.fontSize.md, fontWeight: '600' }}>{label}</RNText>
+          }
+        </GlassView>
+      </View>
+    );
   }
 
-  if (variant === 'glass-danger') {
-    return <GlassButtonBody label={label} loading={loading} tintColor={T.danger} isDisabled={isDisabled} onPress={onPress} />;
-  }
-
-  const spinnerColor = variant === 'ghost' ? T.accent : T.accentText;
-  const labelColor   = variant === 'ghost' ? T.accent : T.accentText;
+  const spinnerColor = effective === 'ghost' ? T.accent : T.accentText;
+  const labelColor   = effective === 'ghost' ? T.accent : T.accentText;
 
   return (
-    <Base
-      variant={variant}
-      onPress={onPress}
-      disabled={isDisabled}
-      opacity={isDisabled ? 0.45 : 1}
-    >
-      {loading
-        ? <Spinner size="small" color={spinnerColor} />
-        : <Text color={labelColor} fontSize={T.fontSize.md} fontWeight="600">{label}</Text>
-      }
-    </Base>
+    <View style={{ alignSelf: 'center' }}>
+      <Base variant={effective} onPress={onPress} disabled={isDisabled} opacity={isDisabled ? 0.45 : 1}>
+        {loading
+          ? <ActivityIndicator size="small" color={spinnerColor} />
+          : <RNText style={{ color: labelColor, fontSize: T.fontSize.md, fontWeight: '600' }}>{label}</RNText>
+        }
+      </Base>
+    </View>
   );
 }
