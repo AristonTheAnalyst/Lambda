@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, TextInput } from 'react-native';
+import { FlatList, Keyboard, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Separator,
@@ -168,7 +168,7 @@ export function DropdownSelect<T = any>(
     ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
     : options;
 
-  function handleOpen() { setQuery(''); setOpen(true); }
+  function handleOpen() { Keyboard.dismiss(); setQuery(''); setOpen(true); }
 
   function toggleMulti(val: T) {
     const onChangeMulti = (props as DropdownSelectMultiProps<T>).onChangeMulti;

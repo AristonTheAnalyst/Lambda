@@ -65,7 +65,15 @@ export default function Input({
 }: InputProps) {
   return (
     <YStack gap={T.space.xs}>
-      {label ? <Text color={T.primary} fontSize={T.fontSize.sm} fontWeight="600">{label}</Text> : null}
+      {label ? (
+        <Text color={T.primary} fontSize={T.fontSize.sm} fontWeight="600">
+          {label.split(/(\([^)]+\))/).map((part, i) =>
+            /^\([^)]+\)$/.test(part)
+              ? <Text key={i} fontSize={T.fontSize.sm} fontWeight="400" color={T.muted}>{part}</Text>
+              : part
+          )}
+        </Text>
+      ) : null}
       <StyledInput
         value={value}
         onChangeText={onChangeText}

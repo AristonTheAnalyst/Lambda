@@ -349,6 +349,9 @@ export default function VariationsScreen() {
                   ? 'Add Variations' : 'Add Variation'}
                 onPress={addVar}
                 loading={addingVar}
+                disabled={addingVar || (addMode === 'new' && [...assignedVars, ...commonVars].some(
+                  (v) => v.variation_name.toLowerCase() === newVarName.trim().toLowerCase()
+                ))}
               />
             </YStack>
           </YStack>

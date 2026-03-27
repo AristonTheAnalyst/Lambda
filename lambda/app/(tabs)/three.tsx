@@ -54,6 +54,8 @@ export default function WorkoutLogScreen() {
   const [startLoading, setStartLoading] = useState(false);
   const [endLoading, setEndLoading]   = useState(false);
 
+  const weightByExercise = React.useRef<Record<number, string>>({});
+
   const [selectedExId, setSelectedExId]     = useState<number | null>(null); // custom_exercise_id
   const [selectedEx, setSelectedEx]         = useState<ExerciseDetail | null>(null);
   const [weight, setWeight]                 = useState('');
@@ -92,12 +94,13 @@ export default function WorkoutLogScreen() {
   }, []);
 
   function onSelectExercise(exId: number | null) {
+    if (selectedExId !== null) weightByExercise.current[selectedExId] = weight;
     setSelectedExId(exId);
     setSelectedVarId(null);
-    setWeight('');
+    setWeight(exId !== null ? (weightByExercise.current[exId] ?? '') : '');
     setRepsOrDuration('');
     setSetNotes('');
-    setSelectedEx(exId ? (exerciseDetailMap[exId] ?? null) : null); // keyed by custom_exercise_id
+    setSelectedEx(exId ? (exerciseDetailMap[exId] ?? null) : null);
   }
 
   function startWorkout() { return guard(async () => {
@@ -161,7 +164,7 @@ export default function WorkoutLogScreen() {
     });
     setLogLoading(false);
     if (error) return Alert.alert('Error', error.message);
-    setWeight(''); setRepsOrDuration(''); setSetNotes(''); setSelectedVarId(null);
+    setRepsOrDuration(''); setSetNotes('');
     loadSets(currentWorkoutId);
   }); }
 
@@ -240,7 +243,7 @@ export default function WorkoutLogScreen() {
 
             {selectedEx && (
               <YStack gap={T.space.md} marginTop={T.space.md}>
-                <Input label="Weight (optional)" placeholder="kg" keyboardType="decimal-pad" value={weight} onChangeText={setWeight} />
+                <Input label="Weight (optional)" placeholder="kg" keyboardType="numbers-and-punctuation" value={weight} onChangeText={setWeight} />
                 <Input
                   label={selectedEx.exercise_volume_type === 'reps' ? 'Reps' : 'Duration (seconds)'}
                   placeholder={selectedEx.exercise_volume_type === 'reps' ? 'e.g. 10,8,6' : 'e.g. 60,45'}
@@ -280,22 +283,22 @@ export default function WorkoutLogScreen() {
                   ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations.find((v) => v.custom_variation_id === s.custom_variation_id)?.variation_name
                   : null;
                 const repsStr = s.workout_set_reps?.length
-                  ? formatValues(s.workout_set_reps)
+                  ? `${formatValues(s.workout_set_reps)} reps`
                   : s.workout_set_duration_seconds?.length ? `${formatValues(s.workout_set_duration_seconds)}s` : '—';
                 return (
-                  <YStack key={s.workout_set_id} borderBottomWidth={0.5} borderBottomColor={T.border} paddingVertical={T.space.sm}>
-                    <XStack alignItems="flex-start" gap={T.space.sm}>
-                      <Text fontWeight="700" fontSize={15} marginTop={1} color={T.accent}>#{s.workout_set_number}</Text>
-                      <YStack flex={1}>
+                  <XStack key={s.workout_set_id} borderBottomWidth={0.5} borderBottomColor={T.border} paddingVertical={T.space.sm} alignItems="center" gap={T.space.sm}>
+                    <Text fontWeight="700" fontSize={15} color={T.accent}>#{s.workout_set_number}</Text>
+                    <YStack flex={1}>
+                      <XStack alignItems="flex-end" gap={T.space.sm}>
                         <Text fontSize={15} fontWeight="500" color={T.primary}>{exName}</Text>
-                        <Text fontSize={T.fontSize.xs} marginTop={T.space.xs} color={T.muted}>
-                          {s.workout_set_weight != null ? `${s.workout_set_weight}kg · ` : ''}{repsStr}
-                          {varName ? ` · ${varName}` : ''}
-                          {s.workout_set_notes ? ` · ${s.workout_set_notes}` : ''}
-                        </Text>
-                      </YStack>
-                    </XStack>
-                    <XStack gap={T.space.sm} marginTop={T.space.xs + 2}>
+                        {varName && <Text fontSize={T.fontSize.sm} color={T.muted}>{varName}</Text>}
+                      </XStack>
+                      <Text fontSize={T.fontSize.xs} marginTop={T.space.xs} color={T.muted}>
+                        {s.workout_set_weight != null ? `${s.workout_set_weight}kg · ` : ''}{repsStr}
+                        {s.workout_set_notes ? <Text fontSize={T.fontSize.xs} color={T.muted} fontStyle="italic">{` · "${s.workout_set_notes}"`}</Text> : ''}
+                      </Text>
+                    </YStack>
+                    <XStack gap={T.space.sm}>
                       <XStack
                         paddingHorizontal={T.space.sm}
                         paddingVertical={T.space.xs + 1}
@@ -319,7 +322,7 @@ export default function WorkoutLogScreen() {
                         <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
                       </XStack>
                     </XStack>
-                  </YStack>
+                  </XStack>
                 );
               })
             )}

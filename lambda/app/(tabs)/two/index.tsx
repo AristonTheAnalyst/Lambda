@@ -14,8 +14,14 @@ const SECTIONS = [
     icon: 'heartbeat' as const,
   },
   {
-    route: '/two/variations',
+    route: '/two/manage-variations',
     label: 'Variations',
+    description: 'Create and manage variations',
+    icon: 'tags' as const,
+  },
+  {
+    route: '/two/variations',
+    label: 'Assign Variations',
     description: 'Manage variations for each exercise',
     icon: 'sliders' as const,
   },

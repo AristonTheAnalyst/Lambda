@@ -1,0 +1,171 @@
+import React, { useState } from 'react';
+import { Alert, ScrollView } from 'react-native';
+import { Text, XStack, YStack } from 'tamagui';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SlideUpModal } from '@/components/FormControls';
+import { Separator } from 'tamagui';
+import { useExerciseData } from '@/lib/ExerciseDataContext';
+import { useAuthContext } from '@/lib/AuthContext';
+import GlassButton from '@/components/GlassButton';
+import Button from '@/components/Button';
+import Input from '@/components/Input';
+import supabase from '@/lib/supabase';
+import { useAsyncGuard, useUIGuard } from '@/lib/asyncGuard';
+import T from '@/constants/Theme';
+
+interface Variation {
+  custom_variation_id: number;
+  variation_name: string;
+  is_active: boolean;
+}
+
+export default function ManageVariationsScreen() {
+  const guard = useAsyncGuard();
+  const openEdit = useUIGuard();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { variations, refreshVariations } = useExerciseData();
+  const { user } = useAuthContext();
+  const [name, setName]         = useState('');
+  const [creating, setCreating] = useState(false);
+  const [editVar, setEditVar]   = useState<Variation | null>(null);
+
+  function create() { return guard(async () => {
+    if (!name.trim()) return Alert.alert('Name required');
+    if (!user) return;
+    setCreating(true);
+
+    const { data: existing } = await supabase
+      .from('user_custom_variation')
+      .select('custom_variation_id, is_active')
+      .eq('user_id', user.id)
+      .ilike('variation_name', name.trim())
+      .maybeSingle();
+
+    if (existing) {
+      if (existing.is_active) {
+        setCreating(false);
+        return Alert.alert('Already exists', 'A variation with this name already exists.');
+      }
+      await supabase.from('user_custom_variation')
+        .update({ is_active: true })
+        .eq('custom_variation_id', existing.custom_variation_id);
+      setCreating(false);
+      setName('');
+      return refreshVariations();
+    }
+
+    const { error } = await supabase.from('user_custom_variation').insert({
+      user_id: user.id,
+      variation_name: name.trim(),
+    });
+    setCreating(false);
+    if (error) return Alert.alert('Error', error.message);
+    setName('');
+    refreshVariations();
+  }); }
+
+  function saveEdit() { return guard(async () => {
+    if (!editVar?.variation_name.trim()) return;
+    const { error } = await supabase
+      .from('user_custom_variation')
+      .update({ variation_name: editVar.variation_name })
+      .eq('custom_variation_id', editVar.custom_variation_id);
+    if (error) return Alert.alert('Error', error.message);
+    setEditVar(null);
+    refreshVariations();
+  }); }
+
+  function confirmDelete(id: number) {
+    Alert.alert('Delete Variation', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
+        await supabase.from('user_custom_variation').update({ is_active: false }).eq('custom_variation_id', id);
+        refreshVariations();
+      })},
+    ]);
+  }
+
+  return (
+    <YStack flex={1} backgroundColor={T.bg}>
+      <XStack style={{ height: insets.top + 52, paddingTop: insets.top }} paddingHorizontal={T.space.md} alignItems="center">
+        <XStack minWidth={80}><GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} /></XStack>
+        <Text flex={1} textAlign="center" color={T.primary} fontSize={T.fontSize.xl} fontWeight="600">Variations</Text>
+        <XStack width={80} />
+      </XStack>
+      <Separator borderColor={T.border} />
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: T.space.lg }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* ── Create form ── */}
+        <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>New Variation</Text>
+        <Input placeholder="Variation name" value={name} onChangeText={setName} />
+        <YStack marginTop={T.space.md}>
+          <Button label="Create Variation" onPress={create} loading={creating} />
+        </YStack>
+
+        {/* ── List ── */}
+        <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginTop={T.space.xxl} marginBottom={T.space.md}>All Variations</Text>
+        {variations.length === 0 ? (
+          <Text color={T.muted} padding={T.space.xs}>No variations yet.</Text>
+        ) : (
+          variations.map((v) => (
+            <XStack
+              key={v.custom_variation_id}
+              alignItems="center"
+              paddingVertical={T.space.md}
+              borderBottomWidth={0.5}
+              borderBottomColor={T.border}
+            >
+              <Text flex={1} fontSize={15} color={T.primary}>{v.variation_name}</Text>
+              <XStack
+                paddingHorizontal={T.space.sm} paddingVertical={T.space.xs + 2}
+                marginLeft={T.space.sm} borderRadius={T.radius.sm}
+                backgroundColor={T.accentBg} pressStyle={{ opacity: 0.7 }}
+                onPress={() => openEdit(() => setEditVar({ ...v, is_active: true }))}
+                cursor="pointer"
+              >
+                <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.accent}>Edit</Text>
+              </XStack>
+              <XStack
+                paddingHorizontal={T.space.sm} paddingVertical={T.space.xs + 2}
+                marginLeft={T.space.sm} borderRadius={T.radius.sm}
+                backgroundColor={T.dangerBg} pressStyle={{ opacity: 0.7 }}
+                onPress={() => confirmDelete(v.custom_variation_id)}
+                cursor="pointer"
+              >
+                <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
+              </XStack>
+            </XStack>
+          ))
+        )}
+        <YStack height={T.space.xxl} />
+
+        {/* ── Edit modal ── */}
+        <SlideUpModal visible={!!editVar} onClose={() => setEditVar(null)}>
+          <YStack
+            backgroundColor={T.surface}
+            borderTopLeftRadius={T.radius.lg}
+            borderTopRightRadius={T.radius.lg}
+            padding={T.space.xl}
+            paddingBottom={T.space.xxl}
+          >
+            <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>Edit Variation</Text>
+            <Input
+              value={editVar?.variation_name ?? ''}
+              onChangeText={(t) => setEditVar((v) => v ? { ...v, variation_name: t } : v)}
+              placeholder="Variation name"
+            />
+            <XStack gap={T.space.sm} marginTop={T.space.md}>
+              <YStack flex={1}><Button label="Save" onPress={saveEdit} /></YStack>
+              <YStack flex={1}><Button label="Cancel" onPress={() => setEditVar(null)} variant="ghost" /></YStack>
+            </XStack>
+          </YStack>
+        </SlideUpModal>
+      </ScrollView>
+    </YStack>
+  );
+}
