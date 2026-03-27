@@ -26,22 +26,12 @@ function ItemRow({ label, onEdit, onRemove }: { label: string; onEdit?: () => vo
     <XStack alignItems="center" paddingVertical={T.space.md}>
       <Text flex={1} fontSize={15} color={T.primary}>{label}</Text>
       {onEdit && (
-        <XStack
-          paddingHorizontal={T.space.sm} paddingVertical={T.space.xs + 2}
-          marginLeft={T.space.sm} borderRadius={T.radius.sm}
-          backgroundColor={T.accentBg} pressStyle={{ opacity: 0.7 }}
-          onPress={onEdit} cursor="pointer"
-        >
-          <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.accent}>Edit</Text>
+        <XStack marginLeft={T.space.sm}>
+          <GlassButton icon="pencil" iconSize={14} onPress={onEdit} />
         </XStack>
       )}
-      <XStack
-        paddingHorizontal={T.space.sm} paddingVertical={T.space.xs + 2}
-        marginLeft={T.space.sm} borderRadius={T.radius.sm}
-        backgroundColor={T.dangerBg} pressStyle={{ opacity: 0.7 }}
-        onPress={onRemove} cursor="pointer"
-      >
-        <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
+      <XStack marginLeft={T.space.sm}>
+        <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={onRemove} />
       </XStack>
     </XStack>
   );

@@ -20,13 +20,8 @@ function ItemRow({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
     <XStack alignItems="center" paddingVertical={T.space.md}>
       <Text flex={1} fontSize={15} color={T.primary}>{label}</Text>
-      <XStack
-        paddingHorizontal={T.space.sm} paddingVertical={T.space.xs + 2}
-        marginLeft={T.space.sm} borderRadius={T.radius.sm}
-        backgroundColor={T.dangerBg} pressStyle={{ opacity: 0.7 }}
-        onPress={onRemove} cursor="pointer"
-      >
-        <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
+      <XStack marginLeft={T.space.sm}>
+        <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={onRemove} />
       </XStack>
     </XStack>
   );

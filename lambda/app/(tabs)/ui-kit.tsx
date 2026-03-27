@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView } from 'react-native';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Text, XStack, YStack } from 'tamagui';
 import PageHeader from '@/components/PageHeader';
 import Button from '@/components/Button';
@@ -75,6 +76,106 @@ export default function UIKitScreen() {
               <GlassButton icon="chevron-left" label="Back" onPress={() => {}} />
               <GlassButton icon="trash" label="Delete" color={T.danger} onPress={() => {}} />
               <GlassButton label="Label only" onPress={() => {}} />
+            </XStack>
+          </Section>
+
+          {/* ── Inline row actions ── */}
+          <Section title="Inline Row Actions">
+            <Text color={T.muted} fontSize={T.fontSize.xs}>
+              Used in list rows (exercises, variations). Inline XStacks, not a component.
+            </Text>
+            {/* Current */}
+            <Text color={T.muted} fontSize={T.fontSize.xs} fontWeight="600">Current — filled bg, boxy (radius.sm)</Text>
+            <XStack alignItems="center" paddingVertical={T.space.sm}>
+              <Text flex={1} fontSize={15} color={T.primary}>Pull-up</Text>
+              <XStack paddingHorizontal={T.space.sm} paddingVertical={T.space.xs + 2} marginLeft={T.space.sm} borderRadius={T.radius.sm} backgroundColor={T.accentBg} pressStyle={{ opacity: 0.7 }} cursor="pointer">
+                <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.accent}>Edit</Text>
+              </XStack>
+              <XStack paddingHorizontal={T.space.sm} paddingVertical={T.space.xs + 2} marginLeft={T.space.sm} borderRadius={T.radius.sm} backgroundColor={T.dangerBg} pressStyle={{ opacity: 0.7 }} cursor="pointer">
+                <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
+              </XStack>
+            </XStack>
+
+            {/* Filled + radius.md */}
+            <Text color={T.muted} fontSize={T.fontSize.xs} fontWeight="600">Filled bg, rounder (radius.md)</Text>
+            <XStack alignItems="center" paddingVertical={T.space.sm}>
+              <Text flex={1} fontSize={15} color={T.primary}>Pull-up</Text>
+              <XStack paddingHorizontal={T.space.sm} paddingVertical={T.space.xs + 2} marginLeft={T.space.sm} borderRadius={T.radius.md} backgroundColor={T.accentBg} pressStyle={{ opacity: 0.7 }} cursor="pointer">
+                <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.accent}>Edit</Text>
+              </XStack>
+              <XStack paddingHorizontal={T.space.sm} paddingVertical={T.space.xs + 2} marginLeft={T.space.sm} borderRadius={T.radius.md} backgroundColor={T.dangerBg} pressStyle={{ opacity: 0.7 }} cursor="pointer">
+                <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
+              </XStack>
+            </XStack>
+
+            {/* Filled + pill */}
+            <Text color={T.muted} fontSize={T.fontSize.xs} fontWeight="600">Filled bg, pill (9999)</Text>
+            <XStack alignItems="center" paddingVertical={T.space.sm}>
+              <Text flex={1} fontSize={15} color={T.primary}>Pull-up</Text>
+              <XStack paddingHorizontal={T.space.md} paddingVertical={T.space.xs + 2} marginLeft={T.space.sm} borderRadius={9999} backgroundColor={T.accentBg} pressStyle={{ opacity: 0.7 }} cursor="pointer">
+                <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.accent}>Edit</Text>
+              </XStack>
+              <XStack paddingHorizontal={T.space.md} paddingVertical={T.space.xs + 2} marginLeft={T.space.sm} borderRadius={9999} backgroundColor={T.dangerBg} pressStyle={{ opacity: 0.7 }} cursor="pointer">
+                <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
+              </XStack>
+            </XStack>
+
+            {/* Ghost */}
+            <Text color={T.muted} fontSize={T.fontSize.xs} fontWeight="600">Ghost (border only, radius.sm)</Text>
+            <XStack alignItems="center" paddingVertical={T.space.sm}>
+              <Text flex={1} fontSize={15} color={T.primary}>Pull-up</Text>
+              <XStack paddingHorizontal={T.space.sm} paddingVertical={T.space.xs + 2} marginLeft={T.space.sm} borderRadius={T.radius.sm} borderWidth={1} borderColor={T.accent} pressStyle={{ opacity: 0.7 }} cursor="pointer">
+                <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.accent}>Edit</Text>
+              </XStack>
+              <XStack paddingHorizontal={T.space.sm} paddingVertical={T.space.xs + 2} marginLeft={T.space.sm} borderRadius={T.radius.sm} borderWidth={1} borderColor={T.danger} pressStyle={{ opacity: 0.7 }} cursor="pointer">
+                <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
+              </XStack>
+            </XStack>
+
+            {/* Text only */}
+            <Text color={T.muted} fontSize={T.fontSize.xs} fontWeight="600">Text only (no container)</Text>
+            <XStack alignItems="center" paddingVertical={T.space.sm}>
+              <Text flex={1} fontSize={15} color={T.primary}>Pull-up</Text>
+              <Text fontSize={T.fontSize.sm} fontWeight="600" color={T.accent} marginLeft={T.space.lg} pressStyle={{ opacity: 0.7 }} cursor="pointer">Edit</Text>
+              <Text fontSize={T.fontSize.sm} fontWeight="600" color={T.danger} marginLeft={T.space.lg} pressStyle={{ opacity: 0.7 }} cursor="pointer">Del</Text>
+            </XStack>
+
+            {/* Icon only */}
+            <Text color={T.muted} fontSize={T.fontSize.xs} fontWeight="600">Icon only</Text>
+            <XStack alignItems="center" paddingVertical={T.space.sm}>
+              <Text flex={1} fontSize={15} color={T.primary}>Pull-up</Text>
+              <XStack paddingHorizontal={T.space.sm} paddingVertical={T.space.xs + 2} marginLeft={T.space.sm} borderRadius={T.radius.sm} backgroundColor={T.accentBg} pressStyle={{ opacity: 0.7 }} cursor="pointer">
+                <FontAwesome name="pencil" size={14} color={T.accent} />
+              </XStack>
+              <XStack paddingHorizontal={T.space.sm} paddingVertical={T.space.xs + 2} marginLeft={T.space.sm} borderRadius={T.radius.sm} backgroundColor={T.dangerBg} pressStyle={{ opacity: 0.7 }} cursor="pointer">
+                <FontAwesome name="trash" size={14} color={T.danger} />
+              </XStack>
+            </XStack>
+
+            {/* Icon only, GlassButton style */}
+            <Text color={T.muted} fontSize={T.fontSize.xs} fontWeight="600">Icon only, GlassButton style</Text>
+            <XStack alignItems="center" paddingVertical={T.space.sm}>
+              <Text flex={1} fontSize={15} color={T.primary}>Pull-up</Text>
+              <XStack marginLeft={T.space.sm}>
+                <GlassButton icon="pencil" iconSize={14} onPress={() => {}} />
+              </XStack>
+              <XStack marginLeft={T.space.sm}>
+                <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => {}} />
+              </XStack>
+            </XStack>
+
+            {/* Icon + text */}
+            <Text color={T.muted} fontSize={T.fontSize.xs} fontWeight="600">Icon + text</Text>
+            <XStack alignItems="center" paddingVertical={T.space.sm}>
+              <Text flex={1} fontSize={15} color={T.primary}>Pull-up</Text>
+              <XStack gap={T.space.xs} paddingHorizontal={T.space.sm} paddingVertical={T.space.xs + 2} marginLeft={T.space.sm} borderRadius={T.radius.sm} backgroundColor={T.accentBg} alignItems="center" pressStyle={{ opacity: 0.7 }} cursor="pointer">
+                <FontAwesome name="pencil" size={12} color={T.accent} />
+                <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.accent}>Edit</Text>
+              </XStack>
+              <XStack gap={T.space.xs} paddingHorizontal={T.space.sm} paddingVertical={T.space.xs + 2} marginLeft={T.space.sm} borderRadius={T.radius.sm} backgroundColor={T.dangerBg} alignItems="center" pressStyle={{ opacity: 0.7 }} cursor="pointer">
+                <FontAwesome name="trash" size={12} color={T.danger} />
+                <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
+              </XStack>
             </XStack>
           </Section>
 

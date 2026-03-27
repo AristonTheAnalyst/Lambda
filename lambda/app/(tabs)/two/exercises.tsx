@@ -136,29 +136,11 @@ export default function ExercisesScreen() {
               <Text fontSize={15} color={T.primary}>{ex.exercise_name}</Text>
               <Text fontSize={T.fontSize.xs} color={T.muted} marginTop={T.space.xs}>{ex.exercise_volume_type}</Text>
             </YStack>
-            <XStack
-              paddingHorizontal={T.space.sm}
-              paddingVertical={T.space.xs + 2}
-              marginLeft={T.space.sm}
-              borderRadius={T.radius.sm}
-              backgroundColor={T.accentBg}
-              pressStyle={{ opacity: 0.7 }}
-              onPress={() => openEdit(() => setEditEx({ ...ex }))}
-              cursor="pointer"
-            >
-              <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.accent}>Edit</Text>
+            <XStack marginLeft={T.space.sm}>
+              <GlassButton icon="pencil" iconSize={14} onPress={() => openEdit(() => setEditEx({ ...ex }))} />
             </XStack>
-            <XStack
-              paddingHorizontal={T.space.sm}
-              paddingVertical={T.space.xs + 2}
-              marginLeft={T.space.sm}
-              borderRadius={T.radius.sm}
-              backgroundColor={T.dangerBg}
-              pressStyle={{ opacity: 0.7 }}
-              onPress={() => confirmDelete(ex.custom_exercise_id)}
-              cursor="pointer"
-            >
-              <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
+            <XStack marginLeft={T.space.sm}>
+              <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => confirmDelete(ex.custom_exercise_id)} />
             </XStack>
           </XStack>
         ))

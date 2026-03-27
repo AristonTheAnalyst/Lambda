@@ -121,23 +121,11 @@ export default function ManageVariationsScreen() {
               borderBottomColor={T.border}
             >
               <Text flex={1} fontSize={15} color={T.primary}>{v.variation_name}</Text>
-              <XStack
-                paddingHorizontal={T.space.sm} paddingVertical={T.space.xs + 2}
-                marginLeft={T.space.sm} borderRadius={T.radius.sm}
-                backgroundColor={T.accentBg} pressStyle={{ opacity: 0.7 }}
-                onPress={() => openEdit(() => setEditVar({ ...v, is_active: true }))}
-                cursor="pointer"
-              >
-                <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.accent}>Edit</Text>
+              <XStack marginLeft={T.space.sm}>
+                <GlassButton icon="pencil" iconSize={14} onPress={() => openEdit(() => setEditVar({ ...v, is_active: true }))} />
               </XStack>
-              <XStack
-                paddingHorizontal={T.space.sm} paddingVertical={T.space.xs + 2}
-                marginLeft={T.space.sm} borderRadius={T.radius.sm}
-                backgroundColor={T.dangerBg} pressStyle={{ opacity: 0.7 }}
-                onPress={() => confirmDelete(v.custom_variation_id)}
-                cursor="pointer"
-              >
-                <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
+              <XStack marginLeft={T.space.sm}>
+                <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => confirmDelete(v.custom_variation_id)} />
               </XStack>
             </XStack>
           ))
