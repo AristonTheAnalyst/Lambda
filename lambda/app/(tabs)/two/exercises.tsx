@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, ScrollView } from 'react-native';
+import { Alert, ScrollView, TextInput } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +31,7 @@ export default function ExercisesScreen() {
   const { exercises, refreshExercises } = useExerciseData();
   const { user } = useAuthContext();
   const [name, setName]         = useState('');
+  const [search, setSearch]     = useState('');
   const [volume, setVolume]     = useState('reps');
   const [creating, setCreating] = useState(false);
   const [editEx, setEditEx]     = useState<Exercise | null>(null);
@@ -115,16 +116,31 @@ export default function ExercisesScreen() {
       <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginTop={T.space.md} marginBottom={T.space.xs}>Volume type</Text>
       <SegmentedControl options={VOLUME_OPTIONS} value={volume} onChange={setVolume} />
 
-      <YStack marginTop={T.space.md}>
+      <YStack marginTop={T.space.lg}>
         <Button label="Create Exercise" onPress={create} loading={creating} />
       </YStack>
 
       {/* ── List ── */}
-      <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginTop={T.space.xxl} marginBottom={T.space.md}>All Exercises</Text>
+      <XStack alignItems="center" marginTop={T.space.lg} marginBottom={T.space.md}>
+        <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} flex={1}>All Exercises</Text>
+        {exercises.length > 0 && (
+          <XStack backgroundColor={T.surface} borderRadius={T.radius.md} paddingHorizontal={T.space.sm} alignItems="center" height={34} minWidth={130}>
+            <TextInput
+              placeholder="Search…"
+              placeholderTextColor={T.muted}
+              value={search}
+              onChangeText={setSearch}
+              style={{ color: T.primary, fontSize: T.fontSize.sm, flex: 1 }}
+            />
+          </XStack>
+        )}
+      </XStack>
       {exercises.length === 0 ? (
         <Text color={T.muted} padding={T.space.xs}>No exercises yet.</Text>
+      ) : exercises.filter((ex) => ex.exercise_name.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
+        <Text color={T.muted} padding={T.space.xs}>No results.</Text>
       ) : (
-        exercises.map((ex) => (
+        exercises.filter((ex) => ex.exercise_name.toLowerCase().includes(search.toLowerCase())).map((ex) => (
           <XStack
             key={ex.custom_exercise_id}
             alignItems="center"

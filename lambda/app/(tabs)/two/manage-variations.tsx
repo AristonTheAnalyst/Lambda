@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, ScrollView } from 'react-native';
+import { Alert, ScrollView, TextInput } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,6 +28,7 @@ export default function ManageVariationsScreen() {
   const { variations, refreshVariations } = useExerciseData();
   const { user } = useAuthContext();
   const [name, setName]         = useState('');
+  const [search, setSearch]     = useState('');
   const [creating, setCreating] = useState(false);
   const [editVar, setEditVar]   = useState<Variation | null>(null);
 
@@ -103,16 +104,31 @@ export default function ManageVariationsScreen() {
         {/* ── Create form ── */}
         <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>New Variation</Text>
         <Input placeholder="Variation name" value={name} onChangeText={setName} />
-        <YStack marginTop={T.space.md}>
+        <YStack marginTop={T.space.lg}>
           <Button label="Create Variation" onPress={create} loading={creating} />
         </YStack>
 
         {/* ── List ── */}
-        <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginTop={T.space.xxl} marginBottom={T.space.md}>All Variations</Text>
+        <XStack alignItems="center" marginTop={T.space.lg} marginBottom={T.space.md}>
+          <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} flex={1}>All Variations</Text>
+          {variations.length > 0 && (
+            <XStack backgroundColor={T.surface} borderRadius={T.radius.md} paddingHorizontal={T.space.sm} alignItems="center" height={34} minWidth={130}>
+              <TextInput
+                placeholder="Search…"
+                placeholderTextColor={T.muted}
+                value={search}
+                onChangeText={setSearch}
+                style={{ color: T.primary, fontSize: T.fontSize.sm, flex: 1 }}
+              />
+            </XStack>
+          )}
+        </XStack>
         {variations.length === 0 ? (
           <Text color={T.muted} padding={T.space.xs}>No variations yet.</Text>
+        ) : variations.filter((v) => v.variation_name.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
+          <Text color={T.muted} padding={T.space.xs}>No results.</Text>
         ) : (
-          variations.map((v) => (
+          variations.filter((v) => v.variation_name.toLowerCase().includes(search.toLowerCase())).map((v) => (
             <XStack
               key={v.custom_variation_id}
               alignItems="center"
