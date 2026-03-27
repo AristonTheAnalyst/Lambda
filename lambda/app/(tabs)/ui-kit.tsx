@@ -6,6 +6,7 @@ import Button from '@/components/Button';
 import Card from '@/components/Card';
 import Input from '@/components/Input';
 import { SegmentedControl, DropdownSelect, SlideUpModal } from '@/components/FormControls';
+import GlassButton from '@/components/GlassButton';
 import T from '@/constants/Theme';
 
 // ─── Section header ───────────────────────────────────────────────────────────
@@ -63,6 +64,19 @@ export default function UIKitScreen() {
 
       <ScrollView contentContainerStyle={{ padding: T.space.lg, gap: T.space.xl }} showsVerticalScrollIndicator={false}>
         <YStack gap={T.space.xl}>
+
+          {/* ── GlassButton ── */}
+          <Section title="GlassButton">
+            <Text color={T.muted} fontSize={T.fontSize.xs}>
+              Used for the hamburger (icon only) and back button (icon + label). On iOS 26+ renders a real blur capsule; falls back to a translucent dark pill.
+            </Text>
+            <XStack gap={T.space.md} flexWrap="wrap">
+              <GlassButton icon="bars" iconSize={18} onPress={() => {}} />
+              <GlassButton icon="chevron-left" label="Back" onPress={() => {}} />
+              <GlassButton icon="trash" label="Delete" color={T.danger} onPress={() => {}} />
+              <GlassButton label="Label only" onPress={() => {}} />
+            </XStack>
+          </Section>
 
           {/* ── Buttons ── */}
           <Section title="Button">
