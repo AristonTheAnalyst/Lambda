@@ -36,6 +36,27 @@ export default function ExercisesScreen() {
   function create() { return guard(async () => {
     if (!name.trim()) return Alert.alert('Name required');
     setCreating(true);
+
+    const { data: existing } = await supabase
+      .from('dim_exercise')
+      .select('exercise_id, is_active')
+      .ilike('exercise_name', name.trim())
+      .maybeSingle();
+
+    if (existing) {
+      if (existing.is_active) {
+        setCreating(false);
+        return Alert.alert('Already exists', 'An exercise with this name already exists.');
+      }
+      // Reactivate a previously deleted exercise
+      await supabase.from('dim_exercise')
+        .update({ is_active: true, exercise_volume_type: volume })
+        .eq('exercise_id', existing.exercise_id);
+      setCreating(false);
+      setName('');
+      return refreshExercises();
+    }
+
     const { error } = await supabase.from('dim_exercise').insert({
       exercise_name: name.trim(),
       exercise_volume_type: volume,

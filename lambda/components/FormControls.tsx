@@ -116,25 +116,65 @@ interface DropdownSelectProps<T = any> {
   onChange: (value: T) => void;
   placeholder?: string;
   searchable?: boolean;
+  multiSelect?: false;
+  selectedValues?: never;
+  onChangeMulti?: never;
 }
 
-export function DropdownSelect<T = any>({
-  options,
-  value,
-  onChange,
-  placeholder = 'Select…',
-  searchable = false,
-}: DropdownSelectProps<T>) {
+interface DropdownSelectMultiProps<T = any> {
+  options: SelectOption<T>[];
+  value?: never;
+  onChange?: never;
+  placeholder?: string;
+  searchable?: boolean;
+  multiSelect: true;
+  selectedValues: T[];
+  onChangeMulti: (values: T[]) => void;
+}
+
+export function DropdownSelect<T = any>(
+  props: DropdownSelectProps<T> | DropdownSelectMultiProps<T>
+) {
+  const {
+    options,
+    placeholder = 'Select…',
+    searchable = false,
+    multiSelect = false,
+  } = props;
+
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
-  const selected = options.find((o) => o.value === value);
-  const insets   = useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
+
+  const selected    = !multiSelect ? options.find((o) => o.value === props.value) : undefined;
+  const selValues   = multiSelect ? (props as DropdownSelectMultiProps<T>).selectedValues : [];
+  const selValueSet = new Set(selValues.map(String));
 
   const filtered = searchable && query.trim()
     ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
     : options;
 
   function handleOpen() { setQuery(''); setOpen(true); }
+
+  function toggleMulti(val: T) {
+    const onChangeMulti = (props as DropdownSelectMultiProps<T>).onChangeMulti;
+    const key = String(val);
+    if (selValueSet.has(key)) {
+      onChangeMulti(selValues.filter((v) => String(v) !== key));
+    } else {
+      onChangeMulti([...selValues, val]);
+    }
+  }
+
+  const triggerLabel = multiSelect
+    ? selValues.length > 0
+      ? `${selValues.length} Variation${selValues.length > 1 ? 's' : ''} Selected`
+      : placeholder
+    : selected
+    ? selected.label
+    : placeholder;
+
+  const triggerHasValue = multiSelect ? selValues.length > 0 : !!selected;
 
   return (
     <>
@@ -158,9 +198,9 @@ export function DropdownSelect<T = any>({
           flex={1}
           marginRight={T.space.sm}
           numberOfLines={1}
-          color={selected ? T.primary : T.muted}
+          color={triggerHasValue ? T.primary : T.muted}
         >
-          {selected ? selected.label : placeholder}
+          {triggerLabel}
         </Text>
         <Text color={T.muted} fontSize={T.fontSize.xs}>▾</Text>
       </XStack>
@@ -194,7 +234,6 @@ export function DropdownSelect<T = any>({
                 onChangeText={setQuery}
                 placeholder="Search…"
                 placeholderTextColor={T.muted}
-                autoFocus
                 style={{
                   backgroundColor: T.bg,
                   borderWidth: 1,
@@ -215,7 +254,9 @@ export function DropdownSelect<T = any>({
             keyboardShouldPersistTaps="handled"
             ItemSeparatorComponent={() => <Separator borderColor={T.border} />}
             renderItem={({ item }) => {
-              const active = item.value === value;
+              const active = multiSelect
+                ? selValueSet.has(String(item.value))
+                : item.value === props.value;
               return (
                 <XStack
                   alignItems="center"
@@ -224,7 +265,10 @@ export function DropdownSelect<T = any>({
                   paddingVertical={15}
                   backgroundColor={active ? T.accentBg : 'transparent'}
                   pressStyle={{ opacity: 0.7 }}
-                  onPress={() => { onChange(item.value); setOpen(false); }}
+                  onPress={() => {
+                    if (multiSelect) { toggleMulti(item.value); }
+                    else { (props as DropdownSelectProps<T>).onChange(item.value); setOpen(false); }
+                  }}
                   cursor="pointer"
                 >
                   <Text
@@ -239,6 +283,23 @@ export function DropdownSelect<T = any>({
               );
             }}
           />
+
+          {multiSelect && (
+            <YStack paddingHorizontal={T.space.lg} paddingVertical={T.space.md}>
+              <XStack
+                backgroundColor={T.accent}
+                borderRadius={T.radius.md}
+                paddingVertical={13}
+                alignItems="center"
+                justifyContent="center"
+                pressStyle={{ opacity: 0.8 }}
+                onPress={() => setOpen(false)}
+                cursor="pointer"
+              >
+                <Text color={T.accentText} fontSize={T.fontSize.md} fontWeight="600">Done</Text>
+              </XStack>
+            </YStack>
+          )}
         </Sheet.Frame>
       </Sheet>
     </>
