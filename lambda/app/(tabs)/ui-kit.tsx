@@ -184,6 +184,8 @@ export default function UIKitScreen() {
             <Button label="Primary (default)" onPress={() => {}} />
             <Button label="Ghost" onPress={() => {}} variant="ghost" />
             <Button label="Danger" onPress={() => {}} variant="danger" />
+            <Button label="Glass Primary" onPress={() => {}} variant="glass-primary" />
+            <Button label="Glass Danger" onPress={() => {}} variant="glass-danger" />
             <Button label="Loading…" onPress={() => {}} loading />
             <Button label="Disabled" onPress={() => {}} disabled />
           </Section>
