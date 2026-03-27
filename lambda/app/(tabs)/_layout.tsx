@@ -30,6 +30,7 @@ const NAV_ITEMS = [
   { label: 'Exercise Configuration', route: '/two', icon: 'pencil' as const },
   { label: 'Workout Log', route: '/three', icon: 'heartbeat' as const },
   { label: 'Training Logs', route: '/four', icon: 'list' as const },
+  { label: 'UI Kit', route: '/ui-kit', icon: 'paint-brush' as const },
 ];
 
 export default function TabLayout() {
@@ -86,6 +87,7 @@ export default function TabLayout() {
         <Tabs.Screen name="two" options={{ headerShown: false }} />
         <Tabs.Screen name="three" options={{ headerShown: false }} />
         <Tabs.Screen name="four" options={{ headerShown: false }} />
+        <Tabs.Screen name="ui-kit" options={{ headerShown: false }} />
       </Tabs>
 
       <Modal
