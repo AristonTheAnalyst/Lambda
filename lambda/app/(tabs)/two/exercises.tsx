@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SegmentedControl, SlideUpModal } from '@/components/FormControls';
 import { Separator } from 'tamagui';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
+import { useAuthContext } from '@/lib/AuthContext';
 import GlassButton from '@/components/GlassButton';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
@@ -14,7 +15,7 @@ import { useAsyncGuard, useUIGuard } from '@/lib/asyncGuard';
 import T from '@/constants/Theme';
 
 interface Exercise {
-  exercise_id: number;
+  custom_exercise_id: number;
   exercise_name: string;
   exercise_volume_type: string;
   is_active: boolean;
@@ -28,6 +29,7 @@ export default function ExercisesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { exercises, refreshExercises } = useExerciseData();
+  const { user } = useAuthContext();
   const [name, setName]         = useState('');
   const [volume, setVolume]     = useState('reps');
   const [creating, setCreating] = useState(false);
@@ -35,11 +37,13 @@ export default function ExercisesScreen() {
 
   function create() { return guard(async () => {
     if (!name.trim()) return Alert.alert('Name required');
+    if (!user) return;
     setCreating(true);
 
     const { data: existing } = await supabase
-      .from('dim_exercise')
-      .select('exercise_id, is_active')
+      .from('user_custom_exercise')
+      .select('custom_exercise_id, is_active')
+      .eq('user_id', user.id)
       .ilike('exercise_name', name.trim())
       .maybeSingle();
 
@@ -48,16 +52,16 @@ export default function ExercisesScreen() {
         setCreating(false);
         return Alert.alert('Already exists', 'An exercise with this name already exists.');
       }
-      // Reactivate a previously deleted exercise
-      await supabase.from('dim_exercise')
+      await supabase.from('user_custom_exercise')
         .update({ is_active: true, exercise_volume_type: volume })
-        .eq('exercise_id', existing.exercise_id);
+        .eq('custom_exercise_id', existing.custom_exercise_id);
       setCreating(false);
       setName('');
       return refreshExercises();
     }
 
-    const { error } = await supabase.from('dim_exercise').insert({
+    const { error } = await supabase.from('user_custom_exercise').insert({
+      user_id: user.id,
       exercise_name: name.trim(),
       exercise_volume_type: volume,
     });
@@ -70,12 +74,12 @@ export default function ExercisesScreen() {
   function saveEdit() { return guard(async () => {
     if (!editEx?.exercise_name.trim()) return;
     const { error } = await supabase
-      .from('dim_exercise')
+      .from('user_custom_exercise')
       .update({
         exercise_name: editEx.exercise_name,
         exercise_volume_type: editEx.exercise_volume_type,
       })
-      .eq('exercise_id', editEx.exercise_id);
+      .eq('custom_exercise_id', editEx.custom_exercise_id);
     if (error) return Alert.alert('Error', error.message);
     setEditEx(null);
     refreshExercises();
@@ -85,7 +89,7 @@ export default function ExercisesScreen() {
     Alert.alert('Delete Exercise', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
-        await supabase.from('dim_exercise').update({ is_active: false }).eq('exercise_id', id);
+        await supabase.from('user_custom_exercise').update({ is_active: false }).eq('custom_exercise_id', id);
         refreshExercises();
       })},
     ]);
@@ -122,7 +126,7 @@ export default function ExercisesScreen() {
       ) : (
         exercises.map((ex) => (
           <XStack
-            key={ex.exercise_id}
+            key={ex.custom_exercise_id}
             alignItems="center"
             paddingVertical={T.space.md}
             borderBottomWidth={0.5}
@@ -151,7 +155,7 @@ export default function ExercisesScreen() {
               borderRadius={T.radius.sm}
               backgroundColor={T.dangerBg}
               pressStyle={{ opacity: 0.7 }}
-              onPress={() => confirmDelete(ex.exercise_id)}
+              onPress={() => confirmDelete(ex.custom_exercise_id)}
               cursor="pointer"
             >
               <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>

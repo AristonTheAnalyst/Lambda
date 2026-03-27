@@ -4,15 +4,15 @@ import supabase from '@/lib/supabase';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface Exercise {
-  exercise_id: number;
+  custom_exercise_id: number;
   exercise_name: string;
   exercise_volume_type: string;
   is_active: boolean;
 }
 
 export interface AssignedVariation {
-  exercise_variation_id: number;
-  exercise_variation_name: string;
+  custom_variation_id: number;
+  variation_name: string;
 }
 
 export interface ExerciseDetail extends Exercise {
@@ -20,8 +20,8 @@ export interface ExerciseDetail extends Exercise {
 }
 
 export interface Variation {
-  exercise_variation_id: number;
-  exercise_variation_name: string;
+  custom_variation_id: number;
+  variation_name: string;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -53,7 +53,7 @@ export function useExerciseData() {
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 interface RawBridgeRow {
-  exercise_id: number;
+  custom_exercise_id: number;
   variation: AssignedVariation;
 }
 
@@ -65,8 +65,8 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
 
   const refreshExercises = useCallback(async () => {
     const { data } = await supabase
-      .from('dim_exercise')
-      .select('*')
+      .from('user_custom_exercise')
+      .select('custom_exercise_id, exercise_name, exercise_volume_type, is_active')
       .eq('is_active', true)
       .order('exercise_name');
     if (data) setExercises(data);
@@ -74,29 +74,27 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
 
   const refreshVariations = useCallback(async () => {
     const { data } = await supabase
-      .from('dim_exercise_variation')
-      .select('exercise_variation_id, exercise_variation_name')
+      .from('user_custom_variation')
+      .select('custom_variation_id, variation_name')
       .eq('is_active', true)
-      .order('exercise_variation_name');
+      .order('variation_name');
     if (data) setVariations(data);
   }, []);
 
   const refreshExerciseDetails = useCallback(async () => {
     const { data } = await supabase
-      .from('bridge_exercise_variation')
-      .select(
-        'exercise_id, dim_exercise_variation(exercise_variation_id, exercise_variation_name)'
-      );
+      .from('user_custom_exercise_variation_bridge')
+      .select('custom_exercise_id, user_custom_variation(custom_variation_id, variation_name)');
     if (data) {
       setRawBridge(
         data.flatMap((b: any) => {
-          const v = b.dim_exercise_variation;
+          const v = b.user_custom_variation;
           if (!v) return [];
           return [{
-            exercise_id: b.exercise_id,
+            custom_exercise_id: b.custom_exercise_id,
             variation: {
-              exercise_variation_id: v.exercise_variation_id,
-              exercise_variation_name: v.exercise_variation_name,
+              custom_variation_id: v.custom_variation_id,
+              variation_name: v.variation_name,
             },
           }];
         })
@@ -104,14 +102,13 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  // exerciseDetailMap is derived — rebuilds automatically when exercises or bridge data changes
   const exerciseDetailMap = useMemo(() => {
     const map: Record<number, ExerciseDetail> = {};
     exercises.forEach((ex) => {
-      map[ex.exercise_id] = { ...ex, assigned_variations: [] };
+      map[ex.custom_exercise_id] = { ...ex, assigned_variations: [] };
     });
-    rawBridge.forEach(({ exercise_id, variation }) => {
-      if (map[exercise_id]) map[exercise_id].assigned_variations.push(variation);
+    rawBridge.forEach(({ custom_exercise_id, variation }) => {
+      if (map[custom_exercise_id]) map[custom_exercise_id].assigned_variations.push(variation);
     });
     return map;
   }, [exercises, rawBridge]);

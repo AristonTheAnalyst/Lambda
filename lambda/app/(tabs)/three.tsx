@@ -22,8 +22,8 @@ import T from '@/constants/Theme';
 interface WorkoutSet {
   workout_set_id: number;
   workout_set_number: number;
-  exercise_id: number;
-  exercise_variation_id: number | null;
+  custom_exercise_id: number;
+  custom_variation_id: number | null;
   workout_set_weight: number | null;
   workout_set_reps: number[] | null;
   workout_set_duration_seconds: number[] | null;
@@ -54,7 +54,7 @@ export default function WorkoutLogScreen() {
   const [startLoading, setStartLoading] = useState(false);
   const [endLoading, setEndLoading]   = useState(false);
 
-  const [selectedExId, setSelectedExId]     = useState<number | null>(null);
+  const [selectedExId, setSelectedExId]     = useState<number | null>(null); // custom_exercise_id
   const [selectedEx, setSelectedEx]         = useState<ExerciseDetail | null>(null);
   const [weight, setWeight]                 = useState('');
   const [repsOrDuration, setRepsOrDuration] = useState('');
@@ -97,7 +97,7 @@ export default function WorkoutLogScreen() {
     setWeight('');
     setRepsOrDuration('');
     setSetNotes('');
-    setSelectedEx(exId ? (exerciseDetailMap[exId] ?? null) : null);
+    setSelectedEx(exId ? (exerciseDetailMap[exId] ?? null) : null); // keyed by custom_exercise_id
   }
 
   function startWorkout() { return guard(async () => {
@@ -150,11 +150,14 @@ export default function WorkoutLogScreen() {
 
     setLogLoading(true);
     const { error } = await supabase.from('fact_workout_set').insert({
-      user_workout_id: currentWorkoutId, exercise_id: selectedExId, exercise_source: 'official',
-      workout_set_number: nextSetNum, workout_set_weight: weight ? parseFloat(weight) : null,
-      workout_set_reps: isReps ? values : [], workout_set_duration_seconds: !isReps ? values : [],
+      user_workout_id: currentWorkoutId,
+      custom_exercise_id: selectedExId,
+      workout_set_number: nextSetNum,
+      workout_set_weight: weight ? parseFloat(weight) : null,
+      workout_set_reps: isReps ? values : [],
+      workout_set_duration_seconds: !isReps ? values : [],
       workout_set_notes: setNotes.trim() || null,
-      exercise_variation_id: selectedVarId,
+      custom_variation_id: selectedVarId,
     });
     setLogLoading(false);
     if (error) return Alert.alert('Error', error.message);
@@ -168,8 +171,8 @@ export default function WorkoutLogScreen() {
     const vals = s.workout_set_reps?.length ? s.workout_set_reps : s.workout_set_duration_seconds ?? [];
     setEditRepsOrDuration(vals.join(','));
     setEditNotes(s.workout_set_notes ?? '');
-    setEditEx(exerciseDetailMap[s.exercise_id] ?? null);
-    setEditVarId(s.exercise_variation_id);
+    setEditEx(exerciseDetailMap[s.custom_exercise_id] ?? null);
+    setEditVarId(s.custom_variation_id);
   }); }
 
   function saveEditSet() { return guard(async () => {
@@ -181,7 +184,7 @@ export default function WorkoutLogScreen() {
       workout_set_weight: editWeight ? parseFloat(editWeight) : null,
       workout_set_reps: isReps ? values : [], workout_set_duration_seconds: !isReps ? values : [],
       workout_set_notes: editNotes.trim() || null,
-      exercise_variation_id: editVarId,
+      custom_variation_id: editVarId,
     }).eq('workout_set_id', editingSet.workout_set_id);
     setEditLoading(false);
     if (error) return Alert.alert('Error', error.message);
@@ -229,7 +232,7 @@ export default function WorkoutLogScreen() {
 
             <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
             <DropdownSelect
-              options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.exercise_id }))}
+              options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
               value={selectedExId}
               onChange={onSelectExercise}
               placeholder="Select exercise…"
@@ -251,7 +254,7 @@ export default function WorkoutLogScreen() {
                     <DropdownSelect
                       options={[
                         { label: 'None', value: null },
-                        ...selectedEx.assigned_variations.map((v) => ({ label: v.exercise_variation_name, value: v.exercise_variation_id })),
+                        ...selectedEx.assigned_variations.map((v) => ({ label: v.variation_name, value: v.custom_variation_id })),
                       ]}
                       value={selectedVarId}
                       onChange={setSelectedVarId}
@@ -272,9 +275,9 @@ export default function WorkoutLogScreen() {
               <Text color={T.muted} marginTop={T.space.sm}>No sets logged yet.</Text>
             ) : (
               sets.map((s) => {
-                const exName = exerciseDetailMap[s.exercise_id]?.exercise_name ?? `#${s.exercise_id}`;
-                const varName = s.exercise_variation_id
-                  ? exerciseDetailMap[s.exercise_id]?.assigned_variations.find((v) => v.exercise_variation_id === s.exercise_variation_id)?.exercise_variation_name
+                const exName = exerciseDetailMap[s.custom_exercise_id]?.exercise_name ?? `#${s.custom_exercise_id}`;
+                const varName = s.custom_variation_id
+                  ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations.find((v) => v.custom_variation_id === s.custom_variation_id)?.variation_name
                   : null;
                 const repsStr = s.workout_set_reps?.length
                   ? formatValues(s.workout_set_reps)
@@ -358,7 +361,7 @@ export default function WorkoutLogScreen() {
                       <DropdownSelect
                         options={[
                           { label: 'None', value: null },
-                          ...editEx.assigned_variations.map((v) => ({ label: v.exercise_variation_name, value: v.exercise_variation_id })),
+                          ...editEx.assigned_variations.map((v) => ({ label: v.variation_name, value: v.custom_variation_id })),
                         ]}
                         value={editVarId}
                         onChange={setEditVarId}

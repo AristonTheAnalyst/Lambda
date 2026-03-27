@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DropdownSelect, SegmentedControl, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
+import { useAuthContext } from '@/lib/AuthContext';
 import GlassButton from '@/components/GlassButton';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
@@ -13,8 +14,8 @@ import { useAsyncGuard, useUIGuard } from '@/lib/asyncGuard';
 import T from '@/constants/Theme';
 
 interface Variation {
-  exercise_variation_id: number;
-  exercise_variation_name: string;
+  custom_variation_id: number;
+  variation_name: string;
 }
 
 export default function VariationsScreen() {
@@ -23,6 +24,7 @@ export default function VariationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { exercises, refreshExerciseDetails, refreshVariations } = useExerciseData();
+  const { user } = useAuthContext();
 
   const [selectedExId, setSelectedExId] = useState<number | null>(null);
   const [assignedVars, setAssignedVars] = useState<Variation[]>([]);
@@ -38,28 +40,28 @@ export default function VariationsScreen() {
     setLoadingVars(true);
     const [assignedRes, allRes] = await Promise.all([
       supabase
-        .from('bridge_exercise_variation')
-        .select('dim_exercise_variation(exercise_variation_id, exercise_variation_name)')
-        .eq('exercise_id', exId),
+        .from('user_custom_exercise_variation_bridge')
+        .select('user_custom_variation(custom_variation_id, variation_name)')
+        .eq('custom_exercise_id', exId),
       supabase
-        .from('dim_exercise_variation')
-        .select('exercise_variation_id, exercise_variation_name')
+        .from('user_custom_variation')
+        .select('custom_variation_id, variation_name')
         .eq('is_active', true),
     ]);
     setLoadingVars(false);
 
     const assigned: Variation[] = assignedRes.data
-      ? assignedRes.data.flatMap((r: any) => r.dim_exercise_variation ? [r.dim_exercise_variation] : [])
+      ? assignedRes.data.flatMap((r: any) => r.user_custom_variation ? [r.user_custom_variation] : [])
       : [];
     setAssignedVars(assigned);
 
-    const assignedIds = new Set(assigned.map((v) => v.exercise_variation_id));
+    const assignedIds = new Set(assigned.map((v) => v.custom_variation_id));
     const seenNames = new Set<string>();
     setExistingVars(
       (allRes.data ?? []).filter((v: any) => {
-        if (assignedIds.has(v.exercise_variation_id)) return false;
-        if (seenNames.has(v.exercise_variation_name)) return false;
-        seenNames.add(v.exercise_variation_name);
+        if (assignedIds.has(v.custom_variation_id)) return false;
+        if (seenNames.has(v.variation_name)) return false;
+        seenNames.add(v.variation_name);
         return true;
       })
     );
@@ -79,55 +81,59 @@ export default function VariationsScreen() {
   }
 
   function add() { return guard(async () => {
-    if (!selectedExId) return;
+    if (!selectedExId || !user) return;
     setAdding(true);
 
     if (addMode === 'existing') {
       if (!selectedExistingIds.length) { setAdding(false); return Alert.alert('Select a variation'); }
-      const rows = selectedExistingIds.map((id) => ({ exercise_id: selectedExId, exercise_variation_id: id }));
-      const { error } = await supabase.from('bridge_exercise_variation').insert(rows);
+      const rows = selectedExistingIds.map((id) => ({
+        custom_exercise_id: selectedExId,
+        custom_variation_id: id,
+        user_id: user.id,
+      }));
+      const { error } = await supabase.from('user_custom_exercise_variation_bridge').insert(rows);
       if (error) { setAdding(false); return Alert.alert('Error', error.message); }
       setSelectedExistingIds([]);
     } else {
       if (!newName.trim()) { setAdding(false); return Alert.alert('Name required'); }
 
-      // Reuse existing variation by name instead of creating a duplicate
       const { data: existingVar } = await supabase
-        .from('dim_exercise_variation')
-        .select('exercise_variation_id, is_active')
-        .ilike('exercise_variation_name', newName.trim())
+        .from('user_custom_variation')
+        .select('custom_variation_id, is_active')
+        .eq('user_id', user.id)
+        .ilike('variation_name', newName.trim())
         .maybeSingle();
 
       let varId: number;
       if (existingVar) {
-        varId = existingVar.exercise_variation_id;
+        varId = existingVar.custom_variation_id;
         if (!existingVar.is_active) {
-          await supabase.from('dim_exercise_variation')
+          await supabase.from('user_custom_variation')
             .update({ is_active: true })
-            .eq('exercise_variation_id', varId);
+            .eq('custom_variation_id', varId);
         }
       } else {
         const { data, error } = await supabase
-          .from('dim_exercise_variation')
-          .insert({ exercise_variation_name: newName.trim() })
-          .select('exercise_variation_id')
+          .from('user_custom_variation')
+          .insert({ user_id: user.id, variation_name: newName.trim() })
+          .select('custom_variation_id')
           .single();
         if (error || !data) { setAdding(false); return Alert.alert('Error', error?.message ?? 'Failed to create variation'); }
-        varId = data.exercise_variation_id;
+        varId = data.custom_variation_id;
       }
 
-      // Only insert bridge if not already assigned
       const { data: bridgeExists } = await supabase
-        .from('bridge_exercise_variation')
-        .select('exercise_id')
-        .eq('exercise_id', selectedExId)
-        .eq('exercise_variation_id', varId)
+        .from('user_custom_exercise_variation_bridge')
+        .select('custom_exercise_id')
+        .eq('custom_exercise_id', selectedExId)
+        .eq('custom_variation_id', varId)
         .maybeSingle();
 
       if (!bridgeExists) {
-        await supabase.from('bridge_exercise_variation').insert({
-          exercise_id: selectedExId,
-          exercise_variation_id: varId,
+        await supabase.from('user_custom_exercise_variation_bridge').insert({
+          custom_exercise_id: selectedExId,
+          custom_variation_id: varId,
+          user_id: user.id,
         });
       }
       setNewName('');
@@ -140,11 +146,11 @@ export default function VariationsScreen() {
   }); }
 
   function saveEdit() { return guard(async () => {
-    if (!editVar?.exercise_variation_name.trim() || !selectedExId) return;
+    if (!editVar?.variation_name.trim() || !selectedExId) return;
     const { error } = await supabase
-      .from('dim_exercise_variation')
-      .update({ exercise_variation_name: editVar.exercise_variation_name })
-      .eq('exercise_variation_id', editVar.exercise_variation_id);
+      .from('user_custom_variation')
+      .update({ variation_name: editVar.variation_name })
+      .eq('custom_variation_id', editVar.custom_variation_id);
     if (error) return Alert.alert('Error', error.message);
     setEditVar(null);
     loadAssigned(selectedExId);
@@ -157,10 +163,10 @@ export default function VariationsScreen() {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: () => guard(async () => {
         if (!selectedExId) return;
-        await supabase.from('bridge_exercise_variation')
+        await supabase.from('user_custom_exercise_variation_bridge')
           .delete()
-          .eq('exercise_id', selectedExId)
-          .eq('exercise_variation_id', varId);
+          .eq('custom_exercise_id', selectedExId)
+          .eq('custom_variation_id', varId);
         loadAssigned(selectedExId);
         refreshExerciseDetails();
         refreshVariations();
@@ -185,7 +191,7 @@ export default function VariationsScreen() {
         {/* ── Exercise selector ── */}
         <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginBottom={T.space.xs}>Exercise</Text>
         <DropdownSelect
-          options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.exercise_id }))}
+          options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
           value={selectedExId}
           onChange={onSelectExercise}
           placeholder="Select exercise…"
@@ -205,13 +211,13 @@ export default function VariationsScreen() {
               <YStack marginBottom={T.space.lg}>
                 {assignedVars.map((v, i) => (
                   <XStack
-                    key={v.exercise_variation_id}
+                    key={v.custom_variation_id}
                     alignItems="center"
                     paddingVertical={T.space.md}
                     borderBottomWidth={i < assignedVars.length - 1 ? 0.5 : 0}
                     borderBottomColor={T.border}
                   >
-                    <Text flex={1} fontSize={15} color={T.primary}>{v.exercise_variation_name}</Text>
+                    <Text flex={1} fontSize={15} color={T.primary}>{v.variation_name}</Text>
                     <XStack
                       paddingHorizontal={T.space.sm}
                       paddingVertical={T.space.xs + 2}
@@ -231,7 +237,7 @@ export default function VariationsScreen() {
                       borderRadius={T.radius.sm}
                       backgroundColor={T.dangerBg}
                       pressStyle={{ opacity: 0.7 }}
-                      onPress={() => confirmRemove(v.exercise_variation_id)}
+                      onPress={() => confirmRemove(v.custom_variation_id)}
                       cursor="pointer"
                     >
                       <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
@@ -246,7 +252,7 @@ export default function VariationsScreen() {
             <SegmentedControl
               options={[{ label: 'Existing', value: 'existing' }, { label: 'New', value: 'new' }]}
               value={addMode}
-              onChange={(v) => { setAddMode(v as 'existing' | 'new'); setSelectedExistingId(null); setNewName(''); }}
+              onChange={(v) => { setAddMode(v as 'existing' | 'new'); setSelectedExistingIds([]); setNewName(''); }}
             />
             <YStack marginTop={T.space.md}>
               {addMode === 'existing' ? (
@@ -254,7 +260,7 @@ export default function VariationsScreen() {
                   <Text color={T.muted} fontSize={T.fontSize.sm}>No other variations available.</Text>
                 ) : (
                   <DropdownSelect
-                    options={existingVars.map((v) => ({ label: v.exercise_variation_name, value: v.exercise_variation_id }))}
+                    options={existingVars.map((v) => ({ label: v.variation_name, value: v.custom_variation_id }))}
                     multiSelect
                     selectedValues={selectedExistingIds}
                     onChangeMulti={setSelectedExistingIds}
@@ -290,8 +296,8 @@ export default function VariationsScreen() {
         >
           <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>Edit Variation</Text>
           <Input
-            value={editVar?.exercise_variation_name ?? ''}
-            onChangeText={(t) => setEditVar((v) => v ? { ...v, exercise_variation_name: t } : v)}
+            value={editVar?.variation_name ?? ''}
+            onChangeText={(t) => setEditVar((v) => v ? { ...v, variation_name: t } : v)}
             placeholder="Variation name"
           />
           <XStack gap={T.space.sm} marginTop={T.space.md}>
