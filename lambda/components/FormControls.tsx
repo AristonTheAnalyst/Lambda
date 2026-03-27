@@ -96,7 +96,7 @@ export function SlideUpModal({ visible, onClose, children }: SlideUpModalProps) 
       zIndex={100_000}
     >
       <Sheet.Overlay
-        animation="lazy"
+        animation="medium"
         enterStyle={{ opacity: 0 }}
         exitStyle={{ opacity: 0 }}
         backgroundColor="rgba(0,0,0,0.6)"
@@ -105,6 +105,20 @@ export function SlideUpModal({ visible, onClose, children }: SlideUpModalProps) 
         {children}
       </Sheet.Frame>
     </Sheet>
+  );
+}
+
+// ─── Dropdown Overlay (extracted so Sheet.Overlay types resolve outside generic) ─
+
+function DropdownOverlay() {
+  const Overlay = Sheet.Overlay as any;
+  return (
+    <Overlay
+      animation="medium"
+      enterStyle={{ opacity: 1 }}
+      exitStyle={{ opacity: 0 }}
+      backgroundColor="rgba(0,0,0,0.6)"
+    />
   );
 }
 
@@ -167,9 +181,14 @@ export function DropdownSelect<T = any>(
   }
 
   const triggerLabel = multiSelect
-    ? selValues.length > 0
-      ? `${selValues.length} Variation${selValues.length > 1 ? 's' : ''} Selected`
-      : placeholder
+    ? selValues.length === 0
+      ? placeholder
+      : selValues.length <= 2
+      ? selValues
+          .map((v) => options.find((o) => String(o.value) === String(v))?.label ?? '')
+          .filter(Boolean)
+          .join(', ')
+      : `${selValues.length} Selected`
     : selected
     ? selected.label
     : placeholder;
@@ -211,16 +230,11 @@ export function DropdownSelect<T = any>(
         open={open}
         onOpenChange={(o: boolean) => { if (!o) setOpen(false); }}
         animation="medium"
-        snapPoints={searchable ? [88] : [75]}
+        snapPoints={searchable ? [75] : [64]}
         disableDrag
         zIndex={100_000}
       >
-        <Sheet.Overlay
-          animation="lazy"
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-          backgroundColor="rgba(0,0,0,0.6)"
-        />
+        <DropdownOverlay />
         <Sheet.Frame backgroundColor={T.surface} paddingBottom={insets.bottom}>
           {/* Handle */}
           <YStack alignItems="center" paddingTop={T.space.sm} paddingBottom={T.space.xs}>

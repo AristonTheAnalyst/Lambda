@@ -6,6 +6,7 @@ export default function AdminExercisesLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="exercises" />
       <Stack.Screen name="variations" />
+      <Stack.Screen name="variation-exercises" options={{ animation: 'none', gestureEnabled: false }} />
       <Stack.Screen name="guide" />
     </Stack>
   );
