@@ -16,8 +16,7 @@ export default function PageHeader({ title, left, right }: Props) {
   return (
     <YStack>
       <XStack
-        paddingTop={insets.top}
-        style={{ paddingBottom: T.space.sm }}
+        style={{ height: insets.top + 52, paddingTop: insets.top }}
         backgroundColor={T.bg}
         alignItems="center"
         justifyContent="space-between"

@@ -72,7 +72,7 @@ export default function ExercisesScreen() {
 
   return (
     <YStack flex={1} backgroundColor={T.bg}>
-      <XStack paddingTop={insets.top} paddingHorizontal={T.space.md} paddingBottom={T.space.sm} alignItems="center">
+      <XStack style={{ height: insets.top + 52, paddingTop: insets.top }} paddingHorizontal={T.space.md} alignItems="center">
         <XStack minWidth={80}><GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} /></XStack>
         <Text flex={1} textAlign="center" color={T.primary} fontSize={T.fontSize.xl} fontWeight="600">Exercises</Text>
         <XStack width={80} />

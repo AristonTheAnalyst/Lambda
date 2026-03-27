@@ -19,6 +19,12 @@ const SECTIONS = [
     description: 'Manage variations for each exercise',
     icon: 'sliders' as const,
   },
+  {
+    route: '/two/guide',
+    label: 'User Guide',
+    description: 'Learn how to set up and use the app',
+    icon: 'book' as const,
+  },
 ];
 
 export default function AdminExercisesHub() {
@@ -27,9 +33,9 @@ export default function AdminExercisesHub() {
   return (
     <YStack flex={1} backgroundColor={T.bg}>
       <PageHeader title="Exercise Configuration" />
-      <YStack padding={T.space.xl} gap={T.space.md}>
+      <YStack flex={1} padding={T.space.xl} gap={T.space.md}>
         {SECTIONS.map((s) => (
-          <Card key={s.route} onPressIn={() => navGuard(() => router.push(s.route as any))}>
+          <Card key={s.route} onPressIn={() => navGuard(() => router.push(s.route as any))} style={{ flex: 1, justifyContent: 'center' }}>
             <XStack alignItems="center" gap={T.space.lg}>
               <XStack
                 width={44}

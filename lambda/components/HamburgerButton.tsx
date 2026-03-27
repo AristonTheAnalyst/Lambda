@@ -21,7 +21,7 @@ export default function HamburgerButton() {
       paddingVertical={T.space.sm}
       paddingHorizontal={T.space.md}
     >
-      <FontAwesome name="bars" size={15} color={T.accent} />
+      <FontAwesome name="bars" size={18} color={T.accent} />
     </XStack>
   );
 
