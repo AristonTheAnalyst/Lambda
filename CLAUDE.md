@@ -35,8 +35,9 @@ lambda/                        ← main app code lives here
 │   ├── _layout.tsx            ← root layout, TamaguiProvider + AuthProvider
 │   ├── (auth)/                ← login.tsx, signup.tsx
 │   ├── (onboarding)/          ← index.tsx (profile setup)
-│   └── (tabs)/                ← main app: index, two/, three, four
-│       └── two/               ← exercise config sub-routes
+│   └── (tabs)/                ← main app tabs + sub-routes
+│       ├── two/               ← exercise config sub-routes
+│       └── four/              ← training logs sub-routes
 ├── components/                ← reusable UI components
 ├── constants/
 │   ├── Theme.ts               ← THE source of truth for all colors/spacing/typography
@@ -50,20 +51,24 @@ lambda/                        ← main app code lives here
 ### Routing Tree
 
 ```
-/(auth)/login          → email/password + social login
-/(auth)/signup         → registration
-/(onboarding)/         → first-time profile setup (name, DOB, gender, height)
-/(tabs)/               → main app
-  index                → Tab 1: User Profile
-  /two                 → Tab 2: Exercise Configuration hub
-  /two/exercises       → CRUD for exercises
-  /two/variations      → CRUD for variations
-  /two/assign          → Link variations to exercises
-  /three               → Tab 3: Workout Log (log sets live)
-  /four                → Tab 4: Training Logs (placeholder — not built)
+/(auth)/login                  → email/password + social login
+/(auth)/signup                 → registration
+/(onboarding)/                 → first-time profile setup (name, DOB, gender, height)
+/(tabs)/                       → main app
+  index                        → Tab 1: User Profile
+  /two                         → Tab 2: Exercise Configuration hub
+  /two/exercises               → CRUD for exercises
+  /two/manage-variations       → CRUD for variations (create, rename, delete)
+  /two/variations              → Assign Variations — exercise-centric: pick exercise, manage assigned variations
+  /two/variation-exercises     → variation-centric view: pick variation, see/manage assigned exercises
+  /three                       → Tab 3: Workout Log (log sets live)
+  /four                        → Tab 4: Training Logs — list of past workout cards
+  /four/[id]                   → Full workout detail (read-only view + edit/delete sets)
 ```
 
 The tab bar is hidden (`tabBarStyle: { display: 'none' }`). Navigation uses a custom hamburger drawer instead.
+
+**Sub-screen headers:** Drill-down screens inside Stack navigators (`/two/*`, `/four/[id]`) use a manual header layout (safe area inset + `GlassButton` back button + centered title) instead of `PageHeader`, since `PageHeader` is designed for top-level tab screens with the hamburger.
 
 ### Auth Flow
 
@@ -204,6 +209,8 @@ Variants: `primary` (default, accent fill), `ghost` (border only), `danger` (red
 
 Renders an optional label above and an optional red error message below. Handles dark keyboard appearance automatically.
 
+**Parenthetical label styling:** Any text in parentheses within the `label` prop (e.g. `"Weight (optional)"`, `"Duration (seconds)"`) is automatically rendered in lighter weight and muted color. No extra props needed.
+
 ---
 
 ### `Card` — `components/Card.tsx`
@@ -264,7 +271,11 @@ Use for 2–4 mutually exclusive options. Active state uses accent color + check
 />
 ```
 
-Opens a `SlideUpModal` with a scrollable list. Generic — works with any value type.
+Opens a bottom sheet with a scrollable list. Generic — works with any value type. Dismisses the keyboard automatically on open.
+
+**Multi-select trigger label:** 0 selected → placeholder, 1 → item name, 2 → "Name A, Name B", 3+ → "X Selected".
+
+**Snap points:** `[64]` default, `[75]` when `searchable` is true.
 
 ---
 
@@ -418,13 +429,12 @@ const { exercises, variations, variationTypes, exerciseDetailMap, loading } = us
 | Table | Purpose |
 |---|---|
 | `dim_user` | User profiles (linked to Supabase auth UUID) |
-| `dim_exercise` | Exercise definitions (name, volume_type, intensity_type, is_active) |
-| `dim_exercise_variation` | Variation definitions (name, variation_type_id, is_active) |
+| `user_custom_exercise` | User exercise definitions (`custom_exercise_id`, `exercise_name`, `exercise_volume_type`, `exercise_intensity_type`, `is_active`) |
+| `user_custom_variation` | User variation definitions (`custom_variation_id`, `variation_name`, `is_active`) |
 | `dim_variation_type` | Variation type catalog (e.g., "Grip", "Tempo") |
 | `bridge_exercise_variation` | Many-to-many: exercises ↔ variations |
-| `fact_user_workout` | Workout sessions (user_id, notes, dates) |
-| `fact_workout_set` | Individual logged sets (weight, reps, exercise, variation) |
-| `fact_set_variation` | Set ↔ variation links |
+| `fact_user_workout` | Workout sessions (`user_workout_id`, `user_id`, `user_workout_notes`, `user_workout_created_date`) |
+| `fact_workout_set` | Individual logged sets (`workout_set_id`, `user_workout_id`, `custom_exercise_id`, `custom_variation_id`, `workout_set_number`, `workout_set_weight`, `workout_set_reps` array, `workout_set_duration_seconds` array, `workout_set_notes`) |
 
 ### Volume Formula
 
@@ -515,15 +525,31 @@ The user also does video/audio production for a YouTube channel. These notes app
 
 ---
 
+## What's Built
+
+| Screen / Feature | Status |
+|---|---|
+| Auth (login, signup, Google, Apple) | Done |
+| Onboarding (name, DOB, gender, height) | Done |
+| User Profile (`/index`) | Done — displays and edits `dim_user` profile |
+| Exercise CRUD (`/two/exercises`) | Done |
+| Variation CRUD (`/two/manage-variations`) | Done |
+| Assign Variations — exercise view (`/two/variations`) | Done — pick exercise, add/remove variations |
+| Assign Variations — variation view (`/two/variation-exercises`) | Done — pick variation, see/manage assigned exercises |
+| Workout Log (`/three`) | Done — start/end workout, log sets with weight/reps/variation/notes, edit/delete sets, weight persists per exercise |
+| Training Logs (`/four`) | Done — scrollable list of past workout cards with date, notes, unique exercise+variation combos |
+| Workout Detail (`/four/[id]`) | Done — full set list, edit/delete sets, same display as Workout Log |
+
+---
+
 ## What's Not Built Yet
 
 | Feature | Notes |
 |---|---|
-| Training Logs (`/four`) | Placeholder screen — needs workout history + analytics |
-| Stripe subscriptions | Architecture TBD |
+| Offline sync | No local cache — all reads/writes go directly to Supabase. AsyncStorage only stores the current workout ID. expo-sqlite was considered but not implemented |
+| Analytics / Training Logs analytics | No charts, volume tracking, or progress views yet |
+| Stripe subscriptions | Architecture TBD — will gate analytics/coaching features |
 | Push notifications | Not started |
-| Offline sync | expo-sqlite was considered but not implemented |
 | Password reset | Auth screen exists but no reset flow |
 | Tests | Zero test coverage |
 | CI/CD | No GitHub Actions |
-| Analytics dashboard | Core product vision — not started |
