@@ -35,15 +35,17 @@ interface CardProps {
   children: React.ReactNode;
   onPress?: () => void;
   onPressIn?: () => void;
+  flex?: number;
   variant?: 'default' | 'glass';
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function Card({ children, onPress, onPressIn, variant = 'default' }: CardProps) {
+export default function Card({ children, onPress, onPressIn, flex, variant = 'default' }: CardProps) {
   if (variant === 'glass' && isGlassSupported && GlassView) {
     return (
       <YStack
+        flex={flex}
         borderRadius={T.radius.md}
         overflow="hidden"
         pressStyle={onPress || onPressIn ? { opacity: 0.8 } : undefined}
@@ -58,7 +60,7 @@ export default function Card({ children, onPress, onPressIn, variant = 'default'
   }
 
   return (
-    <StyledCard pressable={!!(onPress || onPressIn)} onPress={onPress} onPressIn={onPressIn}>
+    <StyledCard flex={flex} pressable={!!(onPress || onPressIn)} onPress={onPress} onPressIn={onPressIn}>
       {children}
     </StyledCard>
   );

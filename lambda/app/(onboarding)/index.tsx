@@ -31,6 +31,7 @@ export default function OnboardingScreen() {
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [gender, setGender]       = useState('');
   const [height, setHeight]       = useState('');
+  const [weight, setWeight]       = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading]     = useState(false);
   const guard = useAsyncGuard();
@@ -38,7 +39,7 @@ export default function OnboardingScreen() {
   const router                    = useRouter();
 
   const handleCompleteOnboarding = () => guard(async () => {
-    const result = onboardingSchema.safeParse({ name: name.trim(), lastname, dateOfBirth, gender, height });
+    const result = onboardingSchema.safeParse({ name: name.trim(), lastname, dateOfBirth, gender, height, weight });
     if (!result.success) { setFieldErrors(getFieldErrors(result.error)); return; }
     setFieldErrors({});
 
@@ -56,11 +57,15 @@ export default function OnboardingScreen() {
           user_date_of_birth: dateOfBirth || null,
           user_gender: gender || null,
           user_height_cm: height ? parseInt(height, 10) : null,
+          user_weight_kg: weight ? parseFloat(weight) : null,
           onboarded: true,
-        })
+        } as any)
         .eq('user_id', userId);
 
       if (error) { Alert.alert('Error', 'Failed to complete onboarding: ' + error.message); return; }
+      if (weight) {
+        await supabase.from('fact_user_weight').insert({ user_id: userId, weight_kg: parseFloat(weight) });
+      }
       await refreshProfile();
       router.replace('/(tabs)');
     } catch {
@@ -125,6 +130,16 @@ export default function OnboardingScreen() {
                 placeholder="Enter your height in cm (optional)"
                 error={fieldErrors.height}
                 keyboardType="number-pad"
+                editable={!loading}
+              />
+
+              <Input
+                label="Weight (kg)"
+                value={weight}
+                onChangeText={(v) => { setWeight(v); setFieldErrors((e) => ({ ...e, weight: '' })); }}
+                placeholder="Enter your weight in kg (optional)"
+                error={fieldErrors.weight}
+                keyboardType="decimal-pad"
                 editable={!loading}
               />
 

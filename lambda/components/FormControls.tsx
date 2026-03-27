@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList } from 'react-native';
+import { FlatList, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Separator,
@@ -115,6 +115,7 @@ interface DropdownSelectProps<T = any> {
   value: T | null;
   onChange: (value: T) => void;
   placeholder?: string;
+  searchable?: boolean;
 }
 
 export function DropdownSelect<T = any>({
@@ -122,10 +123,18 @@ export function DropdownSelect<T = any>({
   value,
   onChange,
   placeholder = 'Select…',
+  searchable = false,
 }: DropdownSelectProps<T>) {
   const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState('');
   const selected = options.find((o) => o.value === value);
   const insets   = useSafeAreaInsets();
+
+  const filtered = searchable && query.trim()
+    ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
+    : options;
+
+  function handleOpen() { setQuery(''); setOpen(true); }
 
   return (
     <>
@@ -141,7 +150,7 @@ export function DropdownSelect<T = any>({
         marginBottom={T.space.xs}
         backgroundColor={T.surface}
         pressStyle={{ opacity: 0.75 }}
-        onPress={() => setOpen(true)}
+        onPress={handleOpen}
         cursor="pointer"
       >
         <Text
@@ -164,6 +173,7 @@ export function DropdownSelect<T = any>({
         animation="medium"
         snapPoints={[75]}
         disableDrag
+        moveOnKeyboardChange
         zIndex={100_000}
       >
         <Sheet.Overlay
@@ -178,9 +188,32 @@ export function DropdownSelect<T = any>({
             <YStack width={36} height={4} borderRadius={2} backgroundColor={T.border} />
           </YStack>
 
+          {searchable && (
+            <YStack paddingHorizontal={T.space.lg} paddingBottom={T.space.sm}>
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search…"
+                placeholderTextColor={T.muted}
+                autoFocus
+                style={{
+                  backgroundColor: T.bg,
+                  borderWidth: 1,
+                  borderColor: T.border,
+                  borderRadius: T.radius.md,
+                  paddingHorizontal: T.space.md,
+                  paddingVertical: 10,
+                  color: T.primary,
+                  fontSize: T.fontSize.md,
+                }}
+              />
+            </YStack>
+          )}
+
           <FlatList
-            data={options}
+            data={filtered}
             keyExtractor={(item) => String(item.value)}
+            keyboardShouldPersistTaps="handled"
             ItemSeparatorComponent={() => <Separator borderColor={T.border} />}
             renderItem={({ item }) => {
               const active = item.value === value;

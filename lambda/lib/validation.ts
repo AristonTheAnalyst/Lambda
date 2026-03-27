@@ -72,6 +72,18 @@ export const onboardingSchema = z.object({
       },
       { message: 'Height must be between 50 and 300 cm' },
     ),
+  weight: z
+    .string()
+    .optional()
+    .or(z.literal(''))
+    .refine(
+      (val) => {
+        if (!val) return true;
+        const num = parseFloat(val);
+        return !isNaN(num) && num >= 20 && num <= 300;
+      },
+      { message: 'Weight must be between 20 and 300 kg' },
+    ),
 });
 
 /** Extract the first error message per field from a ZodError */

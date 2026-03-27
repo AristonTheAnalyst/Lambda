@@ -34,6 +34,7 @@ export default function ProfileScreen() {
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [gender, setGender]       = useState('');
   const [height, setHeight]       = useState('');
+  const [weight, setWeight]       = useState('');
 
   const startEditing = () => {
     setName(profile?.user_name ?? '');
@@ -41,11 +42,16 @@ export default function ProfileScreen() {
     setDateOfBirth(profile?.user_date_of_birth ?? '');
     setGender(profile?.user_gender ?? '');
     setHeight(profile?.user_height_cm?.toString() ?? '');
+    setWeight((profile as any)?.user_weight_kg?.toString() ?? '');
     setEditing(true);
   };
 
   const handleSave = () => guard(async () => {
     if (!name.trim()) { Alert.alert('Error', 'First name is required.'); return; }
+    if (weight) {
+      const w = parseFloat(weight);
+      if (isNaN(w) || w < 20 || w > 300) { Alert.alert('Error', 'Weight must be between 20 and 300 kg.'); return; }
+    }
     setSaving(true);
     try {
       const { error } = await supabase
@@ -56,9 +62,14 @@ export default function ProfileScreen() {
           user_date_of_birth: dateOfBirth || null,
           user_gender: gender || null,
           user_height_cm: height ? parseInt(height, 10) : null,
-        })
+          user_weight_kg: weight ? parseFloat(weight) : null,
+        } as any)
         .eq('user_id', user!.id);
       if (error) { Alert.alert('Error', error.message); return; }
+      const prevWeight = (profile as any)?.user_weight_kg;
+      if (weight && parseFloat(weight) !== prevWeight) {
+        await supabase.from('fact_user_weight').insert({ user_id: user!.id, weight_kg: parseFloat(weight) });
+      }
       await refreshProfile();
       setEditing(false);
     } catch {
@@ -121,25 +132,24 @@ export default function ProfileScreen() {
             {/* Email */}
             <YStack gap={T.space.xs} paddingBottom={T.space.lg} borderBottomWidth={0.5} borderBottomColor={T.border}>
               <Text fontSize={T.fontSize.xs} color={T.muted}>Email</Text>
-              <Text fontSize={T.fontSize.md} fontWeight="500" color={T.primary}>{user?.email}</Text>
+              <Text fontSize={T.fontSize.md} fontWeight="500" color={T.primary}>
+                {user?.email?.endsWith('@privaterelay.appleid.com') ? 'Signed in with Apple' : user?.email}
+              </Text>
             </YStack>
 
-            {/* First Name */}
+            {/* Name */}
             <YStack gap={T.space.xs} paddingBottom={T.space.lg} borderBottomWidth={0.5} borderBottomColor={T.border}>
-              <Text fontSize={T.fontSize.xs} color={T.muted}>First Name</Text>
-              {editing
-                ? <Input value={name} onChangeText={setName} placeholder="Enter first name" editable={!saving} />
-                : <Text fontSize={T.fontSize.md} fontWeight="500" color={T.primary}>{profile?.user_name || '—'}</Text>
-              }
-            </YStack>
-
-            {/* Last Name */}
-            <YStack gap={T.space.xs} paddingBottom={T.space.lg} borderBottomWidth={0.5} borderBottomColor={T.border}>
-              <Text fontSize={T.fontSize.xs} color={T.muted}>Last Name</Text>
-              {editing
-                ? <Input value={lastname} onChangeText={setLastname} placeholder="Enter last name (optional)" editable={!saving} />
-                : <Text fontSize={T.fontSize.md} fontWeight="500" color={T.primary}>{profile?.user_lastname || '—'}</Text>
-              }
+              <Text fontSize={T.fontSize.xs} color={T.muted}>Name</Text>
+              {editing ? (
+                <XStack gap={T.space.sm}>
+                  <YStack flex={1}><Input value={name} onChangeText={setName} placeholder="First" editable={!saving} /></YStack>
+                  <YStack flex={1}><Input value={lastname} onChangeText={setLastname} placeholder="Last" editable={!saving} /></YStack>
+                </XStack>
+              ) : (
+                <Text fontSize={T.fontSize.md} fontWeight="500" color={T.primary}>
+                  {[profile?.user_name, profile?.user_lastname].filter(Boolean).join(' ') || '—'}
+                </Text>
+              )}
             </YStack>
 
             {/* Date of Birth */}
@@ -167,6 +177,17 @@ export default function ProfileScreen() {
                 ? <Input value={height} onChangeText={setHeight} placeholder="Enter height in cm (optional)" keyboardType="number-pad" editable={!saving} />
                 : <Text fontSize={T.fontSize.md} fontWeight="500" color={T.primary}>
                     {profile?.user_height_cm ? `${profile.user_height_cm} cm` : '—'}
+                  </Text>
+              }
+            </YStack>
+
+            {/* Weight */}
+            <YStack gap={T.space.xs} paddingBottom={T.space.lg} borderBottomWidth={0.5} borderBottomColor={T.border}>
+              <Text fontSize={T.fontSize.xs} color={T.muted}>Weight (kg)</Text>
+              {editing
+                ? <Input value={weight} onChangeText={setWeight} placeholder="Enter weight in kg (optional)" keyboardType="decimal-pad" editable={!saving} />
+                : <Text fontSize={T.fontSize.md} fontWeight="500" color={T.primary}>
+                    {(profile as any)?.user_weight_kg ? `${(profile as any).user_weight_kg} kg` : '—'}
                   </Text>
               }
             </YStack>

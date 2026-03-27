@@ -35,7 +35,7 @@ export default function AdminExercisesHub() {
       <PageHeader title="Exercise Configuration" />
       <YStack flex={1} padding={T.space.xl} gap={T.space.md}>
         {SECTIONS.map((s) => (
-          <Card key={s.route} onPressIn={() => navGuard(() => router.push(s.route as any))} style={{ flex: 1, justifyContent: 'center' }}>
+          <Card key={s.route} flex={0} onPressIn={() => navGuard(() => router.push(s.route as any))}>
             <XStack alignItems="center" gap={T.space.lg}>
               <XStack
                 width={44}
