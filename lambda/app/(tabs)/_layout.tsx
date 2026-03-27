@@ -21,7 +21,7 @@ import T from '@/constants/Theme';
 import { ExerciseDataProvider } from '@/lib/ExerciseDataContext';
 import { DrawerContext } from '@/lib/DrawerContext';
 import HamburgerButton from '@/components/HamburgerButton';
-import { navGuard } from '@/lib/asyncGuard';
+import { navGuard } from '@/hooks/useNavGuard';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DRAWER_WIDTH = SCREEN_WIDTH * 0.72;

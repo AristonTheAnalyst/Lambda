@@ -7,15 +7,12 @@ export interface Exercise {
   exercise_id: number;
   exercise_name: string;
   exercise_volume_type: string;
-  exercise_intensity_type: string;
   is_active: boolean;
 }
 
 export interface AssignedVariation {
   exercise_variation_id: number;
   exercise_variation_name: string;
-  variation_type_id: number;
-  variation_type_name: string;
 }
 
 export interface ExerciseDetail extends Exercise {
@@ -25,13 +22,6 @@ export interface ExerciseDetail extends Exercise {
 export interface Variation {
   exercise_variation_id: number;
   exercise_variation_name: string;
-  variation_type_id: number;
-  variation_type_name: string;
-}
-
-export interface VariationType {
-  variation_type_id: number;
-  variation_type_name: string;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -39,7 +29,6 @@ export interface VariationType {
 interface ExerciseDataContextValue {
   exercises: Exercise[];
   variations: Variation[];
-  variationTypes: VariationType[];
   exerciseDetailMap: Record<number, ExerciseDetail>;
   loading: boolean;
   refreshExercises: () => Promise<void>;
@@ -50,7 +39,6 @@ interface ExerciseDataContextValue {
 const ExerciseDataContext = createContext<ExerciseDataContextValue>({
   exercises: [],
   variations: [],
-  variationTypes: [],
   exerciseDetailMap: {},
   loading: true,
   refreshExercises: async () => {},
@@ -72,7 +60,6 @@ interface RawBridgeRow {
 export function ExerciseDataProvider({ children }: { children: React.ReactNode }) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [variations, setVariations] = useState<Variation[]>([]);
-  const [variationTypes, setVariationTypes] = useState<VariationType[]>([]);
   const [rawBridge, setRawBridge] = useState<RawBridgeRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -88,33 +75,17 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
   const refreshVariations = useCallback(async () => {
     const { data } = await supabase
       .from('dim_exercise_variation')
-      .select('*, dim_variation_type(variation_type_name)')
+      .select('exercise_variation_id, exercise_variation_name')
       .eq('is_active', true)
       .order('exercise_variation_name');
-    if (data) {
-      setVariations(
-        data.map((v: any) => ({
-          ...v,
-          variation_type_name: v.dim_variation_type?.variation_type_name ?? '',
-        }))
-      );
-    }
-  }, []);
-
-  const refreshVariationTypes = useCallback(async () => {
-    const { data } = await supabase
-      .from('dim_variation_type')
-      .select('*')
-      .eq('is_active', true)
-      .order('variation_type_name');
-    if (data) setVariationTypes(data);
+    if (data) setVariations(data);
   }, []);
 
   const refreshExerciseDetails = useCallback(async () => {
     const { data } = await supabase
       .from('bridge_exercise_variation')
       .select(
-        'exercise_id, dim_exercise_variation(exercise_variation_id, exercise_variation_name, variation_type_id, dim_variation_type(variation_type_name))'
+        'exercise_id, dim_exercise_variation(exercise_variation_id, exercise_variation_name)'
       );
     if (data) {
       setRawBridge(
@@ -126,8 +97,6 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
             variation: {
               exercise_variation_id: v.exercise_variation_id,
               exercise_variation_name: v.exercise_variation_name,
-              variation_type_id: v.variation_type_id,
-              variation_type_name: v.dim_variation_type?.variation_type_name ?? '',
             },
           }];
         })
@@ -151,7 +120,6 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
     Promise.all([
       refreshExercises(),
       refreshVariations(),
-      refreshVariationTypes(),
       refreshExerciseDetails(),
     ]).finally(() => setLoading(false));
   }, []);
@@ -161,7 +129,6 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
       value={{
         exercises,
         variations,
-        variationTypes,
         exerciseDetailMap,
         loading,
         refreshExercises,

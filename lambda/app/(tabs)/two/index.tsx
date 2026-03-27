@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { navGuard } from '@/lib/asyncGuard';
+import { navGuard } from '@/hooks/useNavGuard';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Text, XStack, YStack } from 'tamagui';
 import PageHeader from '@/components/PageHeader';
@@ -16,14 +16,8 @@ const SECTIONS = [
   {
     route: '/two/variations',
     label: 'Variations',
-    description: 'Create and manage exercise variations',
+    description: 'Manage variations for each exercise',
     icon: 'sliders' as const,
-  },
-  {
-    route: '/two/assign',
-    label: 'Assign Variations',
-    description: 'Link variations to exercises',
-    icon: 'link' as const,
   },
 ];
 
@@ -35,7 +29,7 @@ export default function AdminExercisesHub() {
       <PageHeader title="Exercise Configuration" />
       <YStack padding={T.space.xl} gap={T.space.md}>
         {SECTIONS.map((s) => (
-          <Card key={s.route} onPress={() => navGuard(() => router.push(s.route as any))}>
+          <Card key={s.route} onPressIn={() => navGuard(() => router.push(s.route as any))}>
             <XStack alignItems="center" gap={T.space.lg}>
               <XStack
                 width={44}

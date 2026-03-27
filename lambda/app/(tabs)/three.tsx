@@ -11,7 +11,7 @@ import Button from '@/components/Button';
 import Input from '@/components/Input';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DropdownSelect, SlideUpModal } from '@/components/FormControls';
-import { useExerciseData, ExerciseDetail, AssignedVariation } from '@/lib/ExerciseDataContext';
+import { useExerciseData, ExerciseDetail } from '@/lib/ExerciseDataContext';
 import { useAuthContext } from '@/lib/AuthContext';
 import supabase from '@/lib/supabase';
 import { useAsyncGuard } from '@/lib/asyncGuard';
@@ -23,6 +23,7 @@ interface WorkoutSet {
   workout_set_id: number;
   workout_set_number: number;
   exercise_id: number;
+  exercise_variation_id: number | null;
   workout_set_weight: number | null;
   workout_set_reps: number[] | null;
   workout_set_duration_seconds: number[] | null;
@@ -58,7 +59,7 @@ export default function WorkoutLogScreen() {
   const [weight, setWeight]                 = useState('');
   const [repsOrDuration, setRepsOrDuration] = useState('');
   const [setNotes, setSetNotes]             = useState('');
-  const [selectedVarIds, setSelectedVarIds] = useState<number[]>([]);
+  const [selectedVarId, setSelectedVarId]   = useState<number | null>(null);
   const [logLoading, setLogLoading]         = useState(false);
 
   const [sets, setSets]               = useState<WorkoutSet[]>([]);
@@ -69,7 +70,7 @@ export default function WorkoutLogScreen() {
   const [editWeight, setEditWeight]         = useState('');
   const [editRepsOrDuration, setEditRepsOrDuration] = useState('');
   const [editNotes, setEditNotes]           = useState('');
-  const [editVarIds, setEditVarIds]         = useState<number[]>([]);
+  const [editVarId, setEditVarId]           = useState<number | null>(null);
   const [editLoading, setEditLoading]       = useState(false);
 
   useEffect(() => {
@@ -92,29 +93,11 @@ export default function WorkoutLogScreen() {
 
   function onSelectExercise(exId: number | null) {
     setSelectedExId(exId);
-    setSelectedVarIds([]);
+    setSelectedVarId(null);
     setWeight('');
     setRepsOrDuration('');
     setSetNotes('');
     setSelectedEx(exId ? (exerciseDetailMap[exId] ?? null) : null);
-  }
-
-  function groupByType(vars: AssignedVariation[]): Record<string, AssignedVariation[]> {
-    return vars.reduce<Record<string, AssignedVariation[]>>((acc, v) => {
-      if (!acc[v.variation_type_name]) acc[v.variation_type_name] = [];
-      acc[v.variation_type_name].push(v);
-      return acc;
-    }, {});
-  }
-
-  function setVariationForType(
-    type: string, varId: number | null, allVars: AssignedVariation[],
-    currentIds: number[], setter: (ids: number[]) => void
-  ) {
-    const typeVarIds = allVars.filter((v) => v.variation_type_name === type).map((v) => v.exercise_variation_id);
-    let updated = currentIds.filter((id) => !typeVarIds.includes(id));
-    if (varId !== null) updated = [...updated, varId];
-    setter(updated);
   }
 
   function startWorkout() { return guard(async () => {
@@ -150,7 +133,7 @@ export default function WorkoutLogScreen() {
     setEndLoading(false);
     await AsyncStorage.removeItem(WORKOUT_ID_KEY);
     setCurrentWorkoutId(null); setEndNotes(''); setSets([]);
-    setSelectedExId(null); setSelectedEx(null); setWeight(''); setRepsOrDuration(''); setSetNotes(''); setSelectedVarIds([]);
+    setSelectedExId(null); setSelectedEx(null); setWeight(''); setRepsOrDuration(''); setSetNotes(''); setSelectedVarId(null);
     Alert.alert('Workout saved!');
   }); }
 
@@ -166,21 +149,16 @@ export default function WorkoutLogScreen() {
     const nextSetNum = sets.length > 0 ? Math.max(...sets.map((s) => s.workout_set_number)) + 1 : 1;
 
     setLogLoading(true);
-    const { data: setData, error } = await supabase.from('fact_workout_set').insert({
+    const { error } = await supabase.from('fact_workout_set').insert({
       user_workout_id: currentWorkoutId, exercise_id: selectedExId, exercise_source: 'official',
       workout_set_number: nextSetNum, workout_set_weight: weight ? parseFloat(weight) : null,
       workout_set_reps: isReps ? values : [], workout_set_duration_seconds: !isReps ? values : [],
       workout_set_notes: setNotes.trim() || null,
-    }).select('workout_set_id').single();
-
-    if (!error && setData && selectedVarIds.length > 0) {
-      await supabase.from('fact_set_variation').insert(
-        selectedVarIds.map((vid) => ({ workout_set_id: setData.workout_set_id, exercise_variation_id: vid, variation_source: 'official' }))
-      );
-    }
+      exercise_variation_id: selectedVarId,
+    });
     setLogLoading(false);
     if (error) return Alert.alert('Error', error.message);
-    setWeight(''); setRepsOrDuration(''); setSetNotes(''); setSelectedVarIds([]);
+    setWeight(''); setRepsOrDuration(''); setSetNotes(''); setSelectedVarId(null);
     loadSets(currentWorkoutId);
   }); }
 
@@ -191,8 +169,7 @@ export default function WorkoutLogScreen() {
     setEditRepsOrDuration(vals.join(','));
     setEditNotes(s.workout_set_notes ?? '');
     setEditEx(exerciseDetailMap[s.exercise_id] ?? null);
-    const { data: svData } = await supabase.from('fact_set_variation').select('exercise_variation_id').eq('workout_set_id', s.workout_set_id);
-    setEditVarIds(svData ? svData.map((r: any) => r.exercise_variation_id) : []);
+    setEditVarId(s.exercise_variation_id);
   }); }
 
   function saveEditSet() { return guard(async () => {
@@ -204,16 +181,8 @@ export default function WorkoutLogScreen() {
       workout_set_weight: editWeight ? parseFloat(editWeight) : null,
       workout_set_reps: isReps ? values : [], workout_set_duration_seconds: !isReps ? values : [],
       workout_set_notes: editNotes.trim() || null,
+      exercise_variation_id: editVarId,
     }).eq('workout_set_id', editingSet.workout_set_id);
-
-    if (!error) {
-      await supabase.from('fact_set_variation').delete().eq('workout_set_id', editingSet.workout_set_id);
-      if (editVarIds.length > 0) {
-        await supabase.from('fact_set_variation').insert(
-          editVarIds.map((vid) => ({ workout_set_id: editingSet.workout_set_id, exercise_variation_id: vid, variation_source: 'official' }))
-        );
-      }
-    }
     setEditLoading(false);
     if (error) return Alert.alert('Error', error.message);
     setEditingSet(null); setEditEx(null);
@@ -224,7 +193,6 @@ export default function WorkoutLogScreen() {
     Alert.alert('Delete Set', 'Remove this set?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
-        await supabase.from('fact_set_variation').delete().eq('workout_set_id', setId);
         await supabase.from('fact_workout_set').delete().eq('workout_set_id', setId);
         if (currentWorkoutId) loadSets(currentWorkoutId);
       })},
@@ -277,21 +245,20 @@ export default function WorkoutLogScreen() {
                   value={repsOrDuration}
                   onChangeText={setRepsOrDuration}
                 />
-                {selectedEx.assigned_variations.length > 0 &&
-                  Object.entries(groupByType(selectedEx.assigned_variations)).map(([typeName, vars]) => (
-                    <YStack key={typeName}>
-                      <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>{typeName}</Text>
-                      <DropdownSelect
-                        options={[
-                          { label: 'None', value: null },
-                          ...vars.map((v) => ({ label: v.exercise_variation_name, value: v.exercise_variation_id })),
-                        ]}
-                        value={selectedVarIds.find((id) => vars.some((v) => v.exercise_variation_id === id)) ?? null}
-                        onChange={(v) => setVariationForType(typeName, v, selectedEx.assigned_variations, selectedVarIds, setSelectedVarIds)}
-                        placeholder="None"
-                      />
-                    </YStack>
-                  ))}
+                {selectedEx.assigned_variations.length > 0 && (
+                  <YStack>
+                    <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
+                    <DropdownSelect
+                      options={[
+                        { label: 'None', value: null },
+                        ...selectedEx.assigned_variations.map((v) => ({ label: v.exercise_variation_name, value: v.exercise_variation_id })),
+                      ]}
+                      value={selectedVarId}
+                      onChange={setSelectedVarId}
+                      placeholder="None"
+                    />
+                  </YStack>
+                )}
                 <Input label="Set notes (optional)" placeholder="Notes…" value={setNotes} onChangeText={setSetNotes} />
                 <Button label="Log Set" onPress={logSet} loading={logLoading} />
               </YStack>
@@ -306,6 +273,9 @@ export default function WorkoutLogScreen() {
             ) : (
               sets.map((s) => {
                 const exName = exerciseDetailMap[s.exercise_id]?.exercise_name ?? `#${s.exercise_id}`;
+                const varName = s.exercise_variation_id
+                  ? exerciseDetailMap[s.exercise_id]?.assigned_variations.find((v) => v.exercise_variation_id === s.exercise_variation_id)?.exercise_variation_name
+                  : null;
                 const repsStr = s.workout_set_reps?.length
                   ? formatValues(s.workout_set_reps)
                   : s.workout_set_duration_seconds?.length ? `${formatValues(s.workout_set_duration_seconds)}s` : '—';
@@ -317,6 +287,7 @@ export default function WorkoutLogScreen() {
                         <Text fontSize={15} fontWeight="500" color={T.primary}>{exName}</Text>
                         <Text fontSize={T.fontSize.xs} marginTop={T.space.xs} color={T.muted}>
                           {s.workout_set_weight != null ? `${s.workout_set_weight}kg · ` : ''}{repsStr}
+                          {varName ? ` · ${varName}` : ''}
                           {s.workout_set_notes ? ` · ${s.workout_set_notes}` : ''}
                         </Text>
                       </YStack>
@@ -381,21 +352,20 @@ export default function WorkoutLogScreen() {
                     value={editRepsOrDuration}
                     onChangeText={setEditRepsOrDuration}
                   />
-                  {editEx.assigned_variations.length > 0 &&
-                    Object.entries(groupByType(editEx.assigned_variations)).map(([typeName, vars]) => (
-                      <YStack key={typeName}>
-                        <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>{typeName}</Text>
-                        <DropdownSelect
-                          options={[
-                            { label: 'None', value: null },
-                            ...vars.map((v) => ({ label: v.exercise_variation_name, value: v.exercise_variation_id })),
-                          ]}
-                          value={editVarIds.find((id) => vars.some((v) => v.exercise_variation_id === id)) ?? null}
-                          onChange={(v) => setVariationForType(typeName, v, editEx.assigned_variations, editVarIds, setEditVarIds)}
-                          placeholder="None"
-                        />
-                      </YStack>
-                    ))}
+                  {editEx.assigned_variations.length > 0 && (
+                    <YStack>
+                      <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
+                      <DropdownSelect
+                        options={[
+                          { label: 'None', value: null },
+                          ...editEx.assigned_variations.map((v) => ({ label: v.exercise_variation_name, value: v.exercise_variation_id })),
+                        ]}
+                        value={editVarId}
+                        onChange={setEditVarId}
+                        placeholder="None"
+                      />
+                    </YStack>
+                  )}
                 </>
               )}
               <Input label="Notes (optional)" placeholder="Notes…" value={editNotes} onChangeText={setEditNotes} />

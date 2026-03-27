@@ -9,30 +9,28 @@ import GlassButton from '@/components/GlassButton';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import supabase from '@/lib/supabase';
-import { useAsyncGuard } from '@/lib/asyncGuard';
+import { useAsyncGuard, useUIGuard } from '@/lib/asyncGuard';
 import T from '@/constants/Theme';
 
 interface Exercise {
   exercise_id: number;
   exercise_name: string;
   exercise_volume_type: string;
-  exercise_intensity_type: string;
   is_active: boolean;
 }
 
-const VOLUME_OPTIONS    = [{ label: 'Reps', value: 'reps' }, { label: 'Duration', value: 'duration' }];
-const INTENSITY_OPTIONS = [{ label: 'Weight', value: 'weight' }, { label: 'Distance', value: 'distance' }];
+const VOLUME_OPTIONS = [{ label: 'Reps', value: 'reps' }, { label: 'Duration', value: 'duration' }];
 
 export default function ExercisesScreen() {
   const guard = useAsyncGuard();
+  const openEdit = useUIGuard();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { exercises, refreshExercises } = useExerciseData();
-  const [name, setName]       = useState('');
-  const [volume, setVolume]   = useState('reps');
-  const [intensity, setIntensity] = useState('weight');
-  const [creating, setCreating]   = useState(false);
-  const [editEx, setEditEx]       = useState<Exercise | null>(null);
+  const [name, setName]         = useState('');
+  const [volume, setVolume]     = useState('reps');
+  const [creating, setCreating] = useState(false);
+  const [editEx, setEditEx]     = useState<Exercise | null>(null);
 
   function create() { return guard(async () => {
     if (!name.trim()) return Alert.alert('Name required');
@@ -40,7 +38,6 @@ export default function ExercisesScreen() {
     const { error } = await supabase.from('dim_exercise').insert({
       exercise_name: name.trim(),
       exercise_volume_type: volume,
-      exercise_intensity_type: intensity,
     });
     setCreating(false);
     if (error) return Alert.alert('Error', error.message);
@@ -55,7 +52,6 @@ export default function ExercisesScreen() {
       .update({
         exercise_name: editEx.exercise_name,
         exercise_volume_type: editEx.exercise_volume_type,
-        exercise_intensity_type: editEx.exercise_intensity_type,
       })
       .eq('exercise_id', editEx.exercise_id);
     if (error) return Alert.alert('Error', error.message);
@@ -92,9 +88,6 @@ export default function ExercisesScreen() {
       <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginTop={T.space.md} marginBottom={T.space.xs}>Volume type</Text>
       <SegmentedControl options={VOLUME_OPTIONS} value={volume} onChange={setVolume} />
 
-      <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginTop={T.space.md} marginBottom={T.space.xs}>Intensity type</Text>
-      <SegmentedControl options={INTENSITY_OPTIONS} value={intensity} onChange={setIntensity} />
-
       <YStack marginTop={T.space.md}>
         <Button label="Create Exercise" onPress={create} loading={creating} />
       </YStack>
@@ -114,9 +107,7 @@ export default function ExercisesScreen() {
           >
             <YStack flex={1}>
               <Text fontSize={15} color={T.primary}>{ex.exercise_name}</Text>
-              <Text fontSize={T.fontSize.xs} color={T.muted} marginTop={T.space.xs}>
-                {ex.exercise_volume_type} · {ex.exercise_intensity_type}
-              </Text>
+              <Text fontSize={T.fontSize.xs} color={T.muted} marginTop={T.space.xs}>{ex.exercise_volume_type}</Text>
             </YStack>
             <XStack
               paddingHorizontal={T.space.sm}
@@ -125,7 +116,7 @@ export default function ExercisesScreen() {
               borderRadius={T.radius.sm}
               backgroundColor={T.accentBg}
               pressStyle={{ opacity: 0.7 }}
-              onPress={() => setEditEx({ ...ex })}
+              onPress={() => openEdit(() => setEditEx({ ...ex }))}
               cursor="pointer"
             >
               <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.accent}>Edit</Text>
@@ -168,13 +159,7 @@ export default function ExercisesScreen() {
             value={editEx?.exercise_volume_type ?? 'reps'}
             onChange={(v) => setEditEx((e) => e ? { ...e, exercise_volume_type: v } : e)}
           />
-          <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginTop={T.space.md} marginBottom={T.space.xs}>Intensity type</Text>
-          <SegmentedControl
-            options={INTENSITY_OPTIONS}
-            value={editEx?.exercise_intensity_type ?? 'weight'}
-            onChange={(v) => setEditEx((e) => e ? { ...e, exercise_intensity_type: v } : e)}
-          />
-          <XStack gap={T.space.sm} marginTop={T.space.sm}>
+          <XStack gap={T.space.sm} marginTop={T.space.md}>
             <YStack flex={1}><Button label="Save" onPress={saveEdit} /></YStack>
             <YStack flex={1}><Button label="Cancel" onPress={() => setEditEx(null)} variant="ghost" /></YStack>
           </XStack>

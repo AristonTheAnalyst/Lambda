@@ -6,7 +6,6 @@ export default function AdminExercisesLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="exercises" />
       <Stack.Screen name="variations" />
-      <Stack.Screen name="assign" />
     </Stack>
   );
 }

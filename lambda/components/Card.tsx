@@ -34,19 +34,21 @@ const StyledCard = styled(YStack, {
 interface CardProps {
   children: React.ReactNode;
   onPress?: () => void;
+  onPressIn?: () => void;
   variant?: 'default' | 'glass';
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function Card({ children, onPress, variant = 'default' }: CardProps) {
+export default function Card({ children, onPress, onPressIn, variant = 'default' }: CardProps) {
   if (variant === 'glass' && isGlassSupported && GlassView) {
     return (
       <YStack
         borderRadius={T.radius.md}
         overflow="hidden"
-        pressStyle={onPress ? { opacity: 0.8 } : undefined}
+        pressStyle={onPress || onPressIn ? { opacity: 0.8 } : undefined}
         onPress={onPress}
+        onPressIn={onPressIn}
       >
         <GlassView glassEffectStyle="systemMaterial" style={{ borderRadius: T.radius.md, padding: T.space.md }}>
           {children}
@@ -56,7 +58,7 @@ export default function Card({ children, onPress, variant = 'default' }: CardPro
   }
 
   return (
-    <StyledCard pressable={!!onPress} onPress={onPress}>
+    <StyledCard pressable={!!(onPress || onPressIn)} onPress={onPress} onPressIn={onPressIn}>
       {children}
     </StyledCard>
   );
