@@ -205,8 +205,7 @@ export function DropdownSelect<T = any>(
         borderColor={T.border}
         borderRadius={T.radius.md}
         paddingHorizontal={T.space.md}
-        paddingVertical={13}
-        marginBottom={T.space.xs}
+        height={48}
         backgroundColor={T.surface}
         pressStyle={{ opacity: 0.75 }}
         onPress={handleOpen}
@@ -214,6 +213,7 @@ export function DropdownSelect<T = any>(
       >
         <Text
           fontSize={T.fontSize.md}
+          fontWeight="400"
           flex={1}
           marginRight={T.space.sm}
           numberOfLines={1}
@@ -221,7 +221,7 @@ export function DropdownSelect<T = any>(
         >
           {triggerLabel}
         </Text>
-        <Text color={T.muted} fontSize={T.fontSize.xs}>▾</Text>
+        <Text color={T.muted} fontSize={T.fontSize.lg}>▾</Text>
       </XStack>
 
       {/* ── Sheet ── */}
@@ -303,7 +303,7 @@ export function DropdownSelect<T = any>(
               <XStack
                 backgroundColor={T.accent}
                 borderRadius={T.radius.md}
-                paddingVertical={13}
+                paddingVertical={T.space.md}
                 alignItems="center"
                 justifyContent="center"
                 pressStyle={{ opacity: 0.8 }}

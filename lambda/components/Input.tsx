@@ -10,8 +10,10 @@ const StyledInput = styled(TamaguiInput, {
   borderColor: T.border,
   borderRadius: T.radius.md,
   padding: T.space.md,
+  height: 48,
   color: T.primary,
   fontSize: T.fontSize.md,
+  fontWeight: '400',
   placeholderTextColor: T.muted,
 
   focusStyle: {
@@ -24,7 +26,7 @@ const StyledInput = styled(TamaguiInput, {
       true: { borderColor: T.dangerBorder },
     },
     isMultiline: {
-      true: { minHeight: 96, textAlignVertical: 'top' },
+      true: { height: undefined, minHeight: 96, textAlignVertical: 'top' },
     },
     isDisabled: {
       true: { opacity: 0.5 },
