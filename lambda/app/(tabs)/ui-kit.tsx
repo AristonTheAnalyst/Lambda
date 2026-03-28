@@ -6,6 +6,7 @@ import PageHeader from '@/components/PageHeader';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import Input from '@/components/Input';
+import NotesField from '@/components/NotesField';
 import { SegmentedControl, DropdownSelect, SlideUpModal } from '@/components/FormControls';
 import GlassButton from '@/components/GlassButton';
 import T from '@/constants/Theme';
@@ -52,6 +53,7 @@ export default function UIKitScreen() {
   const [segValue, setSegValue]           = useState<'reps' | 'duration'>('reps');
   const [dropValue, setDropValue]         = useState<string | null>(null);
   const [modalVisible, setModalVisible]   = useState(false);
+  const [notesValue, setNotesValue]       = useState('');
 
   const DROP_OPTIONS = [
     { label: 'Option A', value: 'a' },
@@ -184,8 +186,23 @@ export default function UIKitScreen() {
             <Button label="Primary (default)" onPress={() => {}} />
             <Button label="Ghost" onPress={() => {}} variant="ghost" />
             <Button label="Danger" onPress={() => {}} variant="danger" />
+            <Button label="Danger Ghost" onPress={() => {}} variant="danger-ghost" />
             <Button label="Loading…" onPress={() => {}} loading />
             <Button label="Disabled" onPress={() => {}} disabled />
+            <Text color={T.muted} fontSize={T.fontSize.xs} fontWeight="700" marginTop={T.space.xs}>
+              BUTTON ROW CONVENTION
+            </Text>
+            <Text color={T.muted} fontSize={T.fontSize.xs}>
+              Cancel always left (danger-ghost), confirming action right (primary). Destructive confirms use danger.
+            </Text>
+            <XStack gap={T.space.sm} justifyContent="center">
+              <Button label="Cancel" onPress={() => {}} variant="danger-ghost" />
+              <Button label="Save" onPress={() => {}} />
+            </XStack>
+            <XStack gap={T.space.sm} justifyContent="center">
+              <Button label="Cancel" onPress={() => {}} variant="danger-ghost" />
+              <Button label="Delete" onPress={() => {}} variant="danger" />
+            </XStack>
           </Section>
 
           {/* ── Input ── */}
@@ -264,6 +281,18 @@ export default function UIKitScreen() {
               value={dropValue}
               onChange={setDropValue}
               placeholder="Pick an option…"
+            />
+          </Section>
+
+          {/* ── NotesField ── */}
+          <Section title="NotesField">
+            <Text color={T.muted} fontSize={T.fontSize.xs}>
+              Tappable single-line trigger (pencil icon) that opens a SlideUpModal with a full multiline input. Cancel discards, Done saves. Used for pre/post-workout notes.
+            </Text>
+            <NotesField
+              label="Pre-workout notes (optional)"
+              value={notesValue}
+              onChange={setNotesValue}
             />
           </Section>
 

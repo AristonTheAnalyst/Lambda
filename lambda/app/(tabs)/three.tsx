@@ -3,7 +3,10 @@ import {
   Alert,
   Keyboard,
   ScrollView,
+  useWindowDimensions,
+  View,
 } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import { useSQLiteContext } from 'expo-sqlite';
 import PageHeader from '@/components/PageHeader';
@@ -47,6 +50,10 @@ export default function WorkoutLogScreen() {
   const [endNotes, setEndNotes]       = useState('');
   const [startLoading, setStartLoading] = useState(false);
   const [endLoading, setEndLoading]   = useState(false);
+
+  const { width: screenWidth } = useWindowDimensions();
+  const slideX = useSharedValue(0);
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ translateX: slideX.value }] }));
 
   const weightByExercise = React.useRef<Record<number, string>>({});
 
@@ -94,6 +101,7 @@ export default function WorkoutLogScreen() {
       const activeId = await getActiveWorkoutId(db);
       if (activeId !== null) {
         setCurrentWorkoutId(activeId);
+        slideX.value = -screenWidth;
         loadSets(activeId);
       }
     })();
@@ -124,24 +132,25 @@ export default function WorkoutLogScreen() {
 
   // ── Start workout ──────────────────────────────────────────────────────────
 
-  function startWorkout() { return guard(async () => {
+  function startWorkout(notesOverride?: string) { return guard(async () => {
     if (!user) return;
     setStartLoading(true);
-    const localId = await createWorkout(db, user.id, startNotes);
+    const localId = await createWorkout(db, user.id, notesOverride ?? startNotes);
     setStartLoading(false);
     setCurrentWorkoutId(localId);
     setStartNotes('');
     setSets([]);
+    slideX.value = withTiming(-screenWidth, { duration: 280, easing: Easing.out(Easing.cubic) });
   }); }
 
   // ── End workout ────────────────────────────────────────────────────────────
 
   function confirmCancelWorkout() {
     Alert.alert('Cancel Workout', 'Discard this workout and all logged sets?', [
-      { text: 'Keep Going', style: 'cancel' },
       { text: 'Discard', style: 'destructive', onPress: () => guard(async () => {
         if (!currentWorkoutId) return;
         await cancelWorkout(db, currentWorkoutId);
+        slideX.value = withTiming(0, { duration: 280, easing: Easing.out(Easing.cubic) });
         setCurrentWorkoutId(null);
         setEndNotes('');
         setSets([]);
@@ -152,6 +161,7 @@ export default function WorkoutLogScreen() {
         setSetNotes('');
         setSelectedVarId(null);
       })},
+      { text: 'Keep Going' },
     ]);
   }
 
@@ -167,6 +177,7 @@ export default function WorkoutLogScreen() {
     setEndLoading(true);
     await endWorkout(db, currentWorkoutId, endNotes);
     setEndLoading(false);
+    slideX.value = withTiming(0, { duration: 280, easing: Easing.out(Easing.cubic) });
     setCurrentWorkoutId(null);
     setEndNotes('');
     setSets([]);
@@ -254,110 +265,132 @@ export default function WorkoutLogScreen() {
   return (
     <YStack flex={1} backgroundColor={T.bg}>
       <PageHeader title="Workout Log" right={<SyncStatusIcon />} />
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: T.space.lg, paddingBottom: T.space.xxl }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        automaticallyAdjustKeyboardInsets={true}
-      >
 
-        {/* ── No active workout ── */}
-        {!currentWorkoutId && (
-          <YStack gap={T.space.md}>
-            <Text fontSize={T.fontSize.xl} fontWeight="700" color={T.primary}>Start a Workout</Text>
-            <NotesField label="Pre-workout notes (optional)" value={startNotes} onChange={setStartNotes} />
-            <Button label="Start Workout" onPress={startWorkout} loading={startLoading} />
-          </YStack>
-        )}
+      <YStack flex={1} overflow="hidden">
+        <Animated.View style={[{ flexDirection: 'row', width: screenWidth * 2, flex: 1 }, animatedStyle]}>
 
-        {/* ── Active workout ── */}
-        {currentWorkoutId && (
-          <>
-            <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
-            <DropdownSelect
-              options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
-              value={selectedExId}
-              onChange={onSelectExercise}
-              placeholder="Select exercise…"
-            />
-
-            {selectedEx && (
-              <YStack gap={T.space.md} marginTop={T.space.md}>
-                <Input label="Weight (optional)" placeholder="kg" keyboardType="numbers-and-punctuation" value={weight} onChangeText={setWeight} />
-                <Input
-                  label={selectedEx.exercise_volume_type === 'reps' ? 'Reps' : 'Duration (seconds)'}
-                  placeholder={selectedEx.exercise_volume_type === 'reps' ? 'e.g. 10,8,6' : 'e.g. 60,45'}
-                  keyboardType="numbers-and-punctuation"
-                  value={repsOrDuration}
-                  onChangeText={setRepsOrDuration}
+          {/* ── Page 1: No active workout ── */}
+          <View style={{ width: screenWidth, flex: 1 }}>
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ padding: T.space.lg, paddingBottom: T.space.xxl }}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets={true}
+            >
+              <YStack gap={T.space.md}>
+                <Text fontSize={T.fontSize.xl} fontWeight="700" color={T.primary}>Start a Workout</Text>
+                <NotesField
+                  label="Pre-workout notes (optional)"
+                  value={startNotes}
+                  onChange={setStartNotes}
+                  confirmLabel="Start Workout"
+                  onConfirm={(notes) => startWorkout(notes)}
                 />
-                {selectedEx.assigned_variations.length > 0 && (
-                  <YStack>
-                    <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
-                    <DropdownSelect
-                      options={[
-                        { label: 'None', value: null },
-                        ...selectedEx.assigned_variations.map((v) => ({ label: v.variation_name, value: v.custom_variation_id })),
-                      ]}
-                      value={selectedVarId}
-                      onChange={setSelectedVarId}
-                      placeholder="None"
-                    />
-                  </YStack>
-                )}
-                <Input label="Set notes (optional)" placeholder="Notes…" value={setNotes} onChangeText={setSetNotes} />
-                <Button label="Log Set" onPress={logSet} loading={logLoading} />
+                <Button label="Start Workout" onPress={() => startWorkout()} loading={startLoading} />
               </YStack>
-            )}
+            </ScrollView>
+          </View>
 
-            {/* ── Sets table ── */}
-            <Separator borderColor={T.border} marginTop={T.space.xl} marginBottom={T.space.xl} />
-            <Text fontSize={T.fontSize.xl} fontWeight="700" marginBottom={T.space.sm} color={T.primary}>Sets this workout</Text>
-            {setsLoading ? (
-              <Spinner size="large" color={T.accent} marginTop={T.space.md} />
-            ) : sets.length === 0 ? (
-              <Text color={T.muted} marginTop={T.space.sm}>No sets logged yet.</Text>
-            ) : (
-              sets.map((s) => {
-                const exName = exerciseDetailMap[s.custom_exercise_id]?.exercise_name ?? `#${s.custom_exercise_id}`;
-                const varName = s.custom_variation_id
-                  ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations.find((v) => v.custom_variation_id === s.custom_variation_id)?.variation_name
-                  : null;
-                const repsStr = s.workout_set_reps?.length
-                  ? `${formatValues(s.workout_set_reps)} reps`
-                  : s.workout_set_duration_seconds?.length ? `${formatValues(s.workout_set_duration_seconds)}s` : '—';
-                return (
-                  <XStack key={s.workout_set_id} borderBottomWidth={0.5} borderBottomColor={T.border} paddingVertical={T.space.sm} alignItems="center" gap={T.space.sm}>
-                    <Text fontWeight="700" fontSize={15} color={T.accent}>#{s.workout_set_number}</Text>
-                    <YStack flex={1}>
-                      <XStack alignItems="flex-end" gap={T.space.sm}>
-                        <Text fontSize={15} fontWeight="500" color={T.primary}>{exName}</Text>
-                        {varName && <Text fontSize={T.fontSize.sm} color={T.muted}>{varName}</Text>}
-                      </XStack>
-                      <Text fontSize={T.fontSize.xs} marginTop={T.space.xs} color={T.muted}>
-                        {s.workout_set_weight != null ? `${s.workout_set_weight}kg · ` : ''}{repsStr}
-                        {s.workout_set_notes ? <Text fontSize={T.fontSize.xs} color={T.muted} fontStyle="italic">{` · "${s.workout_set_notes}"`}</Text> : ''}
-                      </Text>
+          {/* ── Page 2: Active workout ── */}
+          <View style={{ width: screenWidth, flex: 1 }}>
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ padding: T.space.lg, paddingBottom: T.space.xxl }}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets={true}
+            >
+              <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
+              <DropdownSelect
+                options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
+                value={selectedExId}
+                onChange={onSelectExercise}
+                placeholder="Select exercise…"
+              />
+
+              {selectedEx && (
+                <YStack gap={T.space.md} marginTop={T.space.md}>
+                  <Input label="Weight (optional)" placeholder="kg" keyboardType="numbers-and-punctuation" value={weight} onChangeText={setWeight} />
+                  <Input
+                    label={selectedEx.exercise_volume_type === 'reps' ? 'Reps' : 'Duration (seconds)'}
+                    placeholder={selectedEx.exercise_volume_type === 'reps' ? 'e.g. 10,8,6' : 'e.g. 60,45'}
+                    keyboardType="numbers-and-punctuation"
+                    value={repsOrDuration}
+                    onChangeText={setRepsOrDuration}
+                  />
+                  {selectedEx.assigned_variations.length > 0 && (
+                    <YStack>
+                      <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
+                      <DropdownSelect
+                        options={[
+                          { label: 'None', value: null },
+                          ...selectedEx.assigned_variations.map((v) => ({ label: v.variation_name, value: v.custom_variation_id })),
+                        ]}
+                        value={selectedVarId}
+                        onChange={setSelectedVarId}
+                        placeholder="None"
+                      />
                     </YStack>
-                    <XStack gap={T.space.sm}>
-                      <GlassButton icon="pencil" iconSize={14} onPress={() => openEditSet(s)} />
-                      <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => handleDeleteSet(s.workout_set_id)} />
-                    </XStack>
-                  </XStack>
-                );
-              })
-            )}
+                  )}
+                  <Input label="Set notes (optional)" placeholder="Notes…" value={setNotes} onChangeText={setSetNotes} />
+                  <Button label="Log Set" onPress={logSet} loading={logLoading} />
+                </YStack>
+              )}
 
-            {/* ── End workout ── */}
-            <YStack marginTop={T.space.xxl} paddingTop={T.space.lg} gap={T.space.md}>
-              <NotesField label="Post-workout notes (optional)" value={endNotes} onChange={setEndNotes} />
-              <Button label="End Workout" onPress={confirmEndWorkout} loading={endLoading} />
-              <Button label="Cancel Workout" onPress={confirmCancelWorkout} variant="ghost" />
-            </YStack>
-          </>
-        )}
-      </ScrollView>
+              {/* ── Sets table ── */}
+              <Separator borderColor={T.border} marginTop={T.space.xl} marginBottom={T.space.xl} />
+              <Text fontSize={T.fontSize.xl} fontWeight="700" marginBottom={T.space.sm} color={T.primary}>Sets this workout</Text>
+              {setsLoading ? (
+                <Spinner size="large" color={T.accent} marginTop={T.space.md} />
+              ) : sets.length === 0 ? (
+                <Text color={T.muted} marginTop={T.space.sm}>No sets logged yet.</Text>
+              ) : (
+                sets.map((s) => {
+                  const exName = exerciseDetailMap[s.custom_exercise_id]?.exercise_name ?? `#${s.custom_exercise_id}`;
+                  const varName = s.custom_variation_id
+                    ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations.find((v) => v.custom_variation_id === s.custom_variation_id)?.variation_name
+                    : null;
+                  const repsStr = s.workout_set_reps?.length
+                    ? `${formatValues(s.workout_set_reps)} reps`
+                    : s.workout_set_duration_seconds?.length ? `${formatValues(s.workout_set_duration_seconds)}s` : '—';
+                  return (
+                    <XStack key={s.workout_set_id} borderBottomWidth={0.5} borderBottomColor={T.border} paddingVertical={T.space.sm} alignItems="center" gap={T.space.sm}>
+                      <Text fontWeight="700" fontSize={15} color={T.accent}>#{s.workout_set_number}</Text>
+                      <YStack flex={1}>
+                        <XStack alignItems="flex-end" gap={T.space.sm}>
+                          <Text fontSize={15} fontWeight="500" color={T.primary}>{exName}</Text>
+                          {varName && <Text fontSize={T.fontSize.sm} color={T.muted}>{varName}</Text>}
+                        </XStack>
+                        <Text fontSize={T.fontSize.xs} marginTop={T.space.xs} color={T.muted}>
+                          {s.workout_set_weight != null ? `${s.workout_set_weight}kg · ` : ''}{repsStr}
+                          {s.workout_set_notes ? <Text fontSize={T.fontSize.xs} color={T.muted} fontStyle="italic">{` · "${s.workout_set_notes}"`}</Text> : ''}
+                        </Text>
+                      </YStack>
+                      <XStack gap={T.space.sm}>
+                        <GlassButton icon="pencil" iconSize={14} onPress={() => openEditSet(s)} />
+                        <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => handleDeleteSet(s.workout_set_id)} />
+                      </XStack>
+                    </XStack>
+                  );
+                })
+              )}
+
+              {/* ── End workout ── */}
+              <YStack marginTop={T.space.xxl} paddingTop={T.space.lg} gap={T.space.md}>
+                <NotesField label="Post-workout notes (optional)" value={endNotes} onChange={setEndNotes} />
+                <XStack justifyContent="center">
+                  <XStack gap={T.space.sm}>
+                    <Button label="Cancel Workout" onPress={confirmCancelWorkout} variant="danger-ghost" />
+                    <Button label="End Workout" onPress={confirmEndWorkout} loading={endLoading} />
+                  </XStack>
+                </XStack>
+              </YStack>
+            </ScrollView>
+          </View>
+
+        </Animated.View>
+      </YStack>
 
       {/* ── Edit Set Modal ── */}
       <SlideUpModal visible={!!editingSet} onClose={() => setEditingSet(null)}>

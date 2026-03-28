@@ -11,9 +11,11 @@ interface NotesFieldProps {
   value: string;
   onChange: (text: string) => void;
   placeholder?: string;
+  confirmLabel?: string;
+  onConfirm?: (value: string) => void;
 }
 
-export default function NotesField({ label, value, onChange, placeholder = 'Notes…' }: NotesFieldProps) {
+export default function NotesField({ label, value, onChange, placeholder = 'Notes…', confirmLabel = 'Done', onConfirm }: NotesFieldProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [draft, setDraft] = useState('');
 
@@ -25,6 +27,7 @@ export default function NotesField({ label, value, onChange, placeholder = 'Note
   function done() {
     onChange(draft);
     setModalVisible(false);
+    onConfirm?.(draft);
   }
 
   function cancel() {
@@ -94,7 +97,7 @@ export default function NotesField({ label, value, onChange, placeholder = 'Note
           />
           <XStack gap={T.space.sm} justifyContent="center">
             <Button label="Cancel" onPress={cancel} variant="danger-ghost" />
-            <Button label="Done" onPress={done} />
+            <Button label={confirmLabel} onPress={done} />
           </XStack>
         </YStack>
       </SlideUpModal>
