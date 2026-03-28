@@ -26,7 +26,7 @@ const StyledInput = styled(TamaguiInput, {
       true: { borderColor: T.dangerBorder },
     },
     isMultiline: {
-      true: { height: undefined, minHeight: 96, textAlignVertical: 'top' },
+      true: { height: undefined, textAlignVertical: 'top' },
     },
     isDisabled: {
       true: { opacity: 0.5 },
@@ -43,6 +43,7 @@ interface InputProps {
   label?: string;
   error?: string;
   multiline?: boolean;
+  minHeight?: number;
   editable?: boolean;
   secureTextEntry?: boolean;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
@@ -59,6 +60,7 @@ export default function Input({
   label,
   error,
   multiline = false,
+  minHeight = 96,
   editable = true,
   secureTextEntry,
   autoCapitalize,
@@ -88,6 +90,7 @@ export default function Input({
         autoCorrect={autoCorrect}
         errored={!!error}
         isMultiline={multiline}
+        minHeight={multiline ? minHeight : undefined}
         isDisabled={!editable}
         keyboardAppearance={Platform.OS === 'ios' ? 'dark' : undefined}
         returnKeyType={Platform.OS === 'ios' ? (multiline ? 'default' : 'done') : undefined}

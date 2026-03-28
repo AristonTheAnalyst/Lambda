@@ -3,8 +3,6 @@ import {
   Alert,
   Keyboard,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import PageHeader from '@/components/PageHeader';
@@ -211,16 +209,14 @@ export default function WorkoutLogScreen() {
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: T.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <YStack flex={1} backgroundColor={T.bg}>
       <PageHeader title="Workout Log" />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: T.space.lg, paddingBottom: T.space.xxl }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets={true}
       >
 
         {/* ── No active workout ── */}
@@ -312,7 +308,7 @@ export default function WorkoutLogScreen() {
 
             {/* ── End workout ── */}
             <YStack marginTop={T.space.xxl} paddingTop={T.space.lg} gap={T.space.md}>
-              <Input label="Final notes (optional)" placeholder="Notes…" value={endNotes} onChangeText={setEndNotes} />
+              <Input label="Final notes (optional)" placeholder="Notes…" value={endNotes} onChangeText={setEndNotes} multiline minHeight={140} />
               <Button label="End Workout" onPress={confirmEndWorkout} loading={endLoading} variant="danger" />
             </YStack>
           </>
@@ -367,6 +363,6 @@ export default function WorkoutLogScreen() {
           </ScrollView>
         </YStack>
       </SlideUpModal>
-    </KeyboardAvoidingView>
+    </YStack>
   );
 }
