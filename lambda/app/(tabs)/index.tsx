@@ -196,7 +196,7 @@ export default function ProfileScreen() {
             {editing ? (
               <YStack gap={T.space.md} marginTop={T.space.sm}>
                 <Button label="Save" onPress={handleSave} loading={saving} disabled={saving} />
-                <Button label="Cancel" onPress={() => setEditing(false)} variant="ghost" disabled={saving} />
+                <Button label="Cancel" onPress={() => setEditing(false)} variant="danger-ghost" disabled={saving} />
               </YStack>
             ) : (
               <YStack gap={T.space.md} marginTop={T.space.xxl}>

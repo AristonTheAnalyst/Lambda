@@ -253,8 +253,8 @@ export default function WorkoutDetailScreen() {
               })()}
               <Input label="Notes (optional)" placeholder="Notes…" value={editNotes} onChangeText={setEditNotes} />
               <XStack gap={T.space.sm} justifyContent="center">
+                <Button label="Cancel" onPress={() => setEditingSet(null)} variant="danger-ghost" />
                 <Button label="Save" onPress={saveEditSet} loading={editLoading} />
-                <Button label="Cancel" onPress={() => setEditingSet(null)} variant="ghost" />
               </XStack>
               <YStack height={T.space.xl} />
             </YStack>

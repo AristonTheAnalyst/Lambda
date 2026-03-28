@@ -151,8 +151,8 @@ export default function ManageVariationsScreen() {
             <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>New Variation</Text>
             <Input placeholder="Variation name" value={name} onChangeText={setName} />
             <XStack gap={T.space.sm} marginTop={T.space.md} justifyContent="center">
+              <Button label="Cancel" onPress={() => setCreateVisible(false)} variant="danger-ghost" />
               <Button label="Create" onPress={create} loading={creating} />
-              <Button label="Cancel" onPress={() => setCreateVisible(false)} variant="ghost" />
             </XStack>
           </YStack>
         </SlideUpModal>
@@ -173,8 +173,8 @@ export default function ManageVariationsScreen() {
               placeholder="Variation name"
             />
             <XStack gap={T.space.sm} marginTop={T.space.md} justifyContent="center">
+              <Button label="Cancel" onPress={() => setEditVar(null)} variant="danger-ghost" />
               <Button label="Save" onPress={saveEdit} />
-              <Button label="Cancel" onPress={() => setEditVar(null)} variant="ghost" />
             </XStack>
           </YStack>
         </SlideUpModal>

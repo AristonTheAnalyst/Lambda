@@ -98,6 +98,46 @@ export async function endWorkout(
   }
 }
 
+// ─── Cancel ───────────────────────────────────────────────────────────────────
+
+/**
+ * Discards an in-progress workout entirely.
+ * - Removes all sets and the workout row from SQLite.
+ * - Purges any pending sync_queue entries so nothing reaches Supabase.
+ * - If the workout was already synced (positive ID), enqueues a DELETE.
+ */
+export async function cancelWorkout(
+  db: SQLiteDatabase,
+  workoutId: number
+): Promise<void> {
+  // Hard-delete sets locally
+  await db.runAsync(`DELETE FROM fact_workout_set WHERE user_workout_id = ?`, [workoutId]);
+
+  // Purge pending sync queue entries for this workout and its sets
+  await db.runAsync(
+    `DELETE FROM sync_queue WHERE (local_id = ? OR depends_on_local_id = ?) AND status = 'pending'`,
+    [workoutId, workoutId]
+  );
+
+  if (workoutId > 0) {
+    // Already synced — enqueue a DELETE so Supabase is cleaned up
+    const row = await db.getFirstAsync<{ user_id: string }>(
+      `SELECT user_id FROM fact_user_workout WHERE user_workout_id = ?`,
+      [workoutId]
+    );
+    if (row) {
+      await enqueueOperation(db, {
+        table_name: 'fact_user_workout',
+        operation: 'DELETE',
+        payload: { user_workout_id: workoutId, user_id: row.user_id },
+      });
+    }
+  }
+
+  // Hard-delete the workout row
+  await db.runAsync(`DELETE FROM fact_user_workout WHERE user_workout_id = ?`, [workoutId]);
+}
+
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
 export async function loadWorkout(

@@ -208,7 +208,12 @@ const MyCard = styled(YStack, {
 <Button label="Saving…" onPress={handleSave} loading={saving} disabled={saving} />
 ```
 
-Variants: `primary` (default, accent fill), `ghost` (border only), `danger` (red fill), `glass` (iOS 26+ only, falls back to primary).
+Variants: `primary` (default, accent fill), `ghost` (accent border only), `danger` (red fill), `danger-ghost` (red border only), `glass` (iOS 26+ only, falls back to primary).
+
+**Button row conventions (standard across the app):**
+- Cancel always goes on the **left**, the confirming action on the right
+- Cancel always uses `variant="danger-ghost"` (red ghost)
+- Destructive confirms (delete, discard) use `variant="danger"`; non-destructive confirms use `variant="primary"` (default)
 
 ---
 

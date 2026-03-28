@@ -27,6 +27,10 @@ export default function NotesField({ label, value, onChange, placeholder = 'Note
     setModalVisible(false);
   }
 
+  function cancel() {
+    setModalVisible(false);
+  }
+
   // Render label with parenthetical text in muted/lighter style (matches Input.tsx)
   const labelParts = label.split(/(\([^)]+\))/);
 
@@ -59,7 +63,7 @@ export default function NotesField({ label, value, onChange, placeholder = 'Note
         </XStack>
       </YStack>
 
-      <SlideUpModal visible={modalVisible} onClose={done}>
+      <SlideUpModal visible={modalVisible} onClose={cancel}>
         <YStack
           backgroundColor={T.surface}
           borderTopLeftRadius={T.radius.lg}
@@ -88,7 +92,10 @@ export default function NotesField({ label, value, onChange, placeholder = 'Note
               textAlignVertical: 'top',
             }}
           />
-          <Button label="Done" onPress={done} />
+          <XStack gap={T.space.sm} justifyContent="center">
+            <Button label="Cancel" onPress={cancel} variant="danger-ghost" />
+            <Button label="Done" onPress={done} />
+          </XStack>
         </YStack>
       </SlideUpModal>
     </>

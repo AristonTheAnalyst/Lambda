@@ -295,8 +295,8 @@ export default function VariationsScreen() {
             placeholder="Variation name"
           />
           <XStack gap={T.space.sm} marginTop={T.space.md} justifyContent="center">
+            <Button label="Cancel" onPress={() => setEditVar(null)} variant="danger-ghost" />
             <Button label="Save" onPress={saveEdit} />
-            <Button label="Cancel" onPress={() => setEditVar(null)} variant="ghost" />
           </XStack>
         </YStack>
       </SlideUpModal>

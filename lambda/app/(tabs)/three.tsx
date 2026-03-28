@@ -16,7 +16,7 @@ import { useExerciseData, ExerciseDetail } from '@/lib/ExerciseDataContext';
 import { useAuthContext } from '@/lib/AuthContext';
 import { useSyncContext } from '@/lib/sync/syncContext';
 import { getRemap } from '@/lib/db/idRemap';
-import { createWorkout, endWorkout, getActiveWorkoutId } from '@/lib/offline/workoutStore';
+import { createWorkout, endWorkout, cancelWorkout, getActiveWorkoutId } from '@/lib/offline/workoutStore';
 import { insertSet, updateSet, deleteSet, loadSetsForWorkout, WorkoutSet } from '@/lib/offline/setStore';
 import GlassButton from '@/components/GlassButton';
 import { useAsyncGuard } from '@/lib/asyncGuard';
@@ -135,6 +135,25 @@ export default function WorkoutLogScreen() {
   }); }
 
   // ── End workout ────────────────────────────────────────────────────────────
+
+  function confirmCancelWorkout() {
+    Alert.alert('Cancel Workout', 'Discard this workout and all logged sets?', [
+      { text: 'Keep Going', style: 'cancel' },
+      { text: 'Discard', style: 'destructive', onPress: () => guard(async () => {
+        if (!currentWorkoutId) return;
+        await cancelWorkout(db, currentWorkoutId);
+        setCurrentWorkoutId(null);
+        setEndNotes('');
+        setSets([]);
+        setSelectedExId(null);
+        setSelectedEx(null);
+        setWeight('');
+        setRepsOrDuration('');
+        setSetNotes('');
+        setSelectedVarId(null);
+      })},
+    ]);
+  }
 
   function confirmEndWorkout() {
     Alert.alert('End Workout', 'Are you sure you want to end this workout?', [
@@ -333,7 +352,8 @@ export default function WorkoutLogScreen() {
             {/* ── End workout ── */}
             <YStack marginTop={T.space.xxl} paddingTop={T.space.lg} gap={T.space.md}>
               <NotesField label="Post-workout notes (optional)" value={endNotes} onChange={setEndNotes} />
-              <Button label="End Workout" onPress={confirmEndWorkout} loading={endLoading} variant="danger" />
+              <Button label="End Workout" onPress={confirmEndWorkout} loading={endLoading} />
+              <Button label="Cancel Workout" onPress={confirmCancelWorkout} variant="ghost" />
             </YStack>
           </>
         )}
@@ -379,8 +399,8 @@ export default function WorkoutLogScreen() {
               )}
               <Input label="Notes (optional)" placeholder="Notes…" value={editNotes} onChangeText={setEditNotes} />
               <XStack gap={T.space.sm} justifyContent="center">
+                <Button label="Cancel" onPress={() => setEditingSet(null)} variant="danger-ghost" />
                 <Button label="Save" onPress={saveEditSet} loading={editLoading} />
-                <Button label="Cancel" onPress={() => setEditingSet(null)} variant="ghost" />
               </XStack>
               <YStack height={T.space.xl} />
             </YStack>

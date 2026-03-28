@@ -160,8 +160,8 @@ export default function ExercisesScreen() {
           <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginTop={T.space.md} marginBottom={T.space.xs}>Volume type</Text>
           <SegmentedControl options={VOLUME_OPTIONS} value={volume} onChange={setVolume} />
           <XStack gap={T.space.sm} marginTop={T.space.md} justifyContent="center">
+            <Button label="Cancel" onPress={() => setCreateVisible(false)} variant="danger-ghost" />
             <Button label="Create" onPress={create} loading={creating} />
-            <Button label="Cancel" onPress={() => setCreateVisible(false)} variant="ghost" />
           </XStack>
         </YStack>
       </SlideUpModal>
@@ -188,8 +188,8 @@ export default function ExercisesScreen() {
             onChange={(v) => setEditEx((e) => e ? { ...e, exercise_volume_type: v } : e)}
           />
           <XStack gap={T.space.sm} marginTop={T.space.md} justifyContent="center">
+            <Button label="Cancel" onPress={() => setEditEx(null)} variant="danger-ghost" />
             <Button label="Save" onPress={saveEdit} />
-            <Button label="Cancel" onPress={() => setEditEx(null)} variant="ghost" />
           </XStack>
         </YStack>
       </SlideUpModal>

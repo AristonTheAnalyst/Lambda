@@ -17,22 +17,21 @@ if (isGlassSupported) {
 interface ButtonProps {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'glass' | 'ghost' | 'danger';
+  variant?: 'primary' | 'glass' | 'ghost' | 'danger' | 'danger-ghost';
   disabled?: boolean;
   loading?: boolean;
   fullWidth?: boolean;
 }
 
-function variantStyles(variant: 'primary' | 'ghost' | 'danger') {
+function variantStyles(variant: 'primary' | 'ghost' | 'danger' | 'danger-ghost') {
   if (variant === 'ghost') {
-    return {
-      backgroundColor: 'transparent' as const,
-      borderWidth: 1,
-      borderColor: T.accent,
-    };
+    return { backgroundColor: 'transparent' as const, borderWidth: 1, borderColor: T.accent };
   }
   if (variant === 'danger') {
     return { backgroundColor: T.danger, borderWidth: 0 };
+  }
+  if (variant === 'danger-ghost') {
+    return { backgroundColor: 'transparent' as const, borderWidth: 1, borderColor: T.danger };
   }
   return { backgroundColor: T.accent, borderWidth: 0 };
 }
@@ -48,7 +47,7 @@ export default function Button({
   fullWidth = false,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
-  const effective  = variant === 'glass' ? 'primary' : variant;
+  const effective  = variant === 'glass' ? 'primary' : (variant ?? 'primary');
   const self       = fullWidth ? ('stretch' as const) : ('center' as const);
 
   // Glass variant on iOS 26+
@@ -70,8 +69,8 @@ export default function Button({
     );
   }
 
-  const spinnerColor = effective === 'ghost' ? T.accent : T.accentText;
-  const labelColor   = effective === 'ghost' ? T.accent : T.accentText;
+  const spinnerColor = effective === 'ghost' ? T.accent : effective === 'danger-ghost' ? T.danger : T.accentText;
+  const labelColor   = effective === 'ghost' ? T.accent : effective === 'danger-ghost' ? T.danger : T.accentText;
   const vs = variantStyles(effective);
 
   return (
