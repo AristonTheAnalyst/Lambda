@@ -40,7 +40,7 @@ export default function GlassButton({
 
   if (isGlassSupported && GlassView) {
     return (
-      <XStack borderRadius={999} overflow="hidden" pressStyle={{ opacity: 0.7 }} onPress={onPress} cursor="pointer">
+      <XStack borderRadius={999} overflow="hidden" onPress={onPress} cursor="pointer">
         <GlassView glassEffectStyle="systemThinMaterial" tintColor={color} style={{ borderRadius: 999 }}>
           {inner}
         </GlassView>
@@ -55,7 +55,6 @@ export default function GlassButton({
       backgroundColor="rgba(46,46,46,0.88)"
       borderWidth={1}
       borderColor="rgba(173,144,115,0.18)"
-      pressStyle={{ opacity: 0.7 }}
       onPress={onPress}
       cursor="pointer"
     >

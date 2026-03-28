@@ -2,12 +2,12 @@ import { Stack } from 'expo-router';
 
 export default function AdminExercisesLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false, gestureEnabled: true }}>
+    <Stack screenOptions={{ headerShown: false, gestureEnabled: true, animation: 'fade', animationDuration: 80 }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="exercises" />
       <Stack.Screen name="manage-variations" />
       <Stack.Screen name="variations" />
-      <Stack.Screen name="variation-exercises" options={{ animation: 'none', gestureEnabled: false }} />
+      <Stack.Screen name="variation-exercises" options={{ gestureEnabled: false }} />
       <Stack.Screen name="guide" />
     </Stack>
   );

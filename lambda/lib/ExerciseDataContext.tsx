@@ -145,10 +145,13 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
   }, [user?.id]);
 
   // Background seed from Supabase on first install (non-blocking)
+  // Only refreshes if seeding actually wrote new rows
   useEffect(() => {
     if (!user || !isConnected) return;
     seedFromSupabase(db, user.id)
-      .then(() => Promise.all([refreshExercises(), refreshVariations(), refreshExerciseDetails()]))
+      .then((seeded) => {
+        if (seeded) return Promise.all([refreshExercises(), refreshVariations(), refreshExerciseDetails()]);
+      })
       .catch(() => {}); // Silently fail — SQLite is source of truth
   }, [user?.id, isConnected]);
 
@@ -170,13 +173,13 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
 
 // ─── Supabase seed helper ─────────────────────────────────────────────────────
 
-async function seedFromSupabase(db: any, userId: string): Promise<void> {
+async function seedFromSupabase(db: any, userId: string): Promise<boolean> {
   // Only seed if SQLite has no positive-ID exercises (i.e. first install)
   const existing = await db.getFirstAsync<{ n: number }>(
     `SELECT COUNT(*) AS n FROM user_custom_exercise WHERE user_id = ? AND custom_exercise_id > 0`,
     [userId]
   );
-  if (existing && existing.n > 0) return;
+  if (existing && existing.n > 0) return false;
 
   const [exRes, varRes, bridgeRes] = await Promise.all([
     supabase
@@ -219,4 +222,5 @@ async function seedFromSupabase(db: any, userId: string): Promise<void> {
       );
     }
   });
+  return true;
 }

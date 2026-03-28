@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -21,32 +21,15 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
-  const [cooldown, setCooldown] = useState(0);
-  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { signIn, signInWithGoogle, signInWithApple, loading, sessionExpired, clearSessionExpired } = useAuthContext();
-
-  useEffect(() => {
-    if (sessionExpired) return () => clearSessionExpired();
-  }, []);
-
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    cooldownRef.current = setInterval(() => {
-      setCooldown((c) => {
-        if (c <= 1) { clearInterval(cooldownRef.current!); return 0; }
-        return c - 1;
-      });
-    }, 1000);
-    return () => clearInterval(cooldownRef.current!);
-  }, [cooldown > 0]);
+  const guard = useAsyncGuard();
 
   const handleLogin = () => guard(async () => {
-    if (cooldown > 0) return;
     const result = loginSchema.safeParse({ email, password });
     if (!result.success) { setFieldErrors(getFieldErrors(result.error)); return; }
     setFieldErrors({});
     const { error } = await signIn(email, password);
-    if (error) { Alert.alert('Login Failed', error.message); setCooldown(30); }
+    if (error) Alert.alert('Login Failed', error.message);
   });
 
   const handleGoogle = () => guard(async () => {
@@ -65,9 +48,7 @@ export default function LoginScreen() {
     } finally { setSocialLoading(null); }
   });
 
-  const guard = useAsyncGuard();
-  const isLoading    = loading || socialLoading !== null;
-  const isCoolingDown = cooldown > 0;
+  const isLoading = loading || socialLoading !== null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
@@ -85,6 +66,9 @@ export default function LoginScreen() {
               borderWidth={1}
               borderRadius={T.radius.md}
               padding={T.space.md}
+              pressStyle={{ opacity: 0.8 }}
+              onPress={clearSessionExpired}
+              cursor="pointer"
             >
               <Text color={T.accent} fontSize={T.fontSize.sm} textAlign="center">
                 Your session expired. Please log in again.
@@ -122,9 +106,9 @@ export default function LoginScreen() {
             />
 
             <Button
-              label={isCoolingDown ? `Try again in ${cooldown}s` : 'Login'}
+              label="Login"
               onPress={handleLogin}
-              disabled={isLoading || isCoolingDown}
+              disabled={isLoading}
               loading={loading}
             />
 

@@ -1,5 +1,4 @@
-import { ActivityIndicator, Platform, Text as RNText, View } from 'react-native';
-import { Button as TamaguiButton, styled } from 'tamagui';
+import { ActivityIndicator, Platform, Text as RNText, TouchableOpacity, View } from 'react-native';
 import T from '@/constants/Theme';
 
 const isGlassSupported = Platform.OS === 'ios' && Number(Platform.Version) >= 26;
@@ -13,40 +12,6 @@ if (isGlassSupported) {
   }
 }
 
-// ─── Styled base ──────────────────────────────────────────────────────────────
-
-const Base = styled(TamaguiButton, {
-  borderRadius: 999,
-  paddingVertical: T.space.md,
-  paddingHorizontal: T.space.lg,
-  alignItems: 'center',
-  justifyContent: 'center',
-  height: 'auto',
-
-  variants: {
-    variant: {
-      primary: {
-        backgroundColor: T.accent,
-        borderWidth: 0,
-        pressStyle: { opacity: 0.75 },
-      },
-      ghost: {
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        borderColor: T.accent,
-        pressStyle: { opacity: 0.75 },
-      },
-      danger: {
-        backgroundColor: T.danger,
-        borderWidth: 0,
-        pressStyle: { opacity: 0.75 },
-      },
-    },
-  } as const,
-
-  defaultVariants: { variant: 'primary' },
-});
-
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface ButtonProps {
@@ -56,6 +21,20 @@ interface ButtonProps {
   disabled?: boolean;
   loading?: boolean;
   fullWidth?: boolean;
+}
+
+function variantStyles(variant: 'primary' | 'ghost' | 'danger') {
+  if (variant === 'ghost') {
+    return {
+      backgroundColor: 'transparent' as const,
+      borderWidth: 1,
+      borderColor: T.accent,
+    };
+  }
+  if (variant === 'danger') {
+    return { backgroundColor: T.danger, borderWidth: 0 };
+  }
+  return { backgroundColor: T.accent, borderWidth: 0 };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -70,7 +49,7 @@ export default function Button({
 }: ButtonProps) {
   const isDisabled = disabled || loading;
   const effective  = variant === 'glass' ? 'primary' : variant;
-  const self       = fullWidth ? 'stretch' : 'center';
+  const self       = fullWidth ? ('stretch' as const) : ('center' as const);
 
   // Glass variant on iOS 26+
   if (variant === 'glass' && isGlassSupported && GlassView) {
@@ -93,15 +72,28 @@ export default function Button({
 
   const spinnerColor = effective === 'ghost' ? T.accent : T.accentText;
   const labelColor   = effective === 'ghost' ? T.accent : T.accentText;
+  const vs = variantStyles(effective);
 
   return (
-    <View style={{ alignSelf: self }}>
-      <Base variant={effective} onPress={onPress} disabled={isDisabled} opacity={isDisabled ? 0.45 : 1}>
-        {loading
-          ? <ActivityIndicator size="small" color={spinnerColor} />
-          : <RNText style={{ color: labelColor, fontSize: T.fontSize.md, fontWeight: '600' }}>{label}</RNText>
-        }
-      </Base>
-    </View>
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={isDisabled}
+      activeOpacity={1}
+      style={{
+        alignSelf: self,
+        borderRadius: 999,
+        paddingVertical: T.space.md,
+        paddingHorizontal: T.space.lg,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: isDisabled ? 0.45 : 1,
+        ...vs,
+      }}
+    >
+      {loading
+        ? <ActivityIndicator size="small" color={spinnerColor} />
+        : <RNText style={{ color: labelColor, fontSize: T.fontSize.md, fontWeight: '600' }}>{label}</RNText>
+      }
+    </TouchableOpacity>
   );
 }

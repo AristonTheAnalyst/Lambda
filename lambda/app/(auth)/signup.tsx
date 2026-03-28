@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -22,28 +22,15 @@ export default function SignupScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
-  const [cooldown, setCooldown]       = useState(0);
-  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { signUp, signInWithGoogle, signInWithApple, loading } = useAuthContext();
-
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    cooldownRef.current = setInterval(() => {
-      setCooldown((c) => {
-        if (c <= 1) { clearInterval(cooldownRef.current!); return 0; }
-        return c - 1;
-      });
-    }, 1000);
-    return () => clearInterval(cooldownRef.current!);
-  }, [cooldown > 0]);
+  const guard = useAsyncGuard();
 
   const handleSignup = () => guard(async () => {
-    if (cooldown > 0) return;
     const result = signupSchema.safeParse({ email, password, confirmPassword });
     if (!result.success) { setFieldErrors(getFieldErrors(result.error)); return; }
     setFieldErrors({});
     const { error } = await signUp(email, password);
-    if (error) { Alert.alert('Signup Failed', error.message); setCooldown(30); }
+    if (error) Alert.alert('Signup Failed', error.message);
   });
 
   const handleGoogle = () => guard(async () => {
@@ -62,9 +49,7 @@ export default function SignupScreen() {
     } finally { setSocialLoading(null); }
   });
 
-  const guard = useAsyncGuard();
-  const isLoading    = loading || socialLoading !== null;
-  const isCoolingDown = cooldown > 0;
+  const isLoading = loading || socialLoading !== null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
@@ -150,9 +135,9 @@ export default function SignupScreen() {
               />
 
               <Button
-                label={isCoolingDown ? `Try again in ${cooldown}s` : 'Sign Up'}
+                label="Sign Up"
                 onPress={handleSignup}
-                disabled={isLoading || isCoolingDown}
+                disabled={isLoading}
                 loading={loading}
               />
 
