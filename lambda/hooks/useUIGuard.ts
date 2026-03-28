@@ -14,7 +14,7 @@ import { useCallback, useRef } from 'react';
  * const openModal = useUIGuard();
  * <Button onPress={() => openModal(() => setVisible(true))} />
  */
-export function useUIGuard(duration = 400) {
+export function useUIGuard(duration = 200) {
   const busy = useRef(false);
   return useCallback((fn: () => void): void => {
     if (busy.current) return;

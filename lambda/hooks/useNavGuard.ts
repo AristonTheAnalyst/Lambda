@@ -16,7 +16,7 @@
  */
 let _navBusy = false;
 
-export function navGuard(fn: () => void, duration = 500): void {
+export function navGuard(fn: () => void, duration = 300): void {
   if (_navBusy) return;
   _navBusy = true;
   fn();
