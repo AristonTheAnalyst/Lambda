@@ -10,7 +10,16 @@ import { useAuthContext } from '@/lib/AuthContext';
 import GlassButton from '@/components/GlassButton';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
-import supabase from '@/lib/supabase';
+import { useSQLiteContext } from 'expo-sqlite';
+import {
+  getBridgeForExercises,
+  checkBridgeExists,
+  addBridgeRow,
+  removeBridgeRow,
+} from '@/lib/offline/bridgeStore';
+import {
+  updateVariation,
+} from '@/lib/offline/variationStore';
 import { useAsyncGuard, useUIGuard } from '@/lib/asyncGuard';
 import T from '@/constants/Theme';
 
@@ -66,7 +75,8 @@ export default function VariationsScreen() {
   const openEdit = useUIGuard();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { exercises, exerciseDetailMap, refreshExerciseDetails, refreshVariations } = useExerciseData();
+  const db = useSQLiteContext();
+  const { exercises, variations, exerciseDetailMap, refreshExerciseDetails, refreshVariations } = useExerciseData();
   const { user } = useAuthContext();
 
   const [selectedExIds, setSelectedExIds]                   = useState<number[]>([]);
@@ -84,54 +94,39 @@ export default function VariationsScreen() {
     if (!exIds.length) { setAssignedVars([]); setCommonVars([]); setExistingVars([]); return; }
     setLoadingEx(true);
 
+    const bridgeRows = await getBridgeForExercises(db, exIds);
+
+    // Build a variation lookup from context (no extra DB query needed)
+    const varById = new Map(variations.map((v) => [v.custom_variation_id, v]));
+
     if (exIds.length === 1) {
-      const [assignedRes, allRes] = await Promise.all([
-        supabase.from('user_custom_exercise_variation_bridge')
-          .select('user_custom_variation(custom_variation_id, variation_name)')
-          .eq('custom_exercise_id', exIds[0]),
-        supabase.from('user_custom_variation').select('custom_variation_id, variation_name').eq('is_active', true),
-      ]);
-      const assigned: Variation[] = (assignedRes.data ?? []).flatMap((r: any) =>
-        r.user_custom_variation ? [r.user_custom_variation] : []
-      );
+      const assigned: Variation[] = bridgeRows
+        .filter((r) => r.custom_exercise_id === exIds[0])
+        .flatMap((r) => {
+          const v = varById.get(r.custom_variation_id);
+          return v ? [v] : [];
+        });
       setAssignedVars(assigned);
       setCommonVars([]);
       const assignedIds = new Set(assigned.map((v) => v.custom_variation_id));
-      const seenNames   = new Set<string>();
-      setExistingVars((allRes.data ?? []).filter((v: any) => {
-        if (assignedIds.has(v.custom_variation_id) || seenNames.has(v.variation_name)) return false;
-        seenNames.add(v.variation_name); return true;
-      }));
+      setExistingVars(variations.filter((v) => !assignedIds.has(v.custom_variation_id)));
     } else {
-      const [bridgeRes, allRes] = await Promise.all([
-        supabase.from('user_custom_exercise_variation_bridge')
-          .select('custom_exercise_id, user_custom_variation(custom_variation_id, variation_name)')
-          .in('custom_exercise_id', exIds),
-        supabase.from('user_custom_variation').select('custom_variation_id, variation_name').eq('is_active', true),
-      ]);
-      const countByVar = new Map<number, Variation>();
-      const exCount    = new Map<number, Set<number>>();
-      (bridgeRes.data ?? []).forEach((r: any) => {
-        const v = r.user_custom_variation; if (!v) return;
-        if (!exCount.has(v.custom_variation_id)) exCount.set(v.custom_variation_id, new Set());
-        exCount.get(v.custom_variation_id)!.add(r.custom_exercise_id);
-        countByVar.set(v.custom_variation_id, v);
+      const exCount = new Map<number, Set<number>>();
+      bridgeRows.forEach((r) => {
+        if (!exCount.has(r.custom_variation_id)) exCount.set(r.custom_variation_id, new Set());
+        exCount.get(r.custom_variation_id)!.add(r.custom_exercise_id);
       });
       const common = [...exCount.entries()]
         .filter(([, s]) => s.size === exIds.length)
-        .map(([id]) => countByVar.get(id)!);
+        .flatMap(([id]) => { const v = varById.get(id); return v ? [v] : []; });
       setCommonVars(common);
       setAssignedVars([]);
       const commonIds = new Set(common.map((v) => v.custom_variation_id));
-      const seenNames = new Set<string>();
-      setExistingVars((allRes.data ?? []).filter((v: any) => {
-        if (commonIds.has(v.custom_variation_id) || seenNames.has(v.variation_name)) return false;
-        seenNames.add(v.variation_name); return true;
-      }));
+      setExistingVars(variations.filter((v) => !commonIds.has(v.custom_variation_id)));
     }
     setLoadingEx(false);
     setSelectedExistingVarIds([]);
-  }, []);
+  }, [db, variations]);
 
   React.useEffect(() => { loadForExercises(selectedExIds); }, [selectedExIds]);
 
@@ -142,38 +137,23 @@ export default function VariationsScreen() {
 
     for (const exId of selectedExIds) {
       for (const varId of selectedExistingVarIds) {
-        const { data: exists } = await supabase.from('user_custom_exercise_variation_bridge')
-          .select('custom_exercise_id')
-          .eq('custom_exercise_id', exId)
-          .eq('custom_variation_id', varId)
-          .maybeSingle();
+        const exists = await checkBridgeExists(db, exId, varId);
         if (!exists) {
-          await supabase.from('user_custom_exercise_variation_bridge').insert({
-            custom_exercise_id: exId,
-            custom_variation_id: varId,
-            user_id: user.id,
-          });
+          await addBridgeRow(db, user.id, exId, varId);
         }
       }
     }
 
     setSelectedExistingVarIds([]);
     setAddingVar(false);
-    loadForExercises(selectedExIds);
-    refreshExerciseDetails();
-    refreshVariations();
+    await Promise.all([loadForExercises(selectedExIds), refreshExerciseDetails()]);
   }); }
 
   function saveEdit() { return guard(async () => {
     if (!editVar?.variation_name.trim()) return;
-    const { error } = await supabase.from('user_custom_variation')
-      .update({ variation_name: editVar.variation_name })
-      .eq('custom_variation_id', editVar.custom_variation_id);
-    if (error) return Alert.alert('Error', error.message);
+    await updateVariation(db, editVar.custom_variation_id, editVar.variation_name);
     setEditVar(null);
-    loadForExercises(selectedExIds);
-    refreshExerciseDetails();
-    refreshVariations();
+    await Promise.all([loadForExercises(selectedExIds), refreshExerciseDetails(), refreshVariations()]);
   }); }
 
   function confirmRemoveVar(varId: number, fromAllExIds: number[]) {
@@ -184,12 +164,9 @@ export default function VariationsScreen() {
         { text: 'Cancel', style: 'cancel' },
         { text: 'Remove', style: 'destructive', onPress: () => guard(async () => {
           for (const exId of fromAllExIds) {
-            await supabase.from('user_custom_exercise_variation_bridge').delete()
-              .eq('custom_exercise_id', exId).eq('custom_variation_id', varId);
+            await removeBridgeRow(db, exId, varId);
           }
-          loadForExercises(selectedExIds);
-          refreshExerciseDetails();
-          refreshVariations();
+          await Promise.all([loadForExercises(selectedExIds), refreshExerciseDetails()]);
         })},
       ]
     );

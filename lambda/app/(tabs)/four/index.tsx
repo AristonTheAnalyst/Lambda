@@ -2,25 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ScrollView } from 'react-native';
 import { Spinner, Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
 import PageHeader from '@/components/PageHeader';
+import SyncStatusIcon from '@/components/SyncStatusIcon';
 import { useAuthContext } from '@/lib/AuthContext';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
-import supabase from '@/lib/supabase';
+import { useNetwork } from '@/hooks/useNetwork';
+import { loadWorkoutsWithSets, seedWorkoutsFromSupabase, WorkoutWithSets } from '@/lib/offline/workoutStore';
 import T from '@/constants/Theme';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface SetPreview {
-  custom_exercise_id: number;
-  custom_variation_id: number | null;
-}
-
-interface WorkoutCard {
-  user_workout_id: number;
-  user_workout_created_date: string;
-  user_workout_notes: string | null;
-  sets: SetPreview[];
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -29,65 +18,64 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function getUniqueCombos(
+  sets: WorkoutWithSets['sets'],
+  exerciseDetailMap: ReturnType<typeof useExerciseData>['exerciseDetailMap']
+): string[] {
+  const seen = new Set<string>();
+  const combos: string[] = [];
+  for (const s of sets) {
+    const exName = exerciseDetailMap[s.custom_exercise_id]?.exercise_name ?? `Exercise ${s.custom_exercise_id}`;
+    const varName = s.custom_variation_id
+      ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations.find(
+          (v) => v.custom_variation_id === s.custom_variation_id
+        )?.variation_name
+      : null;
+    const key = `${s.custom_exercise_id}:${s.custom_variation_id ?? 'none'}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      combos.push(varName ? `${exName} · ${varName}` : exName);
+    }
+  }
+  return combos;
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function TrainingLogsScreen() {
+  const db = useSQLiteContext();
   const router = useRouter();
   const { user } = useAuthContext();
   const { exerciseDetailMap } = useExerciseData();
+  const { isConnected } = useNetwork();
 
-  const [workouts, setWorkouts] = useState<WorkoutCard[]>([]);
+  const [workouts, setWorkouts] = useState<WorkoutWithSets[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadWorkouts = useCallback(async () => {
+  const loadFromSQLite = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
-    const { data } = await supabase
-      .from('fact_user_workout')
-      .select('user_workout_id, user_workout_created_date, user_workout_notes, fact_workout_set(custom_exercise_id, custom_variation_id)')
-      .eq('user_id', user.id)
-      .order('user_workout_created_date', { ascending: false });
+    const data = await loadWorkoutsWithSets(db, user.id);
+    setWorkouts(data);
     setLoading(false);
-    if (data) {
-      setWorkouts(
-        data.map((w: any) => ({
-          user_workout_id: w.user_workout_id,
-          user_workout_created_date: w.user_workout_created_date,
-          user_workout_notes: w.user_workout_notes,
-          sets: w.fact_workout_set ?? [],
-        }))
-      );
-    }
-  }, [user]);
+  }, [db, user]);
 
-  useEffect(() => { loadWorkouts(); }, [loadWorkouts]);
+  useEffect(() => {
+    loadFromSQLite();
+  }, [loadFromSQLite]);
 
-  // ─── Unique combos for card preview ───────────────────────────────────────
-
-  function getUniqueCombos(sets: SetPreview[]): string[] {
-    const seen = new Set<string>();
-    const combos: string[] = [];
-    for (const s of sets) {
-      const exName = exerciseDetailMap[s.custom_exercise_id]?.exercise_name ?? `Exercise ${s.custom_exercise_id}`;
-      const varName = s.custom_variation_id
-        ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations.find(
-            (v) => v.custom_variation_id === s.custom_variation_id
-          )?.variation_name
-        : null;
-      const key = `${s.custom_exercise_id}:${s.custom_variation_id ?? 'none'}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        combos.push(varName ? `${exName} · ${varName}` : exName);
-      }
-    }
-    return combos;
-  }
+  // Background seed from Supabase on first install (non-blocking)
+  useEffect(() => {
+    if (!user || !isConnected) return;
+    seedWorkoutsFromSupabase(db, user.id)
+      .then(() => loadFromSQLite())
+      .catch(() => {}); // Silently fail — SQLite data is the source of truth
+  }, [user?.id, isConnected]);
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <YStack flex={1} backgroundColor={T.bg}>
-      <PageHeader title="Training Logs" />
+      <PageHeader title="Training Logs" right={<SyncStatusIcon />} />
       {loading ? (
         <YStack flex={1} alignItems="center" justifyContent="center">
           <Spinner size="large" color={T.accent} />
@@ -104,7 +92,7 @@ export default function TrainingLogsScreen() {
             </Text>
           ) : (
             workouts.map((w) => {
-              const combos = getUniqueCombos(w.sets);
+              const combos = getUniqueCombos(w.sets, exerciseDetailMap);
               const setCount = w.sets.length;
               return (
                 <YStack

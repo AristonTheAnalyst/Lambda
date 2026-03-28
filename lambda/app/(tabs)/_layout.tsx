@@ -20,6 +20,8 @@ import { Tabs, useRouter, usePathname } from 'expo-router';
 import T from '@/constants/Theme';
 import { ExerciseDataProvider } from '@/lib/ExerciseDataContext';
 import { DrawerContext } from '@/lib/DrawerContext';
+import { SyncProvider } from '@/lib/sync/syncContext';
+import OfflineBanner from '@/components/OfflineBanner';
 import { navGuard } from '@/hooks/useNavGuard';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -80,7 +82,9 @@ export default function TabLayout() {
 
   return (
     <ExerciseDataProvider>
+    <SyncProvider>
     <DrawerContext.Provider value={{ openDrawer }}>
+      <OfflineBanner />
       <Tabs
         screenOptions={{ tabBarStyle: { display: 'none' } }}>
         <Tabs.Screen name="index" options={{ headerShown: false }} />
@@ -145,6 +149,7 @@ export default function TabLayout() {
         </Animated.View>
       </Modal>
     </DrawerContext.Provider>
+    </SyncProvider>
     </ExerciseDataProvider>
   );
 }

@@ -39,7 +39,8 @@
       "expo-web-browser",
       "expo-apple-authentication",
       "expo-secure-store",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true

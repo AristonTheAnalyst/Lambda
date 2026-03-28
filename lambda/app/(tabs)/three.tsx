@@ -5,32 +5,23 @@ import {
   ScrollView,
 } from 'react-native';
 import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
+import { useSQLiteContext } from 'expo-sqlite';
 import PageHeader from '@/components/PageHeader';
+import SyncStatusIcon from '@/components/SyncStatusIcon';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DropdownSelect, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData, ExerciseDetail } from '@/lib/ExerciseDataContext';
 import { useAuthContext } from '@/lib/AuthContext';
-import supabase from '@/lib/supabase';
+import { useSyncContext } from '@/lib/sync/syncContext';
+import { getRemap } from '@/lib/db/idRemap';
+import { createWorkout, endWorkout, getActiveWorkoutId } from '@/lib/offline/workoutStore';
+import { insertSet, updateSet, deleteSet, loadSetsForWorkout, WorkoutSet } from '@/lib/offline/setStore';
 import GlassButton from '@/components/GlassButton';
 import { useAsyncGuard } from '@/lib/asyncGuard';
 import T from '@/constants/Theme';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface WorkoutSet {
-  workout_set_id: number;
-  workout_set_number: number;
-  custom_exercise_id: number;
-  custom_variation_id: number | null;
-  workout_set_weight: number | null;
-  workout_set_reps: number[] | null;
-  workout_set_duration_seconds: number[] | null;
-  workout_set_notes: string | null;
-}
-
-const WORKOUT_ID_KEY = 'currentWorkoutId';
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function parseValues(str: string): number[] {
   return str.split(',').map((v) => parseInt(v.trim(), 10)).filter((n) => !isNaN(n));
@@ -44,9 +35,11 @@ function formatValues(arr: number[] | null): string {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function WorkoutLogScreen() {
+  const db = useSQLiteContext();
   const guard = useAsyncGuard();
   const { user } = useAuthContext();
   const { exercises, exerciseDetailMap } = useExerciseData();
+  const { lastSyncAt } = useSyncContext();
 
   const [currentWorkoutId, setCurrentWorkoutId] = useState<number | null>(null);
   const [startNotes, setStartNotes]   = useState('');
@@ -56,7 +49,7 @@ export default function WorkoutLogScreen() {
 
   const weightByExercise = React.useRef<Record<number, string>>({});
 
-  const [selectedExId, setSelectedExId]     = useState<number | null>(null); // custom_exercise_id
+  const [selectedExId, setSelectedExId]     = useState<number | null>(null);
   const [selectedEx, setSelectedEx]         = useState<ExerciseDetail | null>(null);
   const [weight, setWeight]                 = useState('');
   const [repsOrDuration, setRepsOrDuration] = useState('');
@@ -75,23 +68,48 @@ export default function WorkoutLogScreen() {
   const [editVarId, setEditVarId]           = useState<number | null>(null);
   const [editLoading, setEditLoading]       = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      const stored = await AsyncStorage.getItem(WORKOUT_ID_KEY);
-      if (stored) { const id = parseInt(stored, 10); setCurrentWorkoutId(id); loadSets(id); }
-    })();
-  }, []);
+  // ── Load sets from SQLite ──────────────────────────────────────────────────
 
   const loadSets = useCallback(async (workoutId: number) => {
     setSetsLoading(true);
-    const { data } = await supabase
-      .from('fact_workout_set')
-      .select('*')
-      .eq('user_workout_id', workoutId)
-      .order('workout_set_number');
+    // If the ID is negative (offline), check if sync has remapped it to a server ID
+    let id = workoutId;
+    if (id < 0) {
+      const remap = await getRemap(db, id);
+      if (remap) {
+        id = remap.serverId;
+        setCurrentWorkoutId(id);
+      }
+    }
+    const data = await loadSetsForWorkout(db, id);
     setSetsLoading(false);
-    if (data) setSets(data);
-  }, []);
+    setSets(data);
+  }, [db]);
+
+  // ── Restore active workout on mount ───────────────────────────────────────
+
+  useEffect(() => {
+    (async () => {
+      const activeId = await getActiveWorkoutId(db);
+      if (activeId !== null) {
+        setCurrentWorkoutId(activeId);
+        loadSets(activeId);
+      }
+    })();
+  }, [db]);
+
+  // ── Re-check after sync (ID may have changed from local to server) ─────────
+
+  useEffect(() => {
+    if (!lastSyncAt || currentWorkoutId == null || currentWorkoutId >= 0) return;
+    (async () => {
+      const remap = await getRemap(db, currentWorkoutId);
+      if (remap) {
+        setCurrentWorkoutId(remap.serverId);
+        loadSets(remap.serverId);
+      }
+    })();
+  }, [lastSyncAt]);
 
   function onSelectExercise(exId: number | null) {
     if (selectedExId !== null) weightByExercise.current[selectedExId] = weight;
@@ -103,42 +121,45 @@ export default function WorkoutLogScreen() {
     setSelectedEx(exId ? (exerciseDetailMap[exId] ?? null) : null);
   }
 
+  // ── Start workout ──────────────────────────────────────────────────────────
+
   function startWorkout() { return guard(async () => {
     if (!user) return;
     setStartLoading(true);
-    const { data, error } = await supabase
-      .from('fact_user_workout')
-      .insert({ user_id: user.id, user_workout_notes: startNotes.trim() || null })
-      .select('user_workout_id')
-      .single();
+    const localId = await createWorkout(db, user.id, startNotes);
     setStartLoading(false);
-    if (error || !data) return Alert.alert('Error', error?.message ?? 'Failed to start workout');
-    const id = data.user_workout_id;
-    setCurrentWorkoutId(id);
+    setCurrentWorkoutId(localId);
     setStartNotes('');
-    await AsyncStorage.setItem(WORKOUT_ID_KEY, String(id));
     setSets([]);
   }); }
+
+  // ── End workout ────────────────────────────────────────────────────────────
 
   function confirmEndWorkout() {
     Alert.alert('End Workout', 'Are you sure you want to end this workout?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'End Workout', style: 'destructive', onPress: endWorkout },
+      { text: 'End Workout', style: 'destructive', onPress: doEndWorkout },
     ]);
   }
 
-  function endWorkout() { return guard(async () => {
+  function doEndWorkout() { return guard(async () => {
     if (!currentWorkoutId) return;
     setEndLoading(true);
-    if (endNotes.trim()) {
-      await supabase.from('fact_user_workout').update({ user_workout_notes: endNotes.trim() }).eq('user_workout_id', currentWorkoutId);
-    }
+    await endWorkout(db, currentWorkoutId, endNotes);
     setEndLoading(false);
-    await AsyncStorage.removeItem(WORKOUT_ID_KEY);
-    setCurrentWorkoutId(null); setEndNotes(''); setSets([]);
-    setSelectedExId(null); setSelectedEx(null); setWeight(''); setRepsOrDuration(''); setSetNotes(''); setSelectedVarId(null);
+    setCurrentWorkoutId(null);
+    setEndNotes('');
+    setSets([]);
+    setSelectedExId(null);
+    setSelectedEx(null);
+    setWeight('');
+    setRepsOrDuration('');
+    setSetNotes('');
+    setSelectedVarId(null);
     Alert.alert('Workout saved!');
   }); }
+
+  // ── Log set ────────────────────────────────────────────────────────────────
 
   function logSet() { return guard(async () => {
     if (!currentWorkoutId || !selectedExId || !selectedEx) return Alert.alert('Select an exercise first');
@@ -152,21 +173,23 @@ export default function WorkoutLogScreen() {
     const nextSetNum = sets.length > 0 ? Math.max(...sets.map((s) => s.workout_set_number)) + 1 : 1;
 
     setLogLoading(true);
-    const { error } = await supabase.from('fact_workout_set').insert({
+    await insertSet(db, {
       user_workout_id: currentWorkoutId,
       custom_exercise_id: selectedExId,
+      custom_variation_id: selectedVarId,
       workout_set_number: nextSetNum,
       workout_set_weight: weight ? parseFloat(weight) : null,
       workout_set_reps: isReps ? values : [],
       workout_set_duration_seconds: !isReps ? values : [],
       workout_set_notes: setNotes.trim() || null,
-      custom_variation_id: selectedVarId,
     });
     setLogLoading(false);
-    if (error) return Alert.alert('Error', error.message);
-    setRepsOrDuration(''); setSetNotes('');
+    setRepsOrDuration('');
+    setSetNotes('');
     loadSets(currentWorkoutId);
   }); }
+
+  // ── Edit set ───────────────────────────────────────────────────────────────
 
   function openEditSet(s: WorkoutSet) { return guard(async () => {
     Keyboard.dismiss();
@@ -184,23 +207,24 @@ export default function WorkoutLogScreen() {
     const values = parseValues(editRepsOrDuration);
     const isReps = editEx.exercise_volume_type === 'reps';
     setEditLoading(true);
-    const { error } = await supabase.from('fact_workout_set').update({
+    await updateSet(db, editingSet.workout_set_id, {
       workout_set_weight: editWeight ? parseFloat(editWeight) : null,
-      workout_set_reps: isReps ? values : [], workout_set_duration_seconds: !isReps ? values : [],
+      workout_set_reps: isReps ? values : [],
+      workout_set_duration_seconds: !isReps ? values : [],
       workout_set_notes: editNotes.trim() || null,
       custom_variation_id: editVarId,
-    }).eq('workout_set_id', editingSet.workout_set_id);
+    });
     setEditLoading(false);
-    if (error) return Alert.alert('Error', error.message);
-    setEditingSet(null); setEditEx(null);
+    setEditingSet(null);
+    setEditEx(null);
     if (currentWorkoutId) loadSets(currentWorkoutId);
   }); }
 
-  function deleteSet(setId: number) {
+  function handleDeleteSet(setId: number) {
     Alert.alert('Delete Set', 'Remove this set?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
-        await supabase.from('fact_workout_set').delete().eq('workout_set_id', setId);
+        await deleteSet(db, setId);
         if (currentWorkoutId) loadSets(currentWorkoutId);
       })},
     ]);
@@ -210,7 +234,7 @@ export default function WorkoutLogScreen() {
 
   return (
     <YStack flex={1} backgroundColor={T.bg}>
-      <PageHeader title="Workout Log" />
+      <PageHeader title="Workout Log" right={<SyncStatusIcon />} />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: T.space.lg, paddingBottom: T.space.xxl }}
@@ -299,7 +323,7 @@ export default function WorkoutLogScreen() {
                     </YStack>
                     <XStack gap={T.space.sm}>
                       <GlassButton icon="pencil" iconSize={14} onPress={() => openEditSet(s)} />
-                      <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => deleteSet(s.workout_set_id)} />
+                      <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => handleDeleteSet(s.workout_set_id)} />
                     </XStack>
                   </XStack>
                 );

@@ -17,7 +17,7 @@ This file is read at the start of every conversation. It documents the current s
 | UI / Styling | Tamagui v2 (`XStack`, `YStack`, `Text`, `Sheet`, `Spinner`, `styled()`) |
 | Animations | React Native Reanimated 4, `@tamagui/animations-reanimated` |
 | Auth | Supabase Auth (email/password, Google OAuth, Apple Sign-In) |
-| Database | Supabase (PostgreSQL with RLS) |
+| Database | Supabase (PostgreSQL with RLS) + expo-sqlite (local-first cache) |
 | State | React Context API (no Redux/Zustand) |
 | Validation | Zod v4 |
 | Icons | @expo/vector-icons (FontAwesome) |
@@ -43,6 +43,9 @@ lambda/                        ← main app code lives here
 │   ├── Theme.ts               ← THE source of truth for all colors/spacing/typography
 │   └── Colors.ts              ← light/dark color mapping (currently both = dark)
 ├── lib/                       ← core logic, contexts, supabase client
+│   ├── db/                    ← SQLite schema, migration runner, local ID seq, id_remap
+│   ├── sync/                  ← syncQueue, syncEngine, SyncProvider/useSyncContext
+│   └── offline/               ← local CRUD stores (workoutStore, setStore, exerciseStore, variationStore, bridgeStore)
 ├── hooks/                     ← small utility hooks
 └── types/
     └── database.ts            ← TypeScript interfaces for DB rows
@@ -84,10 +87,28 @@ Session storage: SecureStore on native (chunked at 1900 bytes), AsyncStorage in 
 ### Data Flow
 
 - **AuthContext** (`lib/AuthContext.tsx`) — session, user profile, sign in/out methods. Hook: `useAuthContext()`
-- **ExerciseDataContext** (`lib/ExerciseDataContext.tsx`) — caches exercises, variations, variation types globally; builds `exerciseDetailMap` (exercise ID → assigned variations). Hook: `useExerciseData()`
+- **ExerciseDataContext** (`lib/ExerciseDataContext.tsx`) — reads from SQLite instantly on mount; background-seeds from Supabase on first install. Builds `exerciseDetailMap` (exercise ID → assigned variations). Hook: `useExerciseData()`
+- **SyncContext** (`lib/sync/syncContext.tsx`) — processes sync queue on reconnect, app foreground, and mount. Hook: `useSyncContext()` → `{ isSyncing, pendingCount, lastSyncAt, triggerSync }`
 - **DrawerContext** (`lib/DrawerContext.tsx`) — single `openDrawer()` function for the hamburger button. Hook: `useDrawer()`
 - Local screen state for all form fields (no global form state)
-- Current in-progress workout ID persisted to AsyncStorage (`currentWorkoutId` key)
+- Active workout tracked via `is_active = 1` in SQLite `fact_user_workout` (replaces AsyncStorage)
+
+### Local-First Architecture
+
+All reads and writes go to SQLite immediately — zero latency, works offline. Supabase syncs in the background.
+
+**Write path:** screen calls a store function → SQLite updated → operation enqueued in `sync_queue` → `SyncProvider` processes queue when online.
+
+**Read path:** store/context reads from SQLite → instant, no network needed. On first install (SQLite empty), data is seeded from Supabase in the background.
+
+**Negative ID convention:** Records created offline get negative integer IDs (`-1`, `-2`, …) from `local_id_seq`. After the INSERT syncs, `id_remap` stores `local_id → server_id` and the local row's PK is updated. Child records with `depends_on_local_id` wait for the parent to sync first.
+
+**Store files** (`lib/offline/`):
+- `workoutStore.ts` — `createWorkout`, `endWorkout`, `getActiveWorkoutId`, `loadWorkoutsWithSets`, `seedWorkoutsFromSupabase`
+- `setStore.ts` — `insertSet`, `updateSet`, `deleteSet`, `loadSetsForWorkout`
+- `exerciseStore.ts` — `findExerciseByName`, `createExercise`, `reactivateExercise`, `updateExercise`, `softDeleteExercise`
+- `variationStore.ts` — `findVariationByName`, `createVariation`, `reactivateVariation`, `updateVariation`, `softDeleteVariation`
+- `bridgeStore.ts` — `getBridgeForExercises`, `getBridgeForVariations`, `checkBridgeExists`, `addBridgeRow`, `removeBridgeRow`
 
 ---
 
@@ -539,6 +560,7 @@ The user also does video/audio production for a YouTube channel. These notes app
 | Workout Log (`/three`) | Done — start/end workout, log sets with weight/reps/variation/notes, edit/delete sets, weight persists per exercise |
 | Training Logs (`/four`) | Done — scrollable list of past workout cards with date, notes, unique exercise+variation combos |
 | Workout Detail (`/four/[id]`) | Done — full set list, edit/delete sets, same display as Workout Log |
+| Local-first / Offline sync | Done — all screens use SQLite; sync queue auto-replays to Supabase on reconnect; OfflineBanner + SyncStatusIcon |
 
 ---
 
@@ -546,7 +568,7 @@ The user also does video/audio production for a YouTube channel. These notes app
 
 | Feature | Notes |
 |---|---|
-| Offline sync | No local cache — all reads/writes go directly to Supabase. AsyncStorage only stores the current workout ID. expo-sqlite was considered but not implemented |
+| Offline sync | Done — full local-first architecture with expo-sqlite, sync queue, background Supabase sync, OfflineBanner, SyncStatusIcon |
 | Analytics / Training Logs analytics | No charts, volume tracking, or progress views yet |
 | Stripe subscriptions | Architecture TBD — will gate analytics/coaching features |
 | Push notifications | Not started |

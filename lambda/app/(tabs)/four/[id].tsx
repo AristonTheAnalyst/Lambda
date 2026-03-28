@@ -4,34 +4,16 @@ import { Spinner, Text, XStack, YStack } from 'tamagui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Separator } from 'tamagui';
+import { useSQLiteContext } from 'expo-sqlite';
 import { SlideUpModal, DropdownSelect } from '@/components/FormControls';
 import Input from '@/components/Input';
 import Button from '@/components/Button';
 import GlassButton from '@/components/GlassButton';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
-import { useAuthContext } from '@/lib/AuthContext';
-import supabase from '@/lib/supabase';
 import { useAsyncGuard } from '@/lib/asyncGuard';
+import { loadWorkout, WorkoutRow } from '@/lib/offline/workoutStore';
+import { loadSetsForWorkout, updateSet, deleteSet, WorkoutSet } from '@/lib/offline/setStore';
 import T from '@/constants/Theme';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface WorkoutSet {
-  workout_set_id: number;
-  workout_set_number: number;
-  custom_exercise_id: number;
-  custom_variation_id: number | null;
-  workout_set_weight: number | null;
-  workout_set_reps: number[] | null;
-  workout_set_duration_seconds: number[] | null;
-  workout_set_notes: string | null;
-}
-
-interface Workout {
-  user_workout_id: number;
-  user_workout_created_date: string;
-  user_workout_notes: string | null;
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -54,13 +36,13 @@ function formatDate(iso: string): string {
 export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const workoutId = parseInt(id, 10);
+  const db = useSQLiteContext();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const guard = useAsyncGuard();
-  const { user } = useAuthContext();
   const { exerciseDetailMap } = useExerciseData();
 
-  const [workout, setWorkout] = useState<Workout | null>(null);
+  const [workout, setWorkout] = useState<WorkoutRow | null>(null);
   const [sets, setSets] = useState<WorkoutSet[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -73,22 +55,14 @@ export default function WorkoutDetailScreen() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [workoutRes, setsRes] = await Promise.all([
-      supabase
-        .from('fact_user_workout')
-        .select('user_workout_id, user_workout_created_date, user_workout_notes')
-        .eq('user_workout_id', workoutId)
-        .single(),
-      supabase
-        .from('fact_workout_set')
-        .select('*')
-        .eq('user_workout_id', workoutId)
-        .order('workout_set_number'),
+    const [workoutData, setsData] = await Promise.all([
+      loadWorkout(db, workoutId),
+      loadSetsForWorkout(db, workoutId),
     ]);
     setLoading(false);
-    if (workoutRes.data) setWorkout(workoutRes.data);
-    if (setsRes.data) setSets(setsRes.data);
-  }, [workoutId]);
+    if (workoutData) setWorkout(workoutData);
+    setSets(setsData);
+  }, [db, workoutId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -107,24 +81,23 @@ export default function WorkoutDetailScreen() {
     const values = parseValues(editRepsOrDuration);
     const isReps = editEx?.exercise_volume_type === 'reps';
     setEditLoading(true);
-    const { error } = await supabase.from('fact_workout_set').update({
+    await updateSet(db, editingSet.workout_set_id, {
       workout_set_weight: editWeight ? parseFloat(editWeight) : null,
       workout_set_reps: isReps ? values : [],
       workout_set_duration_seconds: !isReps ? values : [],
       workout_set_notes: editNotes.trim() || null,
       custom_variation_id: editVarId,
-    }).eq('workout_set_id', editingSet.workout_set_id);
+    });
     setEditLoading(false);
-    if (error) return Alert.alert('Error', error.message);
     setEditingSet(null);
     loadData();
   }); }
 
-  function deleteSet(setId: number) {
+  function handleDeleteSet(setId: number) {
     Alert.alert('Delete Set', 'Remove this set?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
-        await supabase.from('fact_workout_set').delete().eq('workout_set_id', setId);
+        await deleteSet(db, setId);
         loadData();
       })},
     ]);
@@ -221,28 +194,8 @@ export default function WorkoutDetailScreen() {
                     </Text>
                   </YStack>
                   <XStack gap={T.space.sm}>
-                    <XStack
-                      paddingHorizontal={T.space.sm}
-                      paddingVertical={T.space.xs + 1}
-                      borderRadius={T.radius.sm}
-                      backgroundColor={T.accentBg}
-                      pressStyle={{ opacity: 0.7 }}
-                      onPress={() => openEditSet(s)}
-                      cursor="pointer"
-                    >
-                      <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.accent}>Edit</Text>
-                    </XStack>
-                    <XStack
-                      paddingHorizontal={T.space.sm}
-                      paddingVertical={T.space.xs + 1}
-                      borderRadius={T.radius.sm}
-                      backgroundColor={T.dangerBg}
-                      pressStyle={{ opacity: 0.7 }}
-                      onPress={() => deleteSet(s.workout_set_id)}
-                      cursor="pointer"
-                    >
-                      <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.danger}>Del</Text>
-                    </XStack>
+                    <GlassButton icon="pencil" iconSize={14} onPress={() => openEditSet(s)} />
+                    <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => handleDeleteSet(s.workout_set_id)} />
                   </XStack>
                 </XStack>
               );

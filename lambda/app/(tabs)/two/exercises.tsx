@@ -10,7 +10,14 @@ import { useAuthContext } from '@/lib/AuthContext';
 import GlassButton from '@/components/GlassButton';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
-import supabase from '@/lib/supabase';
+import { useSQLiteContext } from 'expo-sqlite';
+import {
+  findExerciseByName,
+  createExercise,
+  reactivateExercise,
+  updateExercise,
+  softDeleteExercise,
+} from '@/lib/offline/exerciseStore';
 import { useAsyncGuard, useUIGuard } from '@/lib/asyncGuard';
 import T from '@/constants/Theme';
 
@@ -28,6 +35,7 @@ export default function ExercisesScreen() {
   const openEdit = useUIGuard();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const db = useSQLiteContext();
   const { exercises, refreshExercises } = useExerciseData();
   const { user } = useAuthContext();
   const [name, setName]         = useState('');
@@ -42,34 +50,22 @@ export default function ExercisesScreen() {
     if (!user) return;
     setCreating(true);
 
-    const { data: existing } = await supabase
-      .from('user_custom_exercise')
-      .select('custom_exercise_id, is_active')
-      .eq('user_id', user.id)
-      .ilike('exercise_name', name.trim())
-      .maybeSingle();
+    const existing = await findExerciseByName(db, name.trim());
 
     if (existing) {
       if (existing.is_active) {
         setCreating(false);
         return Alert.alert('Already exists', 'An exercise with this name already exists.');
       }
-      await supabase.from('user_custom_exercise')
-        .update({ is_active: true, exercise_volume_type: volume })
-        .eq('custom_exercise_id', existing.custom_exercise_id);
+      await reactivateExercise(db, existing.custom_exercise_id, volume);
       setCreating(false);
       setName('');
       setCreateVisible(false);
       return refreshExercises();
     }
 
-    const { error } = await supabase.from('user_custom_exercise').insert({
-      user_id: user.id,
-      exercise_name: name.trim(),
-      exercise_volume_type: volume,
-    });
+    await createExercise(db, user.id, name.trim(), volume);
     setCreating(false);
-    if (error) return Alert.alert('Error', error.message);
     setName('');
     setCreateVisible(false);
     refreshExercises();
@@ -77,14 +73,7 @@ export default function ExercisesScreen() {
 
   function saveEdit() { return guard(async () => {
     if (!editEx?.exercise_name.trim()) return;
-    const { error } = await supabase
-      .from('user_custom_exercise')
-      .update({
-        exercise_name: editEx.exercise_name,
-        exercise_volume_type: editEx.exercise_volume_type,
-      })
-      .eq('custom_exercise_id', editEx.custom_exercise_id);
-    if (error) return Alert.alert('Error', error.message);
+    await updateExercise(db, editEx.custom_exercise_id, editEx.exercise_name, editEx.exercise_volume_type);
     setEditEx(null);
     refreshExercises();
   }); }
@@ -93,7 +82,7 @@ export default function ExercisesScreen() {
     Alert.alert('Delete Exercise', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
-        await supabase.from('user_custom_exercise').update({ is_active: false }).eq('custom_exercise_id', id);
+        await softDeleteExercise(db, id);
         refreshExercises();
       })},
     ]);

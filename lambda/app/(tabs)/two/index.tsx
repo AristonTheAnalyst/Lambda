@@ -3,6 +3,7 @@ import { navGuard } from '@/hooks/useNavGuard';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Text, XStack, YStack } from 'tamagui';
 import PageHeader from '@/components/PageHeader';
+import SyncStatusIcon from '@/components/SyncStatusIcon';
 import Card from '@/components/Card';
 import T from '@/constants/Theme';
 
@@ -38,7 +39,7 @@ export default function AdminExercisesHub() {
 
   return (
     <YStack flex={1} backgroundColor={T.bg}>
-      <PageHeader title="Exercise Configuration" />
+      <PageHeader title="Exercise Configuration" right={<SyncStatusIcon />} />
       <YStack flex={1} padding={T.space.xl} gap={T.space.md}>
         {SECTIONS.map((s) => (
           <Card key={s.route} flex={0} onPressIn={() => navGuard(() => router.push(s.route as any))}>

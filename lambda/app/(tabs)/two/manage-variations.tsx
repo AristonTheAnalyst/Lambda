@@ -10,7 +10,14 @@ import { useAuthContext } from '@/lib/AuthContext';
 import GlassButton from '@/components/GlassButton';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
-import supabase from '@/lib/supabase';
+import { useSQLiteContext } from 'expo-sqlite';
+import {
+  findVariationByName,
+  createVariation,
+  reactivateVariation,
+  updateVariation,
+  softDeleteVariation,
+} from '@/lib/offline/variationStore';
 import { useAsyncGuard, useUIGuard } from '@/lib/asyncGuard';
 import T from '@/constants/Theme';
 
@@ -25,6 +32,7 @@ export default function ManageVariationsScreen() {
   const openEdit = useUIGuard();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const db = useSQLiteContext();
   const { variations, refreshVariations } = useExerciseData();
   const { user } = useAuthContext();
   const [name, setName]         = useState('');
@@ -38,33 +46,22 @@ export default function ManageVariationsScreen() {
     if (!user) return;
     setCreating(true);
 
-    const { data: existing } = await supabase
-      .from('user_custom_variation')
-      .select('custom_variation_id, is_active')
-      .eq('user_id', user.id)
-      .ilike('variation_name', name.trim())
-      .maybeSingle();
+    const existing = await findVariationByName(db, name.trim());
 
     if (existing) {
       if (existing.is_active) {
         setCreating(false);
         return Alert.alert('Already exists', 'A variation with this name already exists.');
       }
-      await supabase.from('user_custom_variation')
-        .update({ is_active: true })
-        .eq('custom_variation_id', existing.custom_variation_id);
+      await reactivateVariation(db, existing.custom_variation_id);
       setCreating(false);
       setName('');
       setCreateVisible(false);
       return refreshVariations();
     }
 
-    const { error } = await supabase.from('user_custom_variation').insert({
-      user_id: user.id,
-      variation_name: name.trim(),
-    });
+    await createVariation(db, user.id, name.trim());
     setCreating(false);
-    if (error) return Alert.alert('Error', error.message);
     setName('');
     setCreateVisible(false);
     refreshVariations();
@@ -72,11 +69,7 @@ export default function ManageVariationsScreen() {
 
   function saveEdit() { return guard(async () => {
     if (!editVar?.variation_name.trim()) return;
-    const { error } = await supabase
-      .from('user_custom_variation')
-      .update({ variation_name: editVar.variation_name })
-      .eq('custom_variation_id', editVar.custom_variation_id);
-    if (error) return Alert.alert('Error', error.message);
+    await updateVariation(db, editVar.custom_variation_id, editVar.variation_name);
     setEditVar(null);
     refreshVariations();
   }); }
@@ -85,7 +78,7 @@ export default function ManageVariationsScreen() {
     Alert.alert('Delete Variation', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
-        await supabase.from('user_custom_variation').update({ is_active: false }).eq('custom_variation_id', id);
+        await softDeleteVariation(db, id);
         refreshVariations();
       })},
     ]);
