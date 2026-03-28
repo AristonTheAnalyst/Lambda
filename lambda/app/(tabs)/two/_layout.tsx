@@ -2,7 +2,7 @@ import { Stack } from 'expo-router';
 
 export default function AdminExercisesLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false, gestureEnabled: true, animation: 'fade', animationDuration: 80 }}>
+    <Stack screenOptions={{ headerShown: false, gestureEnabled: true, animation: 'none' }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="exercises" />
       <Stack.Screen name="manage-variations" />
