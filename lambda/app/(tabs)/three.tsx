@@ -10,6 +10,7 @@ import PageHeader from '@/components/PageHeader';
 import SyncStatusIcon from '@/components/SyncStatusIcon';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
+import NotesField from '@/components/NotesField';
 import { DropdownSelect, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData, ExerciseDetail } from '@/lib/ExerciseDataContext';
 import { useAuthContext } from '@/lib/AuthContext';
@@ -163,12 +164,10 @@ export default function WorkoutLogScreen() {
 
   function logSet() { return guard(async () => {
     if (!currentWorkoutId || !selectedExId || !selectedEx) return Alert.alert('Select an exercise first');
-    if (!repsOrDuration.trim()) {
-      return Alert.alert(
-        selectedEx.exercise_volume_type === 'reps' ? 'Enter reps (e.g. 10,8,6)' : 'Enter duration in seconds (e.g. 60,45)'
-      );
-    }
+    const hint = selectedEx.exercise_volume_type === 'reps' ? 'Enter reps (e.g. 10,8,6)' : 'Enter duration in seconds (e.g. 60,45)';
+    if (!repsOrDuration.trim()) return Alert.alert(hint);
     const values = parseValues(repsOrDuration);
+    if (values.length === 0) return Alert.alert(hint);
     const isReps = selectedEx.exercise_volume_type === 'reps';
     const nextSetNum = sets.length > 0 ? Math.max(...sets.map((s) => s.workout_set_number)) + 1 : 1;
 
@@ -205,6 +204,7 @@ export default function WorkoutLogScreen() {
   function saveEditSet() { return guard(async () => {
     if (!editingSet || !editEx) return;
     const values = parseValues(editRepsOrDuration);
+    if (values.length === 0) return Alert.alert(editEx.exercise_volume_type === 'reps' ? 'Enter reps (e.g. 10,8,6)' : 'Enter duration in seconds (e.g. 60,45)');
     const isReps = editEx.exercise_volume_type === 'reps';
     setEditLoading(true);
     await updateSet(db, editingSet.workout_set_id, {
@@ -247,7 +247,7 @@ export default function WorkoutLogScreen() {
         {!currentWorkoutId && (
           <YStack gap={T.space.md}>
             <Text fontSize={T.fontSize.xl} fontWeight="700" color={T.primary}>Start a Workout</Text>
-            <Input label="Pre-workout notes (optional)" placeholder="Notes…" value={startNotes} onChangeText={setStartNotes} />
+            <NotesField label="Pre-workout notes (optional)" value={startNotes} onChange={setStartNotes} />
             <Button label="Start Workout" onPress={startWorkout} loading={startLoading} />
           </YStack>
         )}
@@ -332,7 +332,7 @@ export default function WorkoutLogScreen() {
 
             {/* ── End workout ── */}
             <YStack marginTop={T.space.xxl} paddingTop={T.space.lg} gap={T.space.md}>
-              <Input label="Post-workout notes (optional)" placeholder="Notes…" value={endNotes} onChangeText={setEndNotes} />
+              <NotesField label="Post-workout notes (optional)" value={endNotes} onChange={setEndNotes} />
               <Button label="End Workout" onPress={confirmEndWorkout} loading={endLoading} variant="danger" />
             </YStack>
           </>
