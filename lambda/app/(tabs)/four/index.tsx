@@ -116,9 +116,9 @@ export default function TrainingLogsScreen() {
                   </XStack>
 
                   {/* Workout notes */}
-                  {w.user_workout_notes ? (
+                  {w.user_post_workout_notes ? (
                     <Text fontSize={T.fontSize.sm} color={T.muted} marginBottom={T.space.sm} fontStyle="italic">
-                      "{w.user_workout_notes}"
+                      "{w.user_post_workout_notes}"
                     </Text>
                   ) : null}
 

@@ -6,7 +6,8 @@ import { enqueueOperation } from '@/lib/sync/syncQueue';
 export interface WorkoutRow {
   user_workout_id: number;
   user_id: string;
-  user_workout_notes: string | null;
+  user_pre_workout_notes: string | null;
+  user_post_workout_notes: string | null;
   user_workout_created_date: string;
   synced: number;
   is_active: number;
@@ -15,7 +16,8 @@ export interface WorkoutRow {
 export interface WorkoutWithSets {
   user_workout_id: number;
   user_workout_created_date: string;
-  user_workout_notes: string | null;
+  user_pre_workout_notes: string | null;
+  user_post_workout_notes: string | null;
   sets: { custom_exercise_id: number; custom_variation_id: number | null }[];
 }
 
@@ -41,7 +43,7 @@ export async function createWorkout(
 
   await db.runAsync(
     `INSERT INTO fact_user_workout
-       (user_workout_id, user_id, user_workout_notes, user_workout_created_date, is_active, synced)
+       (user_workout_id, user_id, user_pre_workout_notes, user_workout_created_date, is_active, synced)
      VALUES (?, ?, ?, ?, 1, 0)`,
     [localId, userId, trimmedNotes, now]
   );
@@ -52,7 +54,7 @@ export async function createWorkout(
     payload: {
       user_workout_id: localId,
       user_id: userId,
-      user_workout_notes: trimmedNotes,
+      user_pre_workout_notes: trimmedNotes,
       user_workout_created_date: now,
     },
     local_id: localId,
@@ -71,29 +73,28 @@ export async function endWorkout(
   const trimmedNotes = notes?.trim() || null;
 
   await db.runAsync(
-    `UPDATE fact_user_workout SET is_active = 0, user_workout_notes = ? WHERE user_workout_id = ?`,
+    `UPDATE fact_user_workout SET is_active = 0, user_post_workout_notes = ? WHERE user_workout_id = ?`,
     [trimmedNotes, workoutId]
   );
 
-  if (trimmedNotes) {
-    const row = await db.getFirstAsync<{ user_id: string; user_workout_created_date: string }>(
-      `SELECT user_id, user_workout_created_date FROM fact_user_workout WHERE user_workout_id = ?`,
-      [workoutId]
-    );
-    if (row) {
-      await enqueueOperation(db, {
-        table_name: 'fact_user_workout',
-        operation: 'UPDATE',
-        payload: {
-          user_workout_id: workoutId,
-          user_id: row.user_id,
-          user_workout_created_date: row.user_workout_created_date,
-          user_workout_notes: trimmedNotes,
-        },
-        // If workout was created offline, wait for its INSERT to sync first
-        depends_on_local_id: workoutId < 0 ? workoutId : null,
-      });
-    }
+  const row = await db.getFirstAsync<{ user_id: string; user_workout_created_date: string; user_pre_workout_notes: string | null }>(
+    `SELECT user_id, user_workout_created_date, user_pre_workout_notes FROM fact_user_workout WHERE user_workout_id = ?`,
+    [workoutId]
+  );
+  if (row) {
+    await enqueueOperation(db, {
+      table_name: 'fact_user_workout',
+      operation: 'UPDATE',
+      payload: {
+        user_workout_id: workoutId,
+        user_id: row.user_id,
+        user_workout_created_date: row.user_workout_created_date,
+        user_pre_workout_notes: row.user_pre_workout_notes,
+        user_post_workout_notes: trimmedNotes,
+      },
+      // If workout was created offline, wait for its INSERT to sync first
+      depends_on_local_id: workoutId < 0 ? workoutId : null,
+    });
   }
 }
 
@@ -141,7 +142,8 @@ export async function loadWorkoutsWithSets(
   return workouts.map((w) => ({
     user_workout_id: w.user_workout_id,
     user_workout_created_date: w.user_workout_created_date,
-    user_workout_notes: w.user_workout_notes,
+    user_pre_workout_notes: w.user_pre_workout_notes,
+    user_post_workout_notes: w.user_post_workout_notes,
     sets: setsByWorkout[w.user_workout_id] ?? [],
   }));
 }
@@ -165,7 +167,7 @@ export async function seedWorkoutsFromSupabase(
 
   const { data: workouts } = await supabase
     .from('fact_user_workout')
-    .select('user_workout_id, user_id, user_workout_notes, user_workout_created_date')
+    .select('user_workout_id, user_id, user_pre_workout_notes, user_post_workout_notes, user_workout_created_date')
     .eq('user_id', userId)
     .order('user_workout_created_date', { ascending: false })
     .limit(100);
@@ -181,9 +183,9 @@ export async function seedWorkoutsFromSupabase(
   for (const w of workouts) {
     await db.runAsync(
       `INSERT OR REPLACE INTO fact_user_workout
-         (user_workout_id, user_id, user_workout_notes, user_workout_created_date, is_active, synced, deleted_locally)
-       VALUES (?, ?, ?, ?, 0, 1, 0)`,
-      [w.user_workout_id, w.user_id, w.user_workout_notes, w.user_workout_created_date]
+         (user_workout_id, user_id, user_pre_workout_notes, user_post_workout_notes, user_workout_created_date, is_active, synced, deleted_locally)
+       VALUES (?, ?, ?, ?, ?, 0, 1, 0)`,
+      [w.user_workout_id, w.user_id, w.user_pre_workout_notes ?? null, w.user_post_workout_notes ?? null, w.user_workout_created_date]
     );
   }
 

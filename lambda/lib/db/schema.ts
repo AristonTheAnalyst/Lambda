@@ -5,13 +5,14 @@ export const SCHEMA_VERSION = 1;
 
 export const CREATE_TABLES = `
 CREATE TABLE IF NOT EXISTS fact_user_workout (
-  user_workout_id           INTEGER PRIMARY KEY,
-  user_id                   TEXT NOT NULL,
-  user_workout_notes        TEXT,
-  user_workout_created_date TEXT NOT NULL,
-  is_active                 INTEGER NOT NULL DEFAULT 0,
-  synced                    INTEGER NOT NULL DEFAULT 0,
-  deleted_locally           INTEGER NOT NULL DEFAULT 0
+  user_workout_id            INTEGER PRIMARY KEY,
+  user_id                    TEXT NOT NULL,
+  user_pre_workout_notes     TEXT,
+  user_post_workout_notes    TEXT,
+  user_workout_created_date  TEXT NOT NULL,
+  is_active                  INTEGER NOT NULL DEFAULT 0,
+  synced                     INTEGER NOT NULL DEFAULT 0,
+  deleted_locally            INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS fact_workout_set (

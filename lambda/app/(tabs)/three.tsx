@@ -247,7 +247,7 @@ export default function WorkoutLogScreen() {
         {!currentWorkoutId && (
           <YStack gap={T.space.md}>
             <Text fontSize={T.fontSize.xl} fontWeight="700" color={T.primary}>Start a Workout</Text>
-            <Input placeholder="Workout notes (optional)" value={startNotes} onChangeText={setStartNotes} />
+            <Input label="Pre-workout notes (optional)" placeholder="Notes…" value={startNotes} onChangeText={setStartNotes} />
             <Button label="Start Workout" onPress={startWorkout} loading={startLoading} />
           </YStack>
         )}
@@ -332,7 +332,7 @@ export default function WorkoutLogScreen() {
 
             {/* ── End workout ── */}
             <YStack marginTop={T.space.xxl} paddingTop={T.space.lg} gap={T.space.md}>
-              <Input label="Final notes (optional)" placeholder="Notes…" value={endNotes} onChangeText={setEndNotes} multiline minHeight={140} />
+              <Input label="Post-workout notes (optional)" placeholder="Notes…" value={endNotes} onChangeText={setEndNotes} />
               <Button label="End Workout" onPress={confirmEndWorkout} loading={endLoading} variant="danger" />
             </YStack>
           </>

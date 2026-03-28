@@ -141,9 +141,9 @@ export default function WorkoutDetailScreen() {
           )}
 
           {/* Notes */}
-          {workout?.user_workout_notes ? (
+          {workout?.user_post_workout_notes ? (
             <Text fontSize={T.fontSize.sm} color={T.muted} fontStyle="italic" marginBottom={T.space.lg}>
-              "{workout.user_workout_notes}"
+              "{workout.user_post_workout_notes}"
             </Text>
           ) : (
             <YStack height={T.space.lg} />
