@@ -87,6 +87,7 @@ interface SlideUpModalProps {
 }
 
 export function SlideUpModal({ visible, onClose, children }: SlideUpModalProps) {
+  React.useEffect(() => { if (visible) Keyboard.dismiss(); }, [visible]);
   return (
     <Sheet
       modal
@@ -282,6 +283,7 @@ export function DropdownSelect<T = any>(
                   backgroundColor={active ? T.accentBg : 'transparent'}
                   pressStyle={{ opacity: 0.7 }}
                   onPress={() => {
+                    Keyboard.dismiss();
                     if (multiSelect) { toggleMulti(item.value); }
                     else { (props as DropdownSelectProps<T>).onChange(item.value); setOpen(false); }
                   }}
