@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Text, XStack, YStack } from 'tamagui';
@@ -8,14 +9,10 @@ import T from '@/constants/Theme';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
 // Pre-warm sub-screen modules so first navigation is instant
 import '@/components/GlassButton';
-import '@/components/Button';
-import '@/components/Input';
-import '@/components/FormControls';
 import '@/lib/offline/exerciseStore';
 import '@/lib/offline/variationStore';
 import '@/lib/offline/bridgeStore';
 import '@/lib/asyncGuard';
-import 'expo-haptics';
 
 const SECTIONS = [
   {
@@ -59,35 +56,37 @@ export default function AdminExercisesHub() {
       <PageHeader title="Exercise Configuration" right={<SyncStatusIcon />} />
       <YStack flex={1} padding={T.space.xl} gap={T.space.md}>
         {SECTIONS.map((s) => (
-          <YStack
+          <TouchableOpacity
             key={s.route}
-            backgroundColor={T.surface}
-            borderWidth={1}
-            borderColor={T.border}
-            borderRadius={T.radius.md}
-            padding={T.space.md}
-            pressStyle={{ opacity: 0.7 }}
+            activeOpacity={0.7}
             onPress={() => router.push(s.route as any)}
-            cursor="pointer"
           >
-            <XStack alignItems="center" gap={T.space.lg}>
-              <XStack
-                width={44}
-                height={44}
-                borderRadius={T.radius.md}
-                backgroundColor={T.accentBg}
-                alignItems="center"
-                justifyContent="center"
-              >
-                <FontAwesome name={s.icon} size={22} color={T.accent} />
+            <YStack
+              backgroundColor={T.surface}
+              borderWidth={1}
+              borderColor={T.border}
+              borderRadius={T.radius.md}
+              padding={T.space.md}
+            >
+              <XStack alignItems="center" gap={T.space.lg}>
+                <XStack
+                  width={44}
+                  height={44}
+                  borderRadius={T.radius.md}
+                  backgroundColor={T.accentBg}
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <FontAwesome name={s.icon} size={22} color={T.accent} />
+                </XStack>
+                <YStack flex={1}>
+                  <Text fontSize={T.fontSize.lg} fontWeight="600" color={T.primary} marginBottom={T.space.xs}>{s.label}</Text>
+                  <Text fontSize={T.fontSize.sm} color={T.muted}>{s.description}</Text>
+                </YStack>
+                <FontAwesome name="chevron-right" size={14} color={T.muted} />
               </XStack>
-              <YStack flex={1}>
-                <Text fontSize={T.fontSize.lg} fontWeight="600" color={T.primary} marginBottom={T.space.xs}>{s.label}</Text>
-                <Text fontSize={T.fontSize.sm} color={T.muted}>{s.description}</Text>
-              </YStack>
-              <FontAwesome name="chevron-right" size={14} color={T.muted} />
-            </XStack>
-          </YStack>
+            </YStack>
+          </TouchableOpacity>
         ))}
       </YStack>
     </YStack>
