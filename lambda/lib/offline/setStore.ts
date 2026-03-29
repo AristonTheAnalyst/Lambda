@@ -25,6 +25,7 @@ export interface InsertSetData {
 }
 
 export interface UpdateSetData {
+  custom_exercise_id?: number;
   workout_set_weight: number | null;
   workout_set_reps: number[];
   workout_set_duration_seconds: number[];
@@ -97,6 +98,7 @@ export async function updateSet(
 ): Promise<void> {
   await db.runAsync(
     `UPDATE fact_workout_set SET
+       custom_exercise_id = COALESCE(?, custom_exercise_id),
        workout_set_weight = ?,
        workout_set_reps = ?,
        workout_set_duration_seconds = ?,
@@ -105,6 +107,7 @@ export async function updateSet(
        synced = 0
      WHERE workout_set_id = ?`,
     [
+      data.custom_exercise_id ?? null,
       data.workout_set_weight,
       JSON.stringify(data.workout_set_reps),
       JSON.stringify(data.workout_set_duration_seconds),
@@ -133,7 +136,7 @@ export async function updateSet(
     payload: {
       workout_set_id: setId,
       user_workout_id: row.user_workout_id,
-      custom_exercise_id: row.custom_exercise_id,
+      custom_exercise_id: data.custom_exercise_id ?? row.custom_exercise_id,
       workout_set_number: row.workout_set_number,
       workout_set_weight: data.workout_set_weight,
       workout_set_reps: data.workout_set_reps,

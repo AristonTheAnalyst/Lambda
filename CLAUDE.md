@@ -127,9 +127,9 @@ const Theme = {
   surface: '#2e2e2e',      // Cards, inputs, modals, list rows
   surfaceHigh: '#363636',  // Selected/highlighted rows, hover states
   border: '#383838',       // Dividers, input borders, separators
-  primary: '#ad9073',      // Body text, labels, icons — warm tan
-  muted: '#7a6555',        // Placeholder text, secondary labels, hints
-  accent: '#bb7423',       // Buttons, active states, CTAs — warm orange-brown
+  primary: '#ddbb98',      // Body text, labels, icons — warm tan
+  muted: '#9e8470',        // Placeholder text, secondary labels, hints
+  accent: '#cb7513',       // Buttons, active states, CTAs — warm orange-brown
   accentBg: '#3a2810',     // Accent-tinted row/card backgrounds
   accentText: '#fff',      // Text on top of accent-colored buttons
   danger: '#c0392b',       // Error messages, destructive action buttons
