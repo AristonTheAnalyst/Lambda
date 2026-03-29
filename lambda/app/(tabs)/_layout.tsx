@@ -1,198 +1,86 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  Dimensions,
-} from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  runOnJS,
-  Easing,
-} from 'react-native-reanimated';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs, useRouter, usePathname } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import T from '@/constants/Theme';
 import { ExerciseDataProvider } from '@/lib/ExerciseDataContext';
-import { DrawerContext } from '@/lib/DrawerContext';
 import { SyncProvider } from '@/lib/sync/syncContext';
 import OfflineBanner from '@/components/OfflineBanner';
 import { navGuard } from '@/hooks/useNavGuard';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DRAWER_WIDTH = SCREEN_WIDTH * 0.72;
-
 const NAV_ITEMS = [
-  { label: 'User Profile', route: '/', icon: 'user' as const },
-  { label: 'Exercise Configuration', route: '/two', icon: 'pencil' as const },
-  { label: 'Training Session', route: '/three', icon: 'play-circle' as const },
-  { label: 'Training Logs', route: '/four', icon: 'list' as const },
-  { label: 'UI Kit', route: '/ui-kit', icon: 'paint-brush' as const },
+  { route: '/',        icon: 'person'        as const, label: 'Profile'   },
+  { route: '/two',     icon: 'barbell'       as const, label: 'Exercises' },
+  { route: '/three',   icon: 'play-circle'   as const, label: 'Session'   },
+  { route: '/four',    icon: 'list'          as const, label: 'Logs'      },
+  { route: '/ui-kit',  icon: 'color-palette' as const, label: 'UI Kit'    },
 ];
 
-export default function TabLayout() {
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const router = useRouter();
+function BottomNav() {
+  const router   = useRouter();
   const pathname = usePathname();
+  const insets   = useSafeAreaInsets();
 
-  const overlayOpacity   = useSharedValue(0);
-  const drawerTranslateX = useSharedValue(-DRAWER_WIDTH);
+  return (
+    <View style={[
+      styles.navbar,
+      { paddingBottom: insets.bottom, backgroundColor: T.surface, borderTopColor: T.border },
+    ]}>
+      {NAV_ITEMS.map((item) => {
+        const isActive =
+          (item.route === '/' && pathname === '/') ||
+          (item.route !== '/' && pathname.startsWith(item.route));
+        const iconName = isActive ? item.icon : (`${item.icon}-outline` as any);
+        return (
+          <TouchableOpacity
+            key={item.route}
+            style={styles.navItem}
+            onPress={() => navGuard(() => router.push(item.route as any))}
+            activeOpacity={0.7}
+          >
+            <Ionicons name={iconName} size={24} color={isActive ? T.accent : T.muted} />
+            <Text style={[styles.navLabel, { color: isActive ? T.accent : T.muted }]}>{item.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
 
-  const openDrawer = useCallback(() => {
-    overlayOpacity.value   = 0;
-    drawerTranslateX.value = -DRAWER_WIDTH;
-    setDrawerOpen(true);
-  }, []);
-
-  useEffect(() => {
-    if (drawerOpen) {
-      overlayOpacity.value   = withTiming(1, { duration: 250 });
-      drawerTranslateX.value = withTiming(0, { duration: 280, easing: Easing.out(Easing.cubic) });
-    }
-  }, [drawerOpen]);
-
-  const closeDrawer = useCallback(() => {
-    overlayOpacity.value   = withTiming(0, { duration: 200 });
-    drawerTranslateX.value = withTiming(
-      -DRAWER_WIDTH,
-      { duration: 220, easing: Easing.in(Easing.cubic) },
-      (finished) => { if (finished) runOnJS(setDrawerOpen)(false); }
-    );
-  }, []);
-
-  const navTo = useCallback((route: string) => {
-    navGuard(() => {
-      closeDrawer();
-      router.push(route as any);
-    });
-  }, [closeDrawer, router]);
-
-  const overlayStyle = useAnimatedStyle(() => ({
-    opacity: overlayOpacity.value,
-  }));
-
-  const drawerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: drawerTranslateX.value }],
-  }));
-
+export default function TabLayout() {
   return (
     <ExerciseDataProvider>
     <SyncProvider>
-    <DrawerContext.Provider value={{ openDrawer }}>
-      <OfflineBanner />
-      <Tabs
-        screenOptions={{ tabBarStyle: { display: 'none' } }}>
-        <Tabs.Screen name="index" options={{ headerShown: false }} />
-        <Tabs.Screen name="two" options={{ headerShown: false }} />
-        <Tabs.Screen name="three" options={{ headerShown: false }} />
-        <Tabs.Screen name="four" options={{ headerShown: false }} />
-        <Tabs.Screen name="ui-kit" options={{ headerShown: false }} />
-      </Tabs>
-
-      <Modal
-        visible={drawerOpen}
-        transparent
-        animationType="none"
-        onRequestClose={closeDrawer}
-      >
-        {/* Overlay — fades in/out independently */}
-        <Animated.View style={[styles.overlay, overlayStyle]}>
-          <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            onPress={closeDrawer}
-            activeOpacity={1}
-          />
-        </Animated.View>
-
-        {/* Drawer panel — slides in/out from left */}
-        <Animated.View style={[styles.drawer, { backgroundColor: T.surface }, drawerStyle]}>
-          <SafeAreaView style={{ flex: 1 }}>
-            <Text style={[styles.drawerTitle, { color: T.primary }]}>
-              Menu
-            </Text>
-            {NAV_ITEMS.map((item) => {
-              const isActive =
-                (item.route === '/' && pathname === '/') ||
-                (item.route !== '/' && pathname.startsWith(item.route));
-              return (
-                <TouchableOpacity
-                  key={item.route}
-                  style={[
-                    styles.navItem,
-                    isActive && { backgroundColor: T.accentBg },
-                  ]}
-                  onPress={isActive ? closeDrawer : () => navTo(item.route)}
-                  activeOpacity={isActive ? 1 : 0.7}
-                >
-                  <FontAwesome
-                    name={item.icon}
-                    size={18}
-                    color={isActive ? T.accent : T.muted}
-                  />
-                  <Text
-                    style={[
-                      styles.navLabel,
-                      { color: isActive ? T.accent : T.primary },
-                    ]}
-                  >
-                    {item.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </SafeAreaView>
-        </Animated.View>
-      </Modal>
-    </DrawerContext.Provider>
+      <View style={{ flex: 1, backgroundColor: T.bg }}>
+        <OfflineBanner />
+        <Tabs screenOptions={{ tabBarStyle: { display: 'none' } }}>
+          <Tabs.Screen name="index"   options={{ headerShown: false }} />
+          <Tabs.Screen name="two"     options={{ headerShown: false }} />
+          <Tabs.Screen name="three"   options={{ headerShown: false }} />
+          <Tabs.Screen name="four"    options={{ headerShown: false }} />
+          <Tabs.Screen name="ui-kit"  options={{ headerShown: false }} />
+        </Tabs>
+        <BottomNav />
+      </View>
     </SyncProvider>
     </ExerciseDataProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  drawer: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    width: DRAWER_WIDTH,
-    paddingTop: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-  drawerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#444',
-    marginBottom: 8,
+  navbar: {
+    flexDirection: 'row',
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   navItem: {
-    flexDirection: 'row',
+    flex: 1,
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    gap: 14,
-    borderRadius: 8,
-    marginHorizontal: 8,
-    marginVertical: 2,
+    paddingVertical: 10,
+    gap: 3,
   },
   navLabel: {
-    fontSize: 16,
+    fontSize: 10,
     fontWeight: '500',
   },
 });

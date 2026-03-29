@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Separator, Text, XStack, YStack } from 'tamagui';
-import HamburgerButton from './HamburgerButton';
 import T from '@/constants/Theme';
 
 interface Props {
@@ -21,9 +20,9 @@ export default function PageHeader({ title, left, right }: Props) {
         alignItems="center"
         justifyContent="space-between"
       >
-        {/* Left — hamburger or custom */}
+        {/* Left — optional slot */}
         <XStack width={73} alignItems="center" paddingLeft={T.space.md}>
-          {left ?? <HamburgerButton />}
+          {left ?? null}
         </XStack>
 
         {/* Center — title */}
