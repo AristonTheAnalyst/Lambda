@@ -19,6 +19,7 @@ import { useAuthContext } from '@/lib/AuthContext';
 import { useSyncContext } from '@/lib/sync/syncContext';
 import { getRemap } from '@/lib/db/idRemap';
 import { createWorkout, endWorkout, cancelWorkout, getActiveWorkoutId } from '@/lib/offline/workoutStore';
+import { getExerciseDefault, saveExerciseDefault } from '@/lib/offline/exerciseDefaultsStore';
 import { insertSet, updateSet, deleteSet, loadSetsForWorkout, WorkoutSet } from '@/lib/offline/setStore';
 import GlassButton from '@/components/GlassButton';
 import { useAsyncGuard } from '@/lib/asyncGuard';
@@ -52,7 +53,6 @@ export default function WorkoutLogScreen() {
 
   const slidePages = useSlidePages();
 
-  const weightByExercise = React.useRef<Record<number, string>>({});
 
   const [selectedExId, setSelectedExId]     = useState<number | null>(null);
   const [selectedEx, setSelectedEx]         = useState<ExerciseDetail | null>(null);
@@ -117,14 +117,20 @@ export default function WorkoutLogScreen() {
     })();
   }, [lastSyncAt]);
 
-  function onSelectExercise(exId: number | null) {
-    if (selectedExId !== null) weightByExercise.current[selectedExId] = weight;
+  async function onSelectExercise(exId: number | null) {
     setSelectedExId(exId);
+    setSelectedEx(exId ? (exerciseDetailMap[exId] ?? null) : null);
     setSelectedVarId(null);
-    setWeight(exId !== null ? (weightByExercise.current[exId] ?? '') : '');
+    setWeight('');
     setRepsOrDuration('');
     setSetNotes('');
-    setSelectedEx(exId ? (exerciseDetailMap[exId] ?? null) : null);
+    if (exId !== null) {
+      const defaults = await getExerciseDefault(db, exId);
+      if (defaults) {
+        setWeight(defaults.last_weight_kg != null ? String(defaults.last_weight_kg) : '');
+        setSelectedVarId(defaults.last_variation_id);
+      }
+    }
   }
 
   // ── Start workout ──────────────────────────────────────────────────────────
@@ -209,6 +215,7 @@ export default function WorkoutLogScreen() {
       workout_set_duration_seconds: !isReps ? values : [],
       workout_set_notes: setNotes.trim() || null,
     });
+    await saveExerciseDefault(db, selectedExId, weight ? parseFloat(weight) : null, selectedVarId);
     setLogLoading(false);
     setRepsOrDuration('');
     setSetNotes('');
@@ -290,13 +297,47 @@ export default function WorkoutLogScreen() {
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets={true}
         >
-          <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
-          <DropdownSelect
-            options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
-            value={selectedExId}
-            onChange={onSelectExercise}
-            placeholder="Select exercise…"
-          />
+          <XStack gap={T.space.sm} alignItems="flex-end">
+            <YStack flex={3}>
+              <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
+              <DropdownSelect
+                options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
+                value={selectedExId}
+                onChange={onSelectExercise}
+                placeholder="Select exercise…"
+              />
+            </YStack>
+            {selectedEx && (
+              <YStack flex={2}>
+                <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
+                {selectedEx.assigned_variations.length > 0 ? (
+                  <DropdownSelect
+                    options={[
+                      { label: 'None', value: null },
+                      ...selectedEx.assigned_variations.map((v) => ({ label: v.variation_name, value: v.custom_variation_id })),
+                    ]}
+                    value={selectedVarId}
+                    onChange={setSelectedVarId}
+                    placeholder="None"
+                  />
+                ) : (
+                  <XStack
+                    alignItems="center"
+                    justifyContent="space-between"
+                    borderWidth={1}
+                    borderColor={T.border}
+                    borderRadius={T.radius.md}
+                    paddingHorizontal={T.space.md}
+                    height={48}
+                    backgroundColor={T.surface}
+                    opacity={0.5}
+                  >
+                    <Text fontSize={T.fontSize.md} color={T.muted} flex={1} numberOfLines={1}>Zero Assigned</Text>
+                  </XStack>
+                )}
+              </YStack>
+            )}
+          </XStack>
 
           {selectedEx && (
             <YStack gap={T.space.md} marginTop={T.space.md}>
@@ -308,20 +349,6 @@ export default function WorkoutLogScreen() {
                 value={repsOrDuration}
                 onChangeText={setRepsOrDuration}
               />
-              {selectedEx.assigned_variations.length > 0 && (
-                <YStack>
-                  <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
-                  <DropdownSelect
-                    options={[
-                      { label: 'None', value: null },
-                      ...selectedEx.assigned_variations.map((v) => ({ label: v.variation_name, value: v.custom_variation_id })),
-                    ]}
-                    value={selectedVarId}
-                    onChange={setSelectedVarId}
-                    placeholder="None"
-                  />
-                </YStack>
-              )}
               <Input label="Set notes (optional)" placeholder="Notes…" value={setNotes} onChangeText={setSetNotes} />
               <Button label="Log Set" onPress={logSet} loading={logLoading} />
             </YStack>

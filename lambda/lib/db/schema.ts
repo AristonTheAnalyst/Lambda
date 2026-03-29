@@ -78,6 +78,12 @@ CREATE TABLE IF NOT EXISTS local_id_seq (
   id       INTEGER PRIMARY KEY CHECK (id = 1),
   next_val INTEGER NOT NULL DEFAULT -1
 );
+
+CREATE TABLE IF NOT EXISTS exercise_defaults (
+  custom_exercise_id  INTEGER PRIMARY KEY,
+  last_weight_kg      REAL,
+  last_variation_id   INTEGER
+);
 `;
 
 export const SEED_INITIAL = `

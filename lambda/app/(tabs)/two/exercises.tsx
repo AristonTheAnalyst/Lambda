@@ -113,6 +113,7 @@ export default function ExercisesScreen() {
               value={search}
               onChangeText={setSearch}
               spellCheck={false}
+              selectionColor={T.primary}
               style={{ color: T.primary, fontSize: T.fontSize.sm, flex: 1 }}
             />
           </XStack>

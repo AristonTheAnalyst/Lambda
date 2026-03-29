@@ -89,6 +89,7 @@ export default function Input({
         keyboardType={keyboardType}
         autoCorrect={autoCorrect}
         spellCheck={false}
+        selectionColor={T.primary}
         errored={!!error}
         isMultiline={multiline}
         minHeight={multiline ? minHeight : undefined}

@@ -33,7 +33,7 @@ export default function ManageVariationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const db = useSQLiteContext();
-  const { variations, refreshVariations } = useExerciseData();
+  const { variations, refreshVariations, refreshExerciseDetails } = useExerciseData();
   const { user } = useAuthContext();
   const [name, setName]         = useState('');
   const [search, setSearch]     = useState('');
@@ -71,7 +71,7 @@ export default function ManageVariationsScreen() {
     if (!editVar?.variation_name.trim()) return;
     await updateVariation(db, editVar.custom_variation_id, editVar.variation_name);
     setEditVar(null);
-    refreshVariations();
+    await Promise.all([refreshVariations(), refreshExerciseDetails()]);
   }); }
 
   function confirmDelete(id: number) {
@@ -79,7 +79,7 @@ export default function ManageVariationsScreen() {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
         await softDeleteVariation(db, id);
-        refreshVariations();
+        await Promise.all([refreshVariations(), refreshExerciseDetails()]);
       })},
     ]);
   }
@@ -109,6 +109,7 @@ export default function ManageVariationsScreen() {
                 value={search}
                 onChangeText={setSearch}
                 spellCheck={false}
+                selectionColor={T.primary}
                 style={{ color: T.primary, fontSize: T.fontSize.sm, flex: 1 }}
               />
             </XStack>

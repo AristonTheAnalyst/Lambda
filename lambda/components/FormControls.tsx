@@ -252,6 +252,7 @@ export function DropdownSelect<T = any>(
                 placeholder="Search…"
                 placeholderTextColor={T.muted}
                 spellCheck={false}
+                selectionColor={T.primary}
                 style={{
                   backgroundColor: T.bg,
                   borderWidth: 1,

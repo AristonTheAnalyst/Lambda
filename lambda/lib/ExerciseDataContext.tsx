@@ -109,7 +109,7 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
       `SELECT b.custom_exercise_id, b.custom_variation_id, v.variation_name
        FROM user_custom_exercise_variation_bridge b
        JOIN user_custom_variation v ON v.custom_variation_id = b.custom_variation_id
-       WHERE b.user_id = ?`,
+       WHERE b.user_id = ? AND b.deleted_locally = 0 AND v.is_active = 1`,
       [user.id]
     );
     setRawBridge(

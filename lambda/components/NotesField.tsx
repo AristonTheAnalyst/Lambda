@@ -36,6 +36,7 @@ export default function NotesField({ label, value, onChange, placeholder = 'Note
 
   // Render label with parenthetical text in muted/lighter style (matches Input.tsx)
   const labelParts = label.split(/(\([^)]+\))/);
+  const labelWithoutParens = labelParts.filter(p => !/^\([^)]+\)$/.test(p)).join('').trim();
 
   return (
     <>
@@ -67,40 +68,43 @@ export default function NotesField({ label, value, onChange, placeholder = 'Note
       </YStack>
 
       <SlideUpModal visible={modalVisible} onClose={cancel}>
-        <YStack
-          backgroundColor={T.surface}
-          borderTopLeftRadius={T.radius.lg}
-          borderTopRightRadius={T.radius.lg}
-          padding={T.space.xl}
-          paddingBottom={T.space.xxl}
-          gap={T.space.md}
-        >
-          <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>{label}</Text>
-          <TextInput
-            value={draft}
-            onChangeText={setDraft}
-            placeholder={placeholder}
-            placeholderTextColor={T.muted}
-            multiline
-            autoFocus
-            spellCheck={false}
-            style={{
-              backgroundColor: T.bg,
-              borderWidth: 1,
-              borderColor: T.border,
-              borderRadius: T.radius.md,
-              padding: T.space.md,
-              color: T.primary,
-              fontSize: T.fontSize.md,
-              minHeight: 120,
-              textAlignVertical: 'top',
-            }}
-          />
-          <XStack gap={T.space.sm} justifyContent="center">
-            <Button label="Cancel" onPress={cancel} variant="danger-ghost" />
-            <Button label={confirmLabel} onPress={done} />
-          </XStack>
-        </YStack>
+        {modalVisible && (
+          <YStack
+            backgroundColor={T.surface}
+            borderTopLeftRadius={T.radius.lg}
+            borderTopRightRadius={T.radius.lg}
+            padding={T.space.xl}
+            paddingBottom={T.space.xxl}
+            gap={T.space.md}
+          >
+            <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>{labelWithoutParens}</Text>
+            <TextInput
+              value={draft}
+              onChangeText={setDraft}
+              placeholder={placeholder}
+              placeholderTextColor={T.muted}
+              multiline
+              autoFocus
+              spellCheck={false}
+              selectionColor={T.primary}
+              style={{
+                backgroundColor: T.bg,
+                borderWidth: 1,
+                borderColor: T.border,
+                borderRadius: T.radius.md,
+                padding: T.space.md,
+                color: T.primary,
+                fontSize: T.fontSize.md,
+                minHeight: 120,
+                textAlignVertical: 'top',
+              }}
+            />
+            <XStack gap={T.space.sm} justifyContent="center">
+              <Button label="Cancel" onPress={cancel} variant="danger-ghost" />
+              <Button label={confirmLabel} onPress={done} />
+            </XStack>
+          </YStack>
+        )}
       </SlideUpModal>
     </>
   );

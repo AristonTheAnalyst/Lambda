@@ -101,7 +101,14 @@ export async function processSyncQueue(db: SQLiteDatabase): Promise<void> {
       if (entry.depends_on_local_id != null) {
         const remap = await getRemap(db, entry.depends_on_local_id);
         if (!remap) {
-          // Dependency not yet synced — skip this entry for now
+          // If the parent entry is failed or gone entirely, this will never resolve
+          const parentEntry = await db.getFirstAsync<{ status: string }>(
+            `SELECT status FROM sync_queue WHERE local_id = ?`,
+            [entry.depends_on_local_id]
+          );
+          if (!parentEntry || parentEntry.status === 'failed') {
+            await markFailed(db, entry.id, `Dependency ${entry.depends_on_local_id} unresolvable`);
+          }
           continue;
         }
         payload = substituteLocalId(payload, entry.depends_on_local_id, remap.serverId);
@@ -121,6 +128,7 @@ export async function processSyncQueue(db: SQLiteDatabase): Promise<void> {
       // ── Resolve any remaining negative FK values in non-PK fields ──────
       // Handles cases like the bridge table where both FKs may be local IDs
       let hasUnresolved = false;
+      let hasFailedDep = false;
       const resolvedPayload: Record<string, any> = { ...payload };
       for (const [k, v] of Object.entries(resolvedPayload)) {
         if (k === pkCol) continue;
@@ -129,10 +137,18 @@ export async function processSyncQueue(db: SQLiteDatabase): Promise<void> {
           if (remap) {
             resolvedPayload[k] = remap.serverId;
           } else {
+            const depEntry = await db.getFirstAsync<{ status: string }>(
+              `SELECT status FROM sync_queue WHERE local_id = ?`,
+              [v]
+            );
+            if (!depEntry || depEntry.status === 'failed') hasFailedDep = true;
             hasUnresolved = true;
             break;
           }
         }
+      }
+      if (hasFailedDep) {
+        await markFailed(db, entry.id, `A referenced local ID could not be resolved`);
       }
       if (hasUnresolved) continue;
       payload = resolvedPayload;
