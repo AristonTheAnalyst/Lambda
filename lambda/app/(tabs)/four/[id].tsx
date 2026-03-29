@@ -11,8 +11,9 @@ import Button from '@/components/Button';
 import GlassButton from '@/components/GlassButton';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
 import { useAsyncGuard } from '@/lib/asyncGuard';
-import { loadWorkout, WorkoutRow } from '@/lib/offline/workoutStore';
-import { loadSetsForWorkout, updateSet, deleteSet, WorkoutSet } from '@/lib/offline/setStore';
+import { loadWorkout, updateWorkoutNotes, WorkoutRow } from '@/lib/offline/workoutStore';
+import { loadSetsForWorkout, insertSet, updateSet, deleteSet, WorkoutSet } from '@/lib/offline/setStore';
+import NotesField from '@/components/NotesField';
 import T from '@/constants/Theme';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -40,13 +41,32 @@ export default function WorkoutDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const guard = useAsyncGuard();
-  const { exerciseDetailMap } = useExerciseData();
+  const { exercises, exerciseDetailMap } = useExerciseData();
 
   const [workout, setWorkout] = useState<WorkoutRow | null>(null);
   const [sets, setSets] = useState<WorkoutSet[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // ── Edit mode ──────────────────────────────────────────────────────────────
+  const [editing, setEditing] = useState(false);
+  const [preNotes, setPreNotes] = useState('');
+  const [postNotes, setPostNotes] = useState('');
+  const [notesLoading, setNotesLoading] = useState(false);
+
+  // ── Log Set modal ──────────────────────────────────────────────────────────
+  const [logSetModalVisible, setLogSetModalVisible] = useState(false);
+  const [selectedExId, setSelectedExId] = useState<number | null>(null);
+  const selectedEx = selectedExId ? (exerciseDetailMap[selectedExId] ?? null) : null;
+  const [weight, setWeight] = useState('');
+  const [repsOrDuration, setRepsOrDuration] = useState('');
+  const [setNotes, setSetNotes] = useState('');
+  const [selectedVarId, setSelectedVarId] = useState<number | null>(null);
+  const [logLoading, setLogLoading] = useState(false);
+
+  // ── Edit Set modal ─────────────────────────────────────────────────────────
   const [editingSet, setEditingSet] = useState<WorkoutSet | null>(null);
+  const [editExId, setEditExId] = useState<number | null>(null);
+  const editEx = editExId ? (exerciseDetailMap[editExId] ?? null) : null;
   const [editWeight, setEditWeight] = useState('');
   const [editRepsOrDuration, setEditRepsOrDuration] = useState('');
   const [editNotes, setEditNotes] = useState('');
@@ -66,8 +86,65 @@ export default function WorkoutDetailScreen() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  function startEditing() {
+    setPreNotes(workout?.user_pre_workout_notes ?? '');
+    setPostNotes(workout?.user_post_workout_notes ?? '');
+    setEditing(true);
+  }
+
+  function cancelEditing() {
+    setEditing(false);
+  }
+
+  function saveNotes() { return guard(async () => {
+    setNotesLoading(true);
+    await updateWorkoutNotes(db, workoutId, preNotes, postNotes);
+    setNotesLoading(false);
+    await loadData();
+    setEditing(false);
+  }); }
+
+  // ── Log Set ────────────────────────────────────────────────────────────────
+
+  function onSelectExercise(exId: number | null) {
+    setSelectedExId(exId);
+    setSelectedVarId(null);
+  }
+
+  function logSet() { return guard(async () => {
+    if (!selectedExId || !selectedEx) return Alert.alert('Select an exercise first');
+    const hint = selectedEx.exercise_volume_type === 'reps' ? 'Enter reps (e.g. 10,8,6)' : 'Enter duration in seconds (e.g. 60,45)';
+    if (!repsOrDuration.trim()) return Alert.alert(hint);
+    const values = parseValues(repsOrDuration);
+    if (values.length === 0) return Alert.alert(hint);
+    const isReps = selectedEx.exercise_volume_type === 'reps';
+    const nextSetNum = sets.length > 0 ? Math.max(...sets.map((s) => s.workout_set_number)) + 1 : 1;
+    setLogLoading(true);
+    await insertSet(db, {
+      user_workout_id: workoutId,
+      custom_exercise_id: selectedExId,
+      custom_variation_id: selectedVarId,
+      workout_set_number: nextSetNum,
+      workout_set_weight: weight ? parseFloat(weight) : null,
+      workout_set_reps: isReps ? values : [],
+      workout_set_duration_seconds: !isReps ? values : [],
+      workout_set_notes: setNotes.trim() || null,
+    });
+    setLogLoading(false);
+    setLogSetModalVisible(false);
+    setSelectedExId(null);
+    setWeight('');
+    setRepsOrDuration('');
+    setSetNotes('');
+    setSelectedVarId(null);
+    loadData();
+  }); }
+
+  // ── Edit Set ───────────────────────────────────────────────────────────────
+
   function openEditSet(s: WorkoutSet) {
     setEditingSet(s);
+    setEditExId(s.custom_exercise_id);
     setEditWeight(s.workout_set_weight != null ? String(s.workout_set_weight) : '');
     const vals = s.workout_set_reps?.length ? s.workout_set_reps : s.workout_set_duration_seconds ?? [];
     setEditRepsOrDuration(vals.join(','));
@@ -76,12 +153,13 @@ export default function WorkoutDetailScreen() {
   }
 
   function saveEditSet() { return guard(async () => {
-    if (!editingSet) return;
-    const editEx = exerciseDetailMap[editingSet.custom_exercise_id];
+    if (!editingSet || !editEx || !editExId) return;
     const values = parseValues(editRepsOrDuration);
-    const isReps = editEx?.exercise_volume_type === 'reps';
+    if (values.length === 0) return Alert.alert(editEx.exercise_volume_type === 'reps' ? 'Enter reps (e.g. 10,8,6)' : 'Enter duration in seconds (e.g. 60,45)');
+    const isReps = editEx.exercise_volume_type === 'reps';
     setEditLoading(true);
     await updateSet(db, editingSet.workout_set_id, {
+      custom_exercise_id: editExId,
       workout_set_weight: editWeight ? parseFloat(editWeight) : null,
       workout_set_reps: isReps ? values : [],
       workout_set_duration_seconds: !isReps ? values : [],
@@ -103,7 +181,7 @@ export default function WorkoutDetailScreen() {
     ]);
   }
 
-  // ─── Render ─────────────────────────────────────────────────────────────
+  // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <YStack flex={1} backgroundColor={T.bg}>
@@ -119,7 +197,13 @@ export default function WorkoutDetailScreen() {
         <Text flex={1} textAlign="center" color={T.primary} fontSize={T.fontSize.xl} fontWeight="600">
           Workout
         </Text>
-        <XStack width={80} />
+        <XStack width={80} justifyContent="flex-end">
+          {editing ? (
+            <GlassButton icon="check" label="Save" onPress={saveNotes} />
+          ) : (
+            <Text color={T.accent} fontSize={T.fontSize.md} fontWeight="600" onPress={startEditing} cursor="pointer">Edit</Text>
+          )}
+        </XStack>
       </XStack>
       <Separator borderColor={T.border} />
 
@@ -132,27 +216,43 @@ export default function WorkoutDetailScreen() {
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: T.space.lg, paddingBottom: T.space.xxl }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={true}
         >
           {/* Date */}
           {workout && (
-            <Text fontSize={T.fontSize.sm} fontWeight="700" color={T.accent} marginBottom={T.space.xs}>
+            <Text fontSize={T.fontSize.sm} fontWeight="700" color={T.accent} marginBottom={T.space.sm}>
               {formatDate(workout.user_workout_created_date)}
             </Text>
           )}
 
-          {/* Notes */}
-          {workout?.user_post_workout_notes ? (
-            <Text fontSize={T.fontSize.sm} color={T.muted} fontStyle="italic" marginBottom={T.space.lg}>
-              "{workout.user_post_workout_notes}"
-            </Text>
+          {/* Pre-workout notes */}
+          {editing ? (
+            <NotesField
+              label="Pre-workout notes (optional)"
+              value={preNotes}
+              onChange={setPreNotes}
+            />
           ) : (
-            <YStack height={T.space.lg} />
+            <YStack marginBottom={T.space.md}>
+              <Text fontSize={T.fontSize.xs} color={T.muted} marginBottom={T.space.xs}>Pre-workout notes</Text>
+              {workout?.user_pre_workout_notes ? (
+                <Text fontSize={T.fontSize.sm} color={T.primary} fontStyle="italic">"{workout.user_pre_workout_notes}"</Text>
+              ) : (
+                <Text fontSize={T.fontSize.sm} color={T.muted}>None</Text>
+              )}
+            </YStack>
           )}
 
-          {/* Sets */}
-          <Text fontSize={T.fontSize.xl} fontWeight="700" color={T.primary} marginBottom={T.space.sm}>
-            Sets
-          </Text>
+          {/* Sets header */}
+          <XStack alignItems="center" marginBottom={T.space.sm} marginTop={T.space.sm}>
+            <Text fontSize={T.fontSize.xl} fontWeight="700" color={T.primary} flex={1}>
+              {editing ? 'Sets this workout' : 'Sets'}
+            </Text>
+            {editing && (
+              <GlassButton icon="plus" label="Log Set" onPress={() => setLogSetModalVisible(true)} />
+            )}
+          </XStack>
 
           {sets.length === 0 ? (
             <Text color={T.muted}>No sets recorded.</Text>
@@ -193,18 +293,125 @@ export default function WorkoutDetailScreen() {
                       ) : ''}
                     </Text>
                   </YStack>
-                  <XStack gap={T.space.sm}>
-                    <GlassButton icon="pencil" iconSize={14} onPress={() => openEditSet(s)} />
-                    <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => handleDeleteSet(s.workout_set_id)} />
-                  </XStack>
+                  {editing && (
+                    <XStack gap={T.space.sm}>
+                      <GlassButton icon="pencil" iconSize={14} onPress={() => openEditSet(s)} />
+                      <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => handleDeleteSet(s.workout_set_id)} />
+                    </XStack>
+                  )}
                 </XStack>
               );
             })
           )}
+
+          {/* Post-workout notes */}
+          <YStack marginTop={T.space.xl} gap={T.space.md}>
+            {editing ? (
+              <>
+                <NotesField
+                  label="Post-workout notes (optional)"
+                  value={postNotes}
+                  onChange={setPostNotes}
+                />
+                <XStack justifyContent="center">
+                  <XStack gap={T.space.sm}>
+                    <Button label="Cancel" onPress={cancelEditing} variant="danger-ghost" disabled={notesLoading} />
+                    <Button label="Save" onPress={saveNotes} loading={notesLoading} disabled={notesLoading} />
+                  </XStack>
+                </XStack>
+              </>
+            ) : (
+              <YStack>
+                <Text fontSize={T.fontSize.xs} color={T.muted} marginBottom={T.space.xs}>Post-workout notes</Text>
+                {workout?.user_post_workout_notes ? (
+                  <Text fontSize={T.fontSize.sm} color={T.primary} fontStyle="italic">"{workout.user_post_workout_notes}"</Text>
+                ) : (
+                  <Text fontSize={T.fontSize.sm} color={T.muted}>None</Text>
+                )}
+              </YStack>
+            )}
+          </YStack>
         </ScrollView>
       )}
 
-      {/* Edit Set Modal */}
+      {/* ── Log Set Modal ── */}
+      <SlideUpModal visible={logSetModalVisible} onClose={() => setLogSetModalVisible(false)}>
+        {logSetModalVisible && (
+          <YStack
+            backgroundColor={T.surface}
+            borderTopLeftRadius={T.radius.lg}
+            borderTopRightRadius={T.radius.lg}
+            padding={T.space.xl}
+            maxHeight="85%"
+          >
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <YStack gap={T.space.md}>
+                <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Log Set</Text>
+                <XStack gap={T.space.sm} alignItems="flex-end">
+                  <YStack flex={3}>
+                    <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
+                    <DropdownSelect
+                      options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
+                      value={selectedExId}
+                      onChange={onSelectExercise}
+                      placeholder="Select exercise…"
+                    />
+                  </YStack>
+                  {selectedEx && (
+                    <YStack flex={2}>
+                      <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
+                      {selectedEx.assigned_variations.length > 0 ? (
+                        <DropdownSelect
+                          options={[
+                            { label: 'None', value: null },
+                            ...selectedEx.assigned_variations.map((v) => ({ label: v.variation_name, value: v.custom_variation_id })),
+                          ]}
+                          value={selectedVarId}
+                          onChange={setSelectedVarId}
+                          placeholder="None"
+                        />
+                      ) : (
+                        <XStack
+                          alignItems="center"
+                          borderWidth={1}
+                          borderColor={T.border}
+                          borderRadius={T.radius.md}
+                          paddingHorizontal={T.space.md}
+                          height={48}
+                          backgroundColor={T.surface}
+                          opacity={0.5}
+                        >
+                          <Text fontSize={T.fontSize.md} color={T.muted} flex={1} numberOfLines={1}>Zero Assigned</Text>
+                        </XStack>
+                      )}
+                    </YStack>
+                  )}
+                </XStack>
+                {selectedEx && (
+                  <>
+                    <Input label="Weight (optional)" placeholder="kg" keyboardType="numbers-and-punctuation" value={weight} onChangeText={setWeight} />
+                    <Input
+                      label={selectedEx.exercise_volume_type === 'reps' ? 'Reps' : 'Duration (seconds)'}
+                      placeholder={selectedEx.exercise_volume_type === 'reps' ? 'e.g. 10,8,6' : 'e.g. 60,45'}
+                      keyboardType="numbers-and-punctuation"
+                      value={repsOrDuration}
+                      onChangeText={setRepsOrDuration}
+                    />
+                    <Input label="Set notes (optional)" placeholder="Notes…" value={setNotes} onChangeText={setSetNotes} />
+                  </>
+                )}
+                <XStack gap={T.space.sm} justifyContent="center">
+                  <Button label="Cancel" onPress={() => setLogSetModalVisible(false)} variant="danger-ghost" />
+                  <Button label="Log Set" onPress={logSet} loading={logLoading} />
+                </XStack>
+                <YStack height={T.space.xl} />
+              </YStack>
+            </ScrollView>
+          </YStack>
+        )}
+      </SlideUpModal>
+
+      {/* ── Edit Set Modal ── */}
       <SlideUpModal visible={!!editingSet} onClose={() => setEditingSet(null)}>
         <YStack
           backgroundColor={T.surface}
@@ -216,42 +423,59 @@ export default function WorkoutDetailScreen() {
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <YStack gap={T.space.md}>
               <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Edit Set</Text>
-              {editingSet && (() => {
-                const editEx = exerciseDetailMap[editingSet.custom_exercise_id];
-                return (
-                  <>
-                    <Input
-                      label="Weight (optional)"
-                      placeholder="kg"
-                      keyboardType="numbers-and-punctuation"
-                      value={editWeight}
-                      onChangeText={setEditWeight}
-                    />
-                    <Input
-                      label={editEx?.exercise_volume_type === 'reps' ? 'Reps' : 'Duration (seconds)'}
-                      placeholder={editEx?.exercise_volume_type === 'reps' ? 'e.g. 10,8,6' : 'e.g. 60,45'}
-                      keyboardType="numbers-and-punctuation"
-                      value={editRepsOrDuration}
-                      onChangeText={setEditRepsOrDuration}
-                    />
-                    {editEx && editEx.assigned_variations.length > 0 && (
-                      <YStack>
-                        <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
-                        <DropdownSelect
-                          options={[
-                            { label: 'None', value: null },
-                            ...editEx.assigned_variations.map((v) => ({ label: v.variation_name, value: v.custom_variation_id })),
-                          ]}
-                          value={editVarId}
-                          onChange={setEditVarId}
-                          placeholder="None"
-                        />
-                      </YStack>
+              <XStack gap={T.space.sm} alignItems="flex-end">
+                <YStack flex={3}>
+                  <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
+                  <DropdownSelect
+                    options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
+                    value={editExId}
+                    onChange={(exId) => { setEditExId(exId); setEditVarId(null); }}
+                    placeholder="Select exercise…"
+                  />
+                </YStack>
+                {editEx && (
+                  <YStack flex={2}>
+                    <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
+                    {editEx.assigned_variations.length > 0 ? (
+                      <DropdownSelect
+                        options={[
+                          { label: 'None', value: null },
+                          ...editEx.assigned_variations.map((v) => ({ label: v.variation_name, value: v.custom_variation_id })),
+                        ]}
+                        value={editVarId}
+                        onChange={setEditVarId}
+                        placeholder="None"
+                      />
+                    ) : (
+                      <XStack
+                        alignItems="center"
+                        borderWidth={1}
+                        borderColor={T.border}
+                        borderRadius={T.radius.md}
+                        paddingHorizontal={T.space.md}
+                        height={48}
+                        backgroundColor={T.surface}
+                        opacity={0.5}
+                      >
+                        <Text fontSize={T.fontSize.md} color={T.muted} flex={1} numberOfLines={1}>Zero Assigned</Text>
+                      </XStack>
                     )}
-                  </>
-                );
-              })()}
-              <Input label="Notes (optional)" placeholder="Notes…" value={editNotes} onChangeText={setEditNotes} />
+                  </YStack>
+                )}
+              </XStack>
+              {editEx && (
+                <>
+                  <Input label="Weight (optional)" placeholder="kg" keyboardType="numbers-and-punctuation" value={editWeight} onChangeText={setEditWeight} />
+                  <Input
+                    label={editEx.exercise_volume_type === 'reps' ? 'Reps' : 'Duration (seconds)'}
+                    placeholder={editEx.exercise_volume_type === 'reps' ? 'e.g. 10,8,6' : 'e.g. 60,45'}
+                    keyboardType="numbers-and-punctuation"
+                    value={editRepsOrDuration}
+                    onChangeText={setEditRepsOrDuration}
+                  />
+                  <Input label="Set notes (optional)" placeholder="Notes…" value={editNotes} onChangeText={setEditNotes} />
+                </>
+              )}
               <XStack gap={T.space.sm} justifyContent="center">
                 <Button label="Cancel" onPress={() => setEditingSet(null)} variant="danger-ghost" />
                 <Button label="Save" onPress={saveEditSet} loading={editLoading} />

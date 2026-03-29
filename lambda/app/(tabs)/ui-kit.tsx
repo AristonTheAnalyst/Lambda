@@ -63,7 +63,7 @@ export default function UIKitScreen() {
 
   return (
     <YStack flex={1} backgroundColor={T.bg}>
-      <PageHeader title="UI Kit" />
+      <PageHeader title="UI Kit — DEV ONLY" />
 
       <ScrollView contentContainerStyle={{ padding: T.space.lg, gap: T.space.xl }} showsVerticalScrollIndicator={false}>
         <YStack gap={T.space.xl}>

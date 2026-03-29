@@ -98,6 +98,42 @@ export async function endWorkout(
   }
 }
 
+// ─── Update notes ─────────────────────────────────────────────────────────────
+
+export async function updateWorkoutNotes(
+  db: SQLiteDatabase,
+  workoutId: number,
+  preNotes: string | null,
+  postNotes: string | null
+): Promise<void> {
+  const pre  = preNotes?.trim()  || null;
+  const post = postNotes?.trim() || null;
+
+  await db.runAsync(
+    `UPDATE fact_user_workout SET user_pre_workout_notes = ?, user_post_workout_notes = ?, synced = 0 WHERE user_workout_id = ?`,
+    [pre, post, workoutId]
+  );
+
+  const row = await db.getFirstAsync<{ user_id: string; user_workout_created_date: string }>(
+    `SELECT user_id, user_workout_created_date FROM fact_user_workout WHERE user_workout_id = ?`,
+    [workoutId]
+  );
+  if (row) {
+    await enqueueOperation(db, {
+      table_name: 'fact_user_workout',
+      operation: 'UPDATE',
+      payload: {
+        user_workout_id: workoutId,
+        user_id: row.user_id,
+        user_workout_created_date: row.user_workout_created_date,
+        user_pre_workout_notes: pre,
+        user_post_workout_notes: post,
+      },
+      depends_on_local_id: workoutId < 0 ? workoutId : null,
+    });
+  }
+}
+
 // ─── Cancel ───────────────────────────────────────────────────────────────────
 
 /**

@@ -2,6 +2,9 @@ import { useEffect } from 'react';
 import { TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import AntDesign from '@expo/vector-icons/AntDesign';
+import Feather from '@expo/vector-icons/Feather';
 import { Text, XStack, YStack } from 'tamagui';
 import PageHeader from '@/components/PageHeader';
 import SyncStatusIcon from '@/components/SyncStatusIcon';
@@ -14,30 +17,30 @@ import '@/lib/offline/variationStore';
 import '@/lib/offline/bridgeStore';
 import '@/lib/asyncGuard';
 
-const SECTIONS = [
+const SECTIONS: { route: string; label: string; description: string; icon: React.ReactNode }[] = [
   {
     route: '/two/exercises',
     label: 'Exercises',
     description: 'Create and manage exercises',
-    icon: 'heartbeat' as const,
+    icon: <Ionicons name="barbell" size={22} color={T.accent} />,
   },
   {
     route: '/two/manage-variations',
     label: 'Variations',
     description: 'Create and manage variations',
-    icon: 'tags' as const,
+    icon: <AntDesign name="swap" size={22} color={T.accent} />,
   },
   {
     route: '/two/variations',
     label: 'Assign Variations',
     description: 'Manage variations for each exercise',
-    icon: 'sliders' as const,
+    icon: <Feather name="link" size={22} color={T.accent} />,
   },
   {
     route: '/two/guide',
     label: 'User Guide',
     description: 'Learn how to set up and use the app',
-    icon: 'book' as const,
+    icon: <FontAwesome name="book" size={22} color={T.accent} />,
   },
 ];
 
@@ -77,7 +80,7 @@ export default function AdminExercisesHub() {
                   alignItems="center"
                   justifyContent="center"
                 >
-                  <FontAwesome name={s.icon} size={22} color={T.accent} />
+                  {s.icon}
                 </XStack>
                 <YStack flex={1}>
                   <Text fontSize={T.fontSize.lg} fontWeight="600" color={T.primary} marginBottom={T.space.xs}>{s.label}</Text>
