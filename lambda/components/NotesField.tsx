@@ -83,6 +83,7 @@ export default function NotesField({ label, value, onChange, placeholder = 'Note
             placeholderTextColor={T.muted}
             multiline
             autoFocus
+            spellCheck={false}
             style={{
               backgroundColor: T.bg,
               borderWidth: 1,

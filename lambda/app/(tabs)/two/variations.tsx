@@ -183,7 +183,7 @@ export default function VariationsScreen() {
           <GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} />
         </XStack>
         <Text flex={1} textAlign="center" color={T.primary} fontSize={T.fontSize.xl} fontWeight="600">
-          Variations
+          Assign Variations
         </Text>
         <XStack width={80} />
       </XStack>

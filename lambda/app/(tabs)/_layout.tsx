@@ -30,7 +30,7 @@ const DRAWER_WIDTH = SCREEN_WIDTH * 0.72;
 const NAV_ITEMS = [
   { label: 'User Profile', route: '/', icon: 'user' as const },
   { label: 'Exercise Configuration', route: '/two', icon: 'pencil' as const },
-  { label: 'Workout Log', route: '/three', icon: 'heartbeat' as const },
+  { label: 'Training Session', route: '/three', icon: 'play-circle' as const },
   { label: 'Training Logs', route: '/four', icon: 'list' as const },
   { label: 'UI Kit', route: '/ui-kit', icon: 'paint-brush' as const },
 ];

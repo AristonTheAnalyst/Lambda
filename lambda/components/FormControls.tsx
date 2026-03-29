@@ -251,6 +251,7 @@ export function DropdownSelect<T = any>(
                 onChangeText={setQuery}
                 placeholder="Search…"
                 placeholderTextColor={T.muted}
+                spellCheck={false}
                 style={{
                   backgroundColor: T.bg,
                   borderWidth: 1,

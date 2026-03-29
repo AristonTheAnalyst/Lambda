@@ -88,6 +88,7 @@ export default function Input({
         autoCapitalize={autoCapitalize}
         keyboardType={keyboardType}
         autoCorrect={autoCorrect}
+        spellCheck={false}
         errored={!!error}
         isMultiline={multiline}
         minHeight={multiline ? minHeight : undefined}

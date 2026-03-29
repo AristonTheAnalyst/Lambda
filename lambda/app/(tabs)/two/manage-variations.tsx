@@ -108,6 +108,7 @@ export default function ManageVariationsScreen() {
                 placeholderTextColor={T.muted}
                 value={search}
                 onChangeText={setSearch}
+                spellCheck={false}
                 style={{ color: T.primary, fontSize: T.fontSize.sm, flex: 1 }}
               />
             </XStack>
