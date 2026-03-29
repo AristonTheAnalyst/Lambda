@@ -129,7 +129,7 @@ const Theme = {
   border: '#383838',       // Dividers, input borders, separators
   primary: '#ddbb98',      // Body text, labels, icons — warm tan
   muted: '#9e8470',        // Placeholder text, secondary labels, hints
-  accent: '#cb7513',       // Buttons, active states, CTAs — warm orange-brown
+  accent: '#eb912b',       // Buttons, active states, CTAs — warm orange-brown
   accentBg: '#3a2810',     // Accent-tinted row/card backgrounds
   accentText: '#fff',      // Text on top of accent-colored buttons
   danger: '#c0392b',       // Error messages, destructive action buttons

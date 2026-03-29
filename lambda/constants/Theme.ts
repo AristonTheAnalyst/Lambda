@@ -3,9 +3,9 @@ const Theme = {
   surface: '#2e2e2e',   // cards, inputs, modals (slightly elevated)
   surfaceHigh: '#363636', // selected rows, hover states
   border: '#383838',    // dividers, input borders
-  primary: '#ddbb98',   // body text, labels, icons
+  primary: '#ddcab7',   // body text, labels, icons
   muted: '#9e8470',     // placeholder text, secondary labels
-  accent: '#cb7513',    // buttons, active states, tints
+  accent: '#eb912b',    // buttons, active states, tints
   accentBg: '#3a2810',  // accent-tinted row highlight
   accentText: '#fff',   // text on accent-coloured buttons
   danger: '#c0392b',    // errors, destructive actions
