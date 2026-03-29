@@ -97,7 +97,8 @@ export default function NotesField({ label, value, onChange, placeholder = 'Note
                 fontSize: T.fontSize.md,
                 minHeight: 120,
                 textAlignVertical: 'top',
-              }}
+                tintColor: T.primary,
+              } as any}
             />
             <XStack gap={T.space.sm} justifyContent="center">
               <Button label="Cancel" onPress={cancel} variant="danger-ghost" />

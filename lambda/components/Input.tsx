@@ -1,40 +1,7 @@
-import { Platform } from 'react-native';
-import { Input as TamaguiInput, Text, YStack, styled } from 'tamagui';
+import React from 'react';
+import { Platform, StyleSheet, TextInput, View } from 'react-native';
+import { Text } from 'tamagui';
 import T from '@/constants/Theme';
-
-// ─── Styled input ─────────────────────────────────────────────────────────────
-
-const StyledInput = styled(TamaguiInput, {
-  backgroundColor: T.surface,
-  borderWidth: 1,
-  borderColor: T.border,
-  borderRadius: T.radius.md,
-  padding: T.space.md,
-  height: 48,
-  color: T.primary,
-  fontSize: T.fontSize.md,
-  fontWeight: '400',
-  placeholderTextColor: T.muted,
-
-  focusStyle: {
-    borderColor: T.accent,
-    outlineWidth: 0,
-  },
-
-  variants: {
-    errored: {
-      true: { borderColor: T.dangerBorder },
-    },
-    isMultiline: {
-      true: { height: undefined, textAlignVertical: 'top' },
-    },
-    isDisabled: {
-      true: { opacity: 0.5 },
-    },
-  } as const,
-});
-
-// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface InputProps {
   value: string;
@@ -51,8 +18,6 @@ interface InputProps {
   autoCorrect?: boolean;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export default function Input({
   value,
   onChangeText,
@@ -68,9 +33,9 @@ export default function Input({
   autoCorrect,
 }: InputProps) {
   return (
-    <YStack gap={T.space.xs}>
+    <View style={styles.wrapper}>
       {label ? (
-        <Text color={T.primary} fontSize={T.fontSize.sm} fontWeight="600">
+        <Text color={T.primary} fontSize={T.fontSize.sm} fontWeight="600" marginBottom={T.space.xs}>
           {label.split(/(\([^)]+\))/).map((part, i) =>
             /^\([^)]+\)$/.test(part)
               ? <Text key={i} fontSize={T.fontSize.sm} fontWeight="400" color={T.muted}>{part}</Text>
@@ -78,26 +43,56 @@ export default function Input({
           )}
         </Text>
       ) : null}
-      <StyledInput
+      <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
+        placeholderTextColor={T.muted}
         editable={editable}
         multiline={multiline}
         secureTextEntry={secureTextEntry}
         autoCapitalize={autoCapitalize}
         keyboardType={keyboardType}
-        autoCorrect={autoCorrect}
+        autoCorrect={autoCorrect ?? false}
         spellCheck={false}
         selectionColor={T.primary}
-        errored={!!error}
-        isMultiline={multiline}
-        minHeight={multiline ? minHeight : undefined}
-        isDisabled={!editable}
         keyboardAppearance={Platform.OS === 'ios' ? 'dark' : undefined}
         returnKeyType={Platform.OS === 'ios' ? (multiline ? 'default' : 'done') : undefined}
+        style={[
+          styles.input,
+          multiline && { height: undefined, minHeight, textAlignVertical: 'top' },
+          !editable && styles.disabled,
+          error ? styles.errored : styles.normal,
+        ]}
       />
-      {error ? <Text color={T.danger} fontSize={T.fontSize.xs}>{error}</Text> : null}
-    </YStack>
+      {error ? <Text color={T.danger} fontSize={T.fontSize.xs} marginTop={T.space.xs}>{error}</Text> : null}
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  wrapper: {
+    gap: T.space.xs,
+  },
+  input: {
+    backgroundColor: T.surface,
+    borderWidth: 1,
+    borderRadius: T.radius.md,
+    paddingHorizontal: T.space.md,
+    paddingVertical: T.space.md,
+    height: 48,
+    color: T.primary,
+    fontSize: T.fontSize.md,
+    fontWeight: '400',
+    tintColor: T.primary,
+  } as any,
+  normal: {
+    borderColor: T.border,
+  },
+  errored: {
+    borderColor: T.dangerBorder,
+  },
+  disabled: {
+    opacity: 0.5,
+  },
+});

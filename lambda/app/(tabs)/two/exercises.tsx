@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, ScrollView, TextInput } from 'react-native';
+import { Alert, ScrollView, StyleSheet, TextInput } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -114,7 +114,7 @@ export default function ExercisesScreen() {
               onChangeText={setSearch}
               spellCheck={false}
               selectionColor={T.primary}
-              style={{ color: T.primary, fontSize: T.fontSize.sm, flex: 1 }}
+              style={s.search}
             />
           </XStack>
         )}
@@ -199,3 +199,12 @@ export default function ExercisesScreen() {
     </YStack>
   );
 }
+
+const s = StyleSheet.create({
+  search: {
+    color: T.primary,
+    fontSize: T.fontSize.sm,
+    flex: 1,
+    tintColor: T.primary,
+  } as any,
+});

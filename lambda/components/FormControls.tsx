@@ -262,7 +262,8 @@ export function DropdownSelect<T = any>(
                   paddingVertical: 10,
                   color: T.primary,
                   fontSize: T.fontSize.md,
-                }}
+                  tintColor: T.primary,
+                } as any}
               />
             </YStack>
           )}

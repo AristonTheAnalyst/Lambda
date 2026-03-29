@@ -4,6 +4,7 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef } from 'react';
+import { View } from 'react-native';
 import 'react-native-reanimated';
 import { TamaguiProvider } from 'tamagui';
 import { SQLiteProvider } from 'expo-sqlite';
@@ -12,6 +13,7 @@ import { useColorScheme } from '@/hooks';
 import { AuthProvider, useAuthContext } from '@/lib/AuthContext';
 import { DATABASE_NAME } from '@/lib/db/schema';
 import { initializeDatabase } from '@/lib/db/database';
+import T from '@/constants/Theme';
 
 export {
   ErrorBoundary,
@@ -36,13 +38,15 @@ export default function RootLayout() {
   if (!loaded) return null;
 
   return (
-    <TamaguiProvider config={config} defaultTheme="dark">
-      <SQLiteProvider databaseName={DATABASE_NAME} onInit={initializeDatabase}>
-        <AuthProvider>
-          <RootLayoutNav />
-        </AuthProvider>
-      </SQLiteProvider>
-    </TamaguiProvider>
+    <View style={{ flex: 1, tintColor: T.primary } as any}>
+      <TamaguiProvider config={config} defaultTheme="dark">
+        <SQLiteProvider databaseName={DATABASE_NAME} onInit={initializeDatabase}>
+          <AuthProvider>
+            <RootLayoutNav />
+          </AuthProvider>
+        </SQLiteProvider>
+      </TamaguiProvider>
+    </View>
   );
 }
 

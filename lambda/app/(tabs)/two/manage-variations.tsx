@@ -110,7 +110,7 @@ export default function ManageVariationsScreen() {
                 onChangeText={setSearch}
                 spellCheck={false}
                 selectionColor={T.primary}
-                style={{ color: T.primary, fontSize: T.fontSize.sm, flex: 1 }}
+                style={{ color: T.primary, fontSize: T.fontSize.sm, flex: 1, tintColor: T.primary } as any}
               />
             </XStack>
           )}
