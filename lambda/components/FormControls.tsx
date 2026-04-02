@@ -84,9 +84,10 @@ interface SlideUpModalProps {
   visible: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  zIndex?: number;
 }
 
-export function SlideUpModal({ visible, onClose, children }: SlideUpModalProps) {
+export function SlideUpModal({ visible, onClose, children, zIndex }: SlideUpModalProps) {
   React.useEffect(() => { if (visible) Keyboard.dismiss(); }, [visible]);
   return (
     <Sheet
@@ -96,7 +97,7 @@ export function SlideUpModal({ visible, onClose, children }: SlideUpModalProps) 
       animation="medium"
       snapPoints={[85]}
       disableDrag
-      zIndex={100_000}
+      zIndex={zIndex ?? 100_000}
     >
       <Sheet.Overlay
         animation="medium"
