@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Alert, ScrollView, StyleSheet, TextInput } from 'react-native';
-import { Separator, Text, XStack, YStack } from 'tamagui';
+import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SegmentedControl, SlideUpModal } from '@/components/FormControls';
+import { DropdownSelect, SegmentedControl, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
 import { useAuthContext } from '@/lib/AuthContext';
 import GlassButton from '@/components/GlassButton';
@@ -24,6 +24,13 @@ import {
   updateVariation,
   softDeleteVariation,
 } from '@/lib/offline/variationStore';
+import {
+  getBridgeForExercises,
+  getBridgeForVariations,
+  checkBridgeExists,
+  addBridgeRow,
+  removeBridgeRow,
+} from '@/lib/offline/bridgeStore';
 import { useAsyncGuard, useUIGuard } from '@/lib/asyncGuard';
 import T from '@/constants/Theme';
 
@@ -74,12 +81,58 @@ export default function LibraryScreen() {
   const [exCreateVisible, setExCreateVisible] = useState(false);
   const [editEx, setEditEx]             = useState<Exercise | null>(null);
 
+  // ── Edit exercise — assigned variations ─────────────────────────────────
+  const [exAssignedVars, setExAssignedVars]     = useState<Variation[]>([]);
+  const [exAvailableVars, setExAvailableVars]   = useState<Variation[]>([]);
+  const [exSelectedVarIds, setExSelectedVarIds] = useState<number[]>([]);
+  const [loadingExVars, setLoadingExVars]       = useState(false);
+  const [addingExVar, setAddingExVar]           = useState(false);
+
   // ── Variations state ─────────────────────────────────────────────────────
   const [varSearch, setVarSearch]       = useState('');
   const [varName, setVarName]           = useState('');
   const [varCreating, setVarCreating]   = useState(false);
   const [varCreateVisible, setVarCreateVisible] = useState(false);
   const [editVar, setEditVar]           = useState<Variation | null>(null);
+
+  // ── Edit variation — assigned exercises ──────────────────────────────────
+  const [varAssignedExs, setVarAssignedExs]     = useState<Exercise[]>([]);
+  const [varAvailableExs, setVarAvailableExs]   = useState<Exercise[]>([]);
+  const [varSelectedExIds, setVarSelectedExIds] = useState<number[]>([]);
+  const [loadingVarExs, setLoadingVarExs]       = useState(false);
+  const [addingVarEx, setAddingVarEx]           = useState(false);
+
+  // ── Bridge loaders ───────────────────────────────────────────────────────
+
+  const loadExVars = useCallback(async (exId: number) => {
+    setLoadingExVars(true);
+    const rows = await getBridgeForExercises(db, [exId]);
+    const assignedIds = new Set(rows.map((r) => r.custom_variation_id));
+    setExAssignedVars(variations.filter((v) => assignedIds.has(v.custom_variation_id)));
+    setExAvailableVars(variations.filter((v) => !assignedIds.has(v.custom_variation_id)));
+    setExSelectedVarIds([]);
+    setLoadingExVars(false);
+  }, [db, variations]);
+
+  const loadVarExs = useCallback(async (varId: number) => {
+    setLoadingVarExs(true);
+    const rows = await getBridgeForVariations(db, [varId]);
+    const assignedIds = new Set(rows.map((r) => r.custom_exercise_id));
+    setVarAssignedExs(exercises.filter((e) => assignedIds.has(e.custom_exercise_id)));
+    setVarAvailableExs(exercises.filter((e) => !assignedIds.has(e.custom_exercise_id)));
+    setVarSelectedExIds([]);
+    setLoadingVarExs(false);
+  }, [db, exercises]);
+
+  useEffect(() => {
+    if (editEx) { loadExVars(editEx.custom_exercise_id); }
+    else { setExAssignedVars([]); setExAvailableVars([]); setExSelectedVarIds([]); }
+  }, [editEx?.custom_exercise_id]);
+
+  useEffect(() => {
+    if (editVar) { loadVarExs(editVar.custom_variation_id); }
+    else { setVarAssignedExs([]); setVarAvailableExs([]); setVarSelectedExIds([]); }
+  }, [editVar?.custom_variation_id]);
 
   // ── Exercise handlers ────────────────────────────────────────────────────
 
@@ -116,6 +169,28 @@ export default function LibraryScreen() {
     ]);
   }
 
+  function addExVar() { return guard(async () => {
+    if (!editEx || !user || !exSelectedVarIds.length) return;
+    setAddingExVar(true);
+    for (const varId of exSelectedVarIds) {
+      const exists = await checkBridgeExists(db, editEx.custom_exercise_id, varId);
+      if (!exists) await addBridgeRow(db, user.id, editEx.custom_exercise_id, varId);
+    }
+    setAddingExVar(false);
+    await Promise.all([loadExVars(editEx.custom_exercise_id), refreshExerciseDetails()]);
+  }); }
+
+  function confirmRemoveExVar(varId: number) {
+    Alert.alert('Remove Variation', 'Remove this variation from the exercise?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => guard(async () => {
+        if (!editEx) return;
+        await removeBridgeRow(db, editEx.custom_exercise_id, varId);
+        await Promise.all([loadExVars(editEx.custom_exercise_id), refreshExerciseDetails()]);
+      })},
+    ]);
+  }
+
   // ── Variation handlers ───────────────────────────────────────────────────
 
   function createVar() { return guard(async () => {
@@ -147,6 +222,28 @@ export default function LibraryScreen() {
       { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
         await softDeleteVariation(db, id);
         await Promise.all([refreshVariations(), refreshExerciseDetails()]);
+      })},
+    ]);
+  }
+
+  function addVarEx() { return guard(async () => {
+    if (!editVar || !user || !varSelectedExIds.length) return;
+    setAddingVarEx(true);
+    for (const exId of varSelectedExIds) {
+      const exists = await checkBridgeExists(db, exId, editVar.custom_variation_id);
+      if (!exists) await addBridgeRow(db, user.id, exId, editVar.custom_variation_id);
+    }
+    setAddingVarEx(false);
+    await Promise.all([loadVarExs(editVar.custom_variation_id), refreshExerciseDetails()]);
+  }); }
+
+  function confirmRemoveVarEx(exId: number) {
+    Alert.alert('Remove Exercise', 'Remove this exercise from the variation?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => guard(async () => {
+        if (!editVar) return;
+        await removeBridgeRow(db, exId, editVar.custom_variation_id);
+        await Promise.all([loadVarExs(editVar.custom_variation_id), refreshExerciseDetails()]);
       })},
     ]);
   }
@@ -294,8 +391,13 @@ export default function LibraryScreen() {
         </YStack>
       </SlideUpModal>
 
+      {/* ── Edit Exercise (scrollable — includes variation assignment) ── */}
       <SlideUpModal visible={!!editEx} onClose={() => setEditEx(null)}>
-        <YStack backgroundColor={T.surface} borderTopLeftRadius={T.radius.lg} borderTopRightRadius={T.radius.lg} padding={T.space.xl} paddingBottom={T.space.xxl}>
+        <ScrollView
+          contentContainerStyle={{ padding: T.space.xl, paddingBottom: T.space.xxl }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>Edit Exercise</Text>
           <Input
             value={editEx?.exercise_name ?? ''}
@@ -312,7 +414,50 @@ export default function LibraryScreen() {
             <Button label="Cancel" onPress={() => setEditEx(null)} variant="danger-ghost" />
             <Button label="Save" onPress={saveEditEx} />
           </XStack>
-        </YStack>
+
+          {/* ── Assigned variations ── */}
+          <Separator borderColor={T.border} marginTop={T.space.xl} marginBottom={T.space.lg} />
+          <Text fontSize={T.fontSize.md} fontWeight="600" color={T.primary} marginBottom={T.space.sm}>
+            Assigned Variations
+          </Text>
+          {loadingExVars ? (
+            <Spinner size="small" color={T.accent} alignSelf="center" marginVertical={T.space.md} />
+          ) : exAssignedVars.length === 0 ? (
+            <Text color={T.muted} fontSize={T.fontSize.sm} marginBottom={T.space.md}>No variations assigned yet.</Text>
+          ) : (
+            <YStack marginBottom={T.space.md}>
+              {exAssignedVars.map((v, i) => (
+                <XStack
+                  key={v.custom_variation_id}
+                  alignItems="center"
+                  paddingVertical={T.space.sm}
+                  borderBottomWidth={i < exAssignedVars.length - 1 ? 0.5 : 0}
+                  borderBottomColor={T.border}
+                >
+                  <Text flex={1} fontSize={15} color={T.primary}>{v.variation_name}</Text>
+                  <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => confirmRemoveExVar(v.custom_variation_id)} />
+                </XStack>
+              ))}
+            </YStack>
+          )}
+          {exAvailableVars.length > 0 && (
+            <YStack gap={T.space.sm}>
+              <DropdownSelect
+                options={exAvailableVars.map((v) => ({ label: v.variation_name, value: v.custom_variation_id }))}
+                multiSelect
+                selectedValues={exSelectedVarIds}
+                onChangeMulti={setExSelectedVarIds}
+                placeholder="Add variations…"
+                searchable
+              />
+              <Button
+                label={exSelectedVarIds.length > 1 ? 'Add Variations' : 'Add Variation'}
+                onPress={addExVar}
+                loading={addingExVar}
+              />
+            </YStack>
+          )}
+        </ScrollView>
       </SlideUpModal>
 
       <SlideUpModal visible={varCreateVisible} onClose={() => setVarCreateVisible(false)}>
@@ -326,8 +471,13 @@ export default function LibraryScreen() {
         </YStack>
       </SlideUpModal>
 
+      {/* ── Edit Variation (scrollable — includes exercise assignment) ── */}
       <SlideUpModal visible={!!editVar} onClose={() => setEditVar(null)}>
-        <YStack backgroundColor={T.surface} borderTopLeftRadius={T.radius.lg} borderTopRightRadius={T.radius.lg} padding={T.space.xl} paddingBottom={T.space.xxl}>
+        <ScrollView
+          contentContainerStyle={{ padding: T.space.xl, paddingBottom: T.space.xxl }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>Edit Variation</Text>
           <Input
             value={editVar?.variation_name ?? ''}
@@ -338,7 +488,53 @@ export default function LibraryScreen() {
             <Button label="Cancel" onPress={() => setEditVar(null)} variant="danger-ghost" />
             <Button label="Save" onPress={saveEditVar} />
           </XStack>
-        </YStack>
+
+          {/* ── Assigned exercises ── */}
+          <Separator borderColor={T.border} marginTop={T.space.xl} marginBottom={T.space.lg} />
+          <Text fontSize={T.fontSize.md} fontWeight="600" color={T.primary} marginBottom={T.space.sm}>
+            Assigned Exercises
+          </Text>
+          {loadingVarExs ? (
+            <Spinner size="small" color={T.accent} alignSelf="center" marginVertical={T.space.md} />
+          ) : varAssignedExs.length === 0 ? (
+            <Text color={T.muted} fontSize={T.fontSize.sm} marginBottom={T.space.md}>No exercises assigned yet.</Text>
+          ) : (
+            <YStack marginBottom={T.space.md}>
+              {varAssignedExs.map((ex, i) => (
+                <XStack
+                  key={ex.custom_exercise_id}
+                  alignItems="center"
+                  paddingVertical={T.space.sm}
+                  borderBottomWidth={i < varAssignedExs.length - 1 ? 0.5 : 0}
+                  borderBottomColor={T.border}
+                >
+                  <YStack flex={1}>
+                    <Text fontSize={15} color={T.primary}>{ex.exercise_name}</Text>
+                    <Text fontSize={T.fontSize.xs} color={T.muted} marginTop={2}>{ex.exercise_volume_type}</Text>
+                  </YStack>
+                  <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => confirmRemoveVarEx(ex.custom_exercise_id)} />
+                </XStack>
+              ))}
+            </YStack>
+          )}
+          {varAvailableExs.length > 0 && (
+            <YStack gap={T.space.sm}>
+              <DropdownSelect
+                options={varAvailableExs.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
+                multiSelect
+                selectedValues={varSelectedExIds}
+                onChangeMulti={setVarSelectedExIds}
+                placeholder="Add exercises…"
+                searchable
+              />
+              <Button
+                label={varSelectedExIds.length > 1 ? 'Add Exercises' : 'Add Exercise'}
+                onPress={addVarEx}
+                loading={addingVarEx}
+              />
+            </YStack>
+          )}
+        </ScrollView>
       </SlideUpModal>
 
     </YStack>
