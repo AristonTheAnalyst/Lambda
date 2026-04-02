@@ -3,7 +3,6 @@ import { TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import AntDesign from '@expo/vector-icons/AntDesign';
 import Feather from '@expo/vector-icons/Feather';
 import { Text, XStack, YStack } from 'tamagui';
 import PageHeader from '@/components/PageHeader';
@@ -19,16 +18,10 @@ import '@/lib/asyncGuard';
 
 const SECTIONS: { route: string; label: string; description: string; icon: React.ReactNode }[] = [
   {
-    route: '/two/exercises',
-    label: 'Exercises',
-    description: 'Create and manage exercises',
+    route: '/two/library',
+    label: 'Exercises & Variations',
+    description: 'Create and manage exercises and variations',
     icon: <Ionicons name="barbell" size={22} color={T.accent} />,
-  },
-  {
-    route: '/two/manage-variations',
-    label: 'Variations',
-    description: 'Create and manage variations',
-    icon: <AntDesign name="swap" size={22} color={T.accent} />,
   },
   {
     route: '/two/variations',
