@@ -282,9 +282,8 @@ export function DropdownSelect<T = any>(
             keyExtractor={(item) => String(item.value)}
             keyboardShouldPersistTaps="handled"
             ItemSeparatorComponent={() => <Separator borderColor={T.border} />}
-            ListFooterComponent={onCreateNew ? (() => (
+            ListHeaderComponent={onCreateNew ? (() => (
               <YStack>
-                <Separator borderColor={T.border} />
                 <XStack
                   paddingHorizontal={T.space.xl}
                   paddingVertical={15}
@@ -296,6 +295,7 @@ export function DropdownSelect<T = any>(
                     {`+ ${createNewLabel ?? 'New'}`}
                   </Text>
                 </XStack>
+                <Separator borderColor={T.border} />
               </YStack>
             )) as any : undefined}
             renderItem={({ item }) => {

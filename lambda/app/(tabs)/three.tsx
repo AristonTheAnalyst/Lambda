@@ -157,10 +157,10 @@ export default function WorkoutLogScreen() {
         setNewExCreating(false);
         return Alert.alert('Already exists', `"${name}" already exists.`);
       }
-      await reactivateExercise(db, existing.custom_exercise_id);
+      await reactivateExercise(db, existing.custom_exercise_id, newExVolume);
       localId = existing.custom_exercise_id;
     } else {
-      localId = await createExercise(db, { exercise_name: name, exercise_volume_type: newExVolume, exercise_intensity_type: 'weight' });
+      localId = await createExercise(db, user!.id, name, newExVolume);
     }
     await refreshExercises();
     setNewExCreating(false);
