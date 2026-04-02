@@ -4,7 +4,7 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 import { TamaguiProvider } from 'tamagui';
 import { SQLiteProvider } from 'expo-sqlite';
@@ -25,6 +25,10 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
+const rootStyles = StyleSheet.create({
+  root: { flex: 1, tintColor: T.primary } as any,
+});
+
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
@@ -38,7 +42,7 @@ export default function RootLayout() {
   if (!loaded) return null;
 
   return (
-    <View style={{ flex: 1, tintColor: T.primary } as any}>
+    <View style={rootStyles.root}>
       <TamaguiProvider config={config} defaultTheme="dark">
         <SQLiteProvider databaseName={DATABASE_NAME} onInit={initializeDatabase}>
           <AuthProvider>
