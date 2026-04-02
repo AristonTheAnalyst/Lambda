@@ -59,6 +59,10 @@ export async function createWorkout(
         user_workout_created_date: now,
       },
       local_id: localId,
+      // Hold until the user explicitly ends the workout. This prevents partial
+      // workout data from reaching Supabase mid-session, and ensures a cancelled
+      // workout never touches Supabase at all (the held entry is just deleted).
+      status: 'held',
     });
   });
 
@@ -79,6 +83,14 @@ export async function endWorkout(
     [trimmedNotes, workoutId]
   );
 
+  // Release the held workout INSERT so the sync engine picks it up on the next
+  // cycle. Set INSERTs are pending with depends_on_local_id = workoutId, so they
+  // process automatically in order after the workout INSERT resolves.
+  await db.runAsync(
+    `UPDATE sync_queue SET status = 'pending' WHERE status = 'held' AND local_id = ?`,
+    [workoutId]
+  );
+
   const row = await db.getFirstAsync<{ user_id: string; user_workout_created_date: string; user_pre_workout_notes: string | null }>(
     `SELECT user_id, user_workout_created_date, user_pre_workout_notes FROM fact_user_workout WHERE user_workout_id = ?`,
     [workoutId]
@@ -94,7 +106,7 @@ export async function endWorkout(
         user_pre_workout_notes: row.user_pre_workout_notes,
         user_post_workout_notes: trimmedNotes,
       },
-      // If workout was created offline, wait for its INSERT to sync first
+      // Workout was created offline — wait for its INSERT to resolve first
       depends_on_local_id: workoutId < 0 ? workoutId : null,
     });
   }
@@ -151,9 +163,10 @@ export async function cancelWorkout(
   // Hard-delete sets locally
   await db.runAsync(`DELETE FROM fact_workout_set WHERE user_workout_id = ?`, [workoutId]);
 
-  // Purge pending sync queue entries for this workout and its sets
+  // Purge all sync queue entries for this workout and its sets (including held,
+  // which is the normal case — the workout INSERT was never promoted to pending).
   await db.runAsync(
-    `DELETE FROM sync_queue WHERE (local_id = ? OR depends_on_local_id = ?) AND status IN ('pending', 'failed')`,
+    `DELETE FROM sync_queue WHERE (local_id = ? OR depends_on_local_id = ?) AND status IN ('pending', 'failed', 'held')`,
     [workoutId, workoutId]
   );
 

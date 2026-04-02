@@ -10,6 +10,12 @@ export interface SyncEntry {
   local_id?: number | null;
   /** Block this entry until the given local ID has been remapped to a server ID. */
   depends_on_local_id?: number | null;
+  /**
+   * 'pending' (default) — picked up on the next sync run.
+   * 'held'              — invisible to the sync engine until explicitly promoted.
+   *                       Used to defer workout INSERT until the user ends the workout.
+   */
+  status?: 'pending' | 'held';
 }
 
 interface SyncRow {
@@ -66,14 +72,15 @@ export async function enqueueOperation(db: SQLiteDatabase, entry: SyncEntry): Pr
   }
 
   await db.runAsync(
-    `INSERT INTO sync_queue (table_name, operation, payload, local_id, depends_on_local_id)
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO sync_queue (table_name, operation, payload, local_id, depends_on_local_id, status)
+     VALUES (?, ?, ?, ?, ?, ?)`,
     [
       entry.table_name,
       entry.operation,
       payloadJson,
       entry.local_id ?? null,
       entry.depends_on_local_id ?? null,
+      entry.status ?? 'pending',
     ]
   );
 }
