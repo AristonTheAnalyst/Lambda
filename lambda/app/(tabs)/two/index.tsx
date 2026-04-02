@@ -3,7 +3,6 @@ import { TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import Feather from '@expo/vector-icons/Feather';
 import { Text, XStack, YStack } from 'tamagui';
 import PageHeader from '@/components/PageHeader';
 import SyncStatusIcon from '@/components/SyncStatusIcon';
@@ -22,12 +21,6 @@ const SECTIONS: { route: string; label: string; description: string; icon: React
     label: 'Exercises & Variations',
     description: 'Create and manage exercises and variations',
     icon: <Ionicons name="barbell" size={22} color={T.accent} />,
-  },
-  {
-    route: '/two/variations',
-    label: 'Assign Variations',
-    description: 'Manage variations for each exercise',
-    icon: <Feather name="link" size={22} color={T.accent} />,
   },
   {
     route: '/two/guide',

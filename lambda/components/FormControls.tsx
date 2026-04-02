@@ -147,6 +147,8 @@ interface DropdownSelectMultiProps<T = any> {
   multiSelect: true;
   selectedValues: T[];
   onChangeMulti: (values: T[]) => void;
+  onConfirm?: () => void;
+  confirmLabel?: string;
 }
 
 export function DropdownSelect<T = any>(
@@ -158,6 +160,9 @@ export function DropdownSelect<T = any>(
     searchable = false,
     multiSelect = false,
   } = props;
+
+  const onConfirm    = multiSelect ? (props as DropdownSelectMultiProps<T>).onConfirm    : undefined;
+  const confirmLabel = multiSelect ? (props as DropdownSelectMultiProps<T>).confirmLabel : undefined;
 
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
@@ -314,10 +319,10 @@ export function DropdownSelect<T = any>(
                 alignItems="center"
                 justifyContent="center"
                 pressStyle={{ opacity: 0.8 }}
-                onPress={() => setOpen(false)}
+                onPress={() => { setOpen(false); onConfirm?.(); }}
                 cursor="pointer"
               >
-                <Text color={T.accentText} fontSize={T.fontSize.md} fontWeight="600">Done</Text>
+                <Text color={T.accentText} fontSize={T.fontSize.md} fontWeight="600">{confirmLabel ?? 'Done'}</Text>
               </XStack>
             </YStack>
           )}
