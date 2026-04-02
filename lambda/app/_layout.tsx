@@ -13,6 +13,7 @@ import { useColorScheme } from '@/hooks';
 import { AuthProvider, useAuthContext } from '@/lib/AuthContext';
 import { DATABASE_NAME } from '@/lib/db/schema';
 import { initializeDatabase } from '@/lib/db/database';
+import LoadingScreen from '@/components/LoadingScreen';
 import T from '@/constants/Theme';
 
 export {
@@ -39,7 +40,7 @@ export default function RootLayout() {
     if (error) throw error;
   }, [error]);
 
-  if (!loaded) return null;
+  if (!loaded) return <LoadingScreen />;
 
   return (
     <View style={rootStyles.root}>
@@ -62,6 +63,7 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (loading) return;
+    // Still waiting for profile cache / network fetch to resolve onboarded state
     if (session && onboarded === null) return;
 
     let target: string;
@@ -84,6 +86,11 @@ function RootLayoutNav() {
       requestAnimationFrame(() => SplashScreen.hideAsync().catch(() => {}));
     }
   }, [session, loading, onboarded]);
+
+  // Show logo while auth state is resolving (after native splash has hidden)
+  if (loading || (session && onboarded === null)) {
+    return <LoadingScreen />;
+  }
 
   return (
     <ThemeProvider value={DarkTheme}>
