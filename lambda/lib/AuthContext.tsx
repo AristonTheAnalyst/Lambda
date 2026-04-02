@@ -5,27 +5,19 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import supabase from './supabase';
+import { getSecureStorage } from './storage';
 import { DimUser, AuthUser } from '@/types/database';
 
-// ─── Profile cache (AsyncStorage) ────────────────────────────────────────────
-// Caches the user profile locally so the app can start fully offline after
-// the first login. The cache is keyed by user ID so multi-account devices
-// work correctly. We use require() to match the pattern in supabase.ts and
-// avoid a static import that would break on platforms without the module.
-
-function getAsyncStorage() {
-  return require('@react-native-async-storage/async-storage').default as {
-    getItem: (key: string) => Promise<string | null>;
-    setItem: (key: string, value: string) => Promise<void>;
-    removeItem: (key: string) => Promise<void>;
-  };
-}
+// ─── Profile cache (SecureStore) ─────────────────────────────────────────────
+// Caches the user profile in SecureStore (iOS Keychain / Android Keystore) so
+// the app can start fully offline after the first login. Falls back to
+// AsyncStorage in Expo Go. Keyed by user ID so multi-account devices work.
 
 const profileCacheKey = (userId: string) => `lambda_profile_${userId}`;
 
 async function loadCachedProfile(userId: string): Promise<DimUser | null> {
   try {
-    const raw = await getAsyncStorage().getItem(profileCacheKey(userId));
+    const raw = await getSecureStorage().getItem(profileCacheKey(userId));
     return raw ? (JSON.parse(raw) as DimUser) : null;
   } catch {
     return null;
@@ -34,13 +26,13 @@ async function loadCachedProfile(userId: string): Promise<DimUser | null> {
 
 async function saveProfileCache(userId: string, profile: DimUser): Promise<void> {
   try {
-    await getAsyncStorage().setItem(profileCacheKey(userId), JSON.stringify(profile));
+    await getSecureStorage().setItem(profileCacheKey(userId), JSON.stringify(profile));
   } catch {}
 }
 
 async function clearProfileCache(userId: string): Promise<void> {
   try {
-    await getAsyncStorage().removeItem(profileCacheKey(userId));
+    await getSecureStorage().removeItem(profileCacheKey(userId));
   } catch {}
 }
 
