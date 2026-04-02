@@ -59,11 +59,8 @@ lambda/                        ← main app code lives here
 /(onboarding)/                 → first-time profile setup (name, DOB, gender, height)
 /(tabs)/                       → main app
   index                        → Tab 1: User Profile
-  /two                         → Tab 2: Exercise Configuration hub
-  /two/exercises               → CRUD for exercises
-  /two/manage-variations       → CRUD for variations (create, rename, delete)
-  /two/variations              → Assign Variations — exercise-centric: pick exercise, manage assigned variations
-  /two/variation-exercises     → variation-centric view: pick variation, see/manage assigned exercises
+  /two                         → Tab 2: Exercise Configuration hub (2 entries: Library + User Guide)
+  /two/library                 → Combined Exercises & Variations CRUD + variation assignment
   /three                       → Tab 3: Workout Log (log sets live)
   /four                        → Tab 4: Training Logs — list of past workout cards
   /four/[id]                   → Full workout detail (read-only view + edit/delete sets)
@@ -303,6 +300,18 @@ Opens a bottom sheet with a scrollable list. Generic — works with any value ty
 
 **Snap points:** `[64]` default, `[75]` when `searchable` is true.
 
+**Multi-select confirm button:** supports optional `confirmLabel` and `onConfirm` props. Use these to rename the "Done" button and trigger an action when it's pressed. Label can be dynamic (e.g. `"Add 3 Variations"`).
+
+```typescript
+<DropdownSelect
+  multiSelect
+  selectedValues={selection}
+  onChangeMulti={setSelection}
+  confirmLabel={selection.length > 0 ? `Add ${selection.length} Variations` : 'Done'}
+  onConfirm={() => { /* commit selection */ }}
+/>
+```
+
 ---
 
 ### `SlideUpModal` — `components/FormControls.tsx`
@@ -313,7 +322,27 @@ Opens a bottom sheet with a scrollable list. Generic — works with any value ty
 </SlideUpModal>
 ```
 
-Animated overlay + bottom sheet slide-up (Tamagui `Sheet`). Overlay tap closes it.
+Animated overlay + bottom sheet slide-up (Tamagui `Sheet`). Overlay tap closes it. `snapPoints={[85]}` — 85% of screen height.
+
+**Scrollable modal with sticky footer pattern** (used in edit modals):
+```typescript
+<SlideUpModal visible={visible} onClose={onClose}>
+  <YStack flex={1}>
+    <ScrollView contentContainerStyle={{ padding: T.space.xl, paddingBottom: T.space.md }}
+      keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      {/* form content */}
+    </ScrollView>
+    <XStack gap={T.space.sm} paddingHorizontal={T.space.xl} paddingTop={T.space.md}
+      paddingBottom={T.space.xxl} borderTopWidth={0.5} borderTopColor={T.border}
+      justifyContent="center" backgroundColor={T.surface}>
+      <Button label="Cancel" onPress={onClose} variant="danger-ghost" />
+      <Button label="Save" onPress={handleSave} />
+    </XStack>
+  </YStack>
+</SlideUpModal>
+```
+
+**Critical:** `SlideUpModal` components must always be mounted at a stable level in the tree — never inside conditional render blocks (`{condition && <SlideUpModal>}`). Conditionally unmounting a Sheet breaks Tamagui's portal registry and causes the open trigger to stop working. Control visibility via the `visible` prop only.
 
 ---
 
@@ -558,14 +587,41 @@ The user also does video/audio production for a YouTube channel. These notes app
 | Auth (login, signup, Google, Apple) | Done |
 | Onboarding (name, DOB, gender, height) | Done |
 | User Profile (`/index`) | Done — displays and edits `dim_user` profile |
-| Exercise CRUD (`/two/exercises`) | Done |
-| Variation CRUD (`/two/manage-variations`) | Done |
-| Assign Variations — exercise view (`/two/variations`) | Done — pick exercise, add/remove variations |
-| Assign Variations — variation view (`/two/variation-exercises`) | Done — pick variation, see/manage assigned exercises |
+| Exercises & Variations (`/two/library`) | Done — combined CRUD screen with segmented control; edit modals include variation/exercise assignment inline |
 | Workout Log (`/three`) | Done — start/end workout, log sets with weight/reps/variation/notes, edit/delete sets, weight persists per exercise |
 | Training Logs (`/four`) | Done — scrollable list of past workout cards with date, notes, unique exercise+variation combos |
 | Workout Detail (`/four/[id]`) | Done — full set list, edit/delete sets, same display as Workout Log |
 | Local-first / Offline sync | Done — all screens use SQLite; sync queue auto-replays to Supabase on reconnect; OfflineBanner + SyncStatusIcon |
+
+---
+
+## Exercise & Variation Library (`/two/library`)
+
+Single screen combining both CRUD lists via a `SegmentedControl` ("Exercises" / "Variations").
+
+### Edit Modal Pattern (draft-based, deferred commit)
+
+The edit modals for both exercises and variations use a **draft pattern**: all changes (name, volume type, and bridge assignments) are held in local React state and only written to SQLite when the user presses **Save**. Pressing **Cancel** discards everything with zero side effects.
+
+**State shape (edit exercise):**
+- `exOriginalVarIds: Set<number>` — snapshot from DB when modal opens; used to compute the diff
+- `exDraftVarIds: Set<number>` — what's shown in the modal; updates as user adds/removes
+- `exSelection: number[]` — currently checked items in the "Add variations" dropdown (cleared after Add)
+
+**Interaction flow:**
+1. Open edit modal → DB is queried, `exOriginalVarIds` and `exDraftVarIds` seeded identically
+2. User removes a variation (trash button) → removed from `exDraftVarIds`; list updates immediately in modal
+3. User opens "Add variations…" dropdown, selects items → stored in `exSelection`
+4. User presses "Add N Variations" → `exSelection` IDs merged into `exDraftVarIds`, selection cleared; assigned list updates in modal
+5. User presses **Save** → diffs draft vs original, calls `addBridgeRow`/`removeBridgeRow` only for changed IDs, then calls `updateExercise`, closes modal, refreshes context
+
+**Same pattern applies to Edit Variation** (uses `varOriginalExIds`, `varDraftExIds`, `varSelection`).
+
+### Performance notes
+
+- `filteredEx` / `filteredVar` are `useMemo`-derived — only recompute when data or search changes
+- `ExRow` / `VarRow` are `React.memo` components defined outside the screen — don't re-render on modal state changes
+- `confirmDeleteEx`, `confirmDeleteVar`, `handleEditEx`, `handleEditVar` are `useCallback`-wrapped for stable refs passed to memoized rows
 
 ---
 
