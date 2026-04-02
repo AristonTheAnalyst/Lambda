@@ -136,6 +136,8 @@ interface DropdownSelectProps<T = any> {
   multiSelect?: false;
   selectedValues?: never;
   onChangeMulti?: never;
+  onCreateNew?: () => void;
+  createNewLabel?: string;
 }
 
 interface DropdownSelectMultiProps<T = any> {
@@ -163,6 +165,8 @@ export function DropdownSelect<T = any>(
 
   const onConfirm    = multiSelect ? (props as DropdownSelectMultiProps<T>).onConfirm    : undefined;
   const confirmLabel = multiSelect ? (props as DropdownSelectMultiProps<T>).confirmLabel : undefined;
+  const onCreateNew    = !multiSelect ? (props as DropdownSelectProps<T>).onCreateNew    : undefined;
+  const createNewLabel = !multiSelect ? (props as DropdownSelectProps<T>).createNewLabel : undefined;
 
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
@@ -278,6 +282,22 @@ export function DropdownSelect<T = any>(
             keyExtractor={(item) => String(item.value)}
             keyboardShouldPersistTaps="handled"
             ItemSeparatorComponent={() => <Separator borderColor={T.border} />}
+            ListFooterComponent={onCreateNew ? (() => (
+              <YStack>
+                <Separator borderColor={T.border} />
+                <XStack
+                  paddingHorizontal={T.space.xl}
+                  paddingVertical={15}
+                  pressStyle={{ opacity: 0.7 }}
+                  onPress={() => { setOpen(false); onCreateNew!(); }}
+                  cursor="pointer"
+                >
+                  <Text fontSize={T.fontSize.md} color={T.accent} fontWeight="500">
+                    {`+ ${createNewLabel ?? 'New'}`}
+                  </Text>
+                </XStack>
+              </YStack>
+            )) as any : undefined}
             renderItem={({ item }) => {
               const active = multiSelect
                 ? selValueSet.has(String(item.value))

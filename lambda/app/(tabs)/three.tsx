@@ -13,8 +13,9 @@ import SyncStatusIcon from '@/components/SyncStatusIcon';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import NotesField from '@/components/NotesField';
-import { DropdownSelect, SlideUpModal } from '@/components/FormControls';
+import { DropdownSelect, SegmentedControl, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
+import { createExercise, findExerciseByName, reactivateExercise } from '@/lib/offline/exerciseStore';
 import { useAuthContext } from '@/lib/AuthContext';
 import { useSyncContext } from '@/lib/sync/syncContext';
 import { getRemap } from '@/lib/db/idRemap';
@@ -42,7 +43,7 @@ export default function WorkoutLogScreen() {
   const db = useSQLiteContext();
   const guard = useAsyncGuard();
   const { user } = useAuthContext();
-  const { exercises, exerciseDetailMap } = useExerciseData();
+  const { exercises, exerciseDetailMap, refreshExercises } = useExerciseData();
   const { lastSyncAt } = useSyncContext();
 
   const [currentWorkoutId, setCurrentWorkoutId] = useState<number | null>(null);
@@ -62,6 +63,11 @@ export default function WorkoutLogScreen() {
   const [selectedVarId, setSelectedVarId]   = useState<number | null>(null);
   const [logLoading, setLogLoading]         = useState(false);
   const [logSetModalVisible, setLogSetModalVisible] = useState(false);
+
+  const [newExVisible, setNewExVisible]   = useState(false);
+  const [newExName, setNewExName]         = useState('');
+  const [newExVolume, setNewExVolume]     = useState<'reps' | 'duration'>('reps');
+  const [newExCreating, setNewExCreating] = useState(false);
 
   const [sets, setSets]               = useState<WorkoutSet[]>([]);
   const [setsLoading, setSetsLoading] = useState(false);
@@ -133,6 +139,34 @@ export default function WorkoutLogScreen() {
       }
     }
   }
+
+  function openNewExercise() {
+    setNewExName('');
+    setNewExVolume('reps');
+    setNewExVisible(true);
+  }
+
+  function createNewExercise() { return guard(async () => {
+    const name = newExName.trim();
+    if (!name) return Alert.alert('Enter a name');
+    setNewExCreating(true);
+    const existing = await findExerciseByName(db, name);
+    let localId: number;
+    if (existing) {
+      if (existing.is_active) {
+        setNewExCreating(false);
+        return Alert.alert('Already exists', `"${name}" already exists.`);
+      }
+      await reactivateExercise(db, existing.custom_exercise_id);
+      localId = existing.custom_exercise_id;
+    } else {
+      localId = await createExercise(db, { exercise_name: name, exercise_volume_type: newExVolume, exercise_intensity_type: 'weight' });
+    }
+    await refreshExercises();
+    setNewExCreating(false);
+    setNewExVisible(false);
+    onSelectExercise(localId);
+  }); }
 
   // ── Start workout ──────────────────────────────────────────────────────────
 
@@ -376,6 +410,9 @@ export default function WorkoutLogScreen() {
                       value={selectedExId}
                       onChange={onSelectExercise}
                       placeholder="Select exercise…"
+                      searchable
+                      onCreateNew={openNewExercise}
+                      createNewLabel="New Exercise"
                     />
                   </YStack>
                   {selectedEx && (
@@ -430,6 +467,41 @@ export default function WorkoutLogScreen() {
             </ScrollView>
           </YStack>
         )}
+      </SlideUpModal>
+
+      {/* ── New Exercise Modal ── */}
+      <SlideUpModal visible={newExVisible} onClose={() => setNewExVisible(false)}>
+        <YStack flex={1}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: T.space.xl, paddingBottom: T.space.xxl }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <YStack gap={T.space.md}>
+              <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>New Exercise</Text>
+              <Input
+                label="Name"
+                value={newExName}
+                onChangeText={setNewExName}
+                placeholder="e.g. Pull-up"
+                autoCapitalize="words"
+              />
+              <YStack gap={T.space.xs}>
+                <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary}>Volume type</Text>
+                <SegmentedControl
+                  options={[{ label: 'Reps', value: 'reps' }, { label: 'Duration', value: 'duration' }]}
+                  value={newExVolume}
+                  onChange={setNewExVolume}
+                />
+              </YStack>
+            </YStack>
+          </ScrollView>
+          <XStack gap={T.space.sm} padding={T.space.xl} paddingTop={T.space.sm} justifyContent="center">
+            <Button label="Cancel" onPress={() => setNewExVisible(false)} variant="danger-ghost" />
+            <Button label="Create" onPress={createNewExercise} loading={newExCreating} />
+          </XStack>
+        </YStack>
       </SlideUpModal>
 
       {/* ── Edit Set Modal ── */}
