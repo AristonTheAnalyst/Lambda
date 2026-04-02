@@ -7,6 +7,43 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import supabase from './supabase';
 import { DimUser, AuthUser } from '@/types/database';
 
+// ─── Profile cache (AsyncStorage) ────────────────────────────────────────────
+// Caches the user profile locally so the app can start fully offline after
+// the first login. The cache is keyed by user ID so multi-account devices
+// work correctly. We use require() to match the pattern in supabase.ts and
+// avoid a static import that would break on platforms without the module.
+
+function getAsyncStorage() {
+  return require('@react-native-async-storage/async-storage').default as {
+    getItem: (key: string) => Promise<string | null>;
+    setItem: (key: string, value: string) => Promise<void>;
+    removeItem: (key: string) => Promise<void>;
+  };
+}
+
+const profileCacheKey = (userId: string) => `lambda_profile_${userId}`;
+
+async function loadCachedProfile(userId: string): Promise<DimUser | null> {
+  try {
+    const raw = await getAsyncStorage().getItem(profileCacheKey(userId));
+    return raw ? (JSON.parse(raw) as DimUser) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function saveProfileCache(userId: string, profile: DimUser): Promise<void> {
+  try {
+    await getAsyncStorage().setItem(profileCacheKey(userId), JSON.stringify(profile));
+  } catch {}
+}
+
+async function clearProfileCache(userId: string): Promise<void> {
+  try {
+    await getAsyncStorage().removeItem(profileCacheKey(userId));
+  } catch {}
+}
+
 WebBrowser.maybeCompleteAuthSession();
 
 interface AuthContextValue {
@@ -39,6 +76,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const clearSessionExpired = useCallback(() => setSessionExpired(false), []);
 
   const fetchUserProfile = useCallback(async (userId: string) => {
+    // 1. Load from cache first — unblocks navigation immediately when offline
+    const cached = await loadCachedProfile(userId);
+    if (cached) {
+      setProfile(cached);
+      setOnboarded(cached.onboarded);
+    }
+
+    // 2. Fetch fresh data from Supabase in the background
     const { data, error } = await supabase
       .from('dim_user')
       .select('*')
@@ -46,15 +91,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
 
     if (error) {
+      // Offline or transient error — keep using cached values
       console.error('[Auth] Error fetching profile:', error);
       return;
     }
 
     if (!data) {
-      await supabase.auth.signOut();
+      // Server is reachable but profile doesn't exist — only sign out if
+      // there is no cached profile (i.e. this isn't just a network blip)
+      if (!cached) await supabase.auth.signOut();
       return;
     }
 
+    // 3. Persist fresh data and update state
+    await saveProfileCache(userId, data as DimUser);
     setProfile(data as DimUser);
     setOnboarded(data.onboarded);
   }, []);
@@ -112,8 +162,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async (): Promise<{ error: Error | null }> => {
     explicitSignOut.current = true;
+    const userId = user?.id;
     const { error } = await supabase.auth.signOut();
     if (!error) {
+      if (userId) await clearProfileCache(userId);
       setUser(null);
       setSession(null);
       setProfile(null);
@@ -122,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       explicitSignOut.current = false;
     }
     return { error: error ?? null };
-  }, []);
+  }, [user]);
 
   const signInWithGoogle = useCallback(async (): Promise<{ error: Error | null }> => {
     try {

@@ -25,7 +25,7 @@ export interface WorkoutWithSets {
 
 export async function getActiveWorkoutId(db: SQLiteDatabase): Promise<number | null> {
   const row = await db.getFirstAsync<{ user_workout_id: number }>(
-    `SELECT user_workout_id FROM fact_user_workout WHERE is_active = 1 LIMIT 1`
+    `SELECT user_workout_id FROM fact_user_workout WHERE is_active = 1 AND deleted_locally = 0 LIMIT 1`
   );
   return row?.user_workout_id ?? null;
 }
@@ -41,23 +41,25 @@ export async function createWorkout(
   const now = new Date().toISOString();
   const trimmedNotes = notes?.trim() || null;
 
-  await db.runAsync(
-    `INSERT INTO fact_user_workout
-       (user_workout_id, user_id, user_pre_workout_notes, user_workout_created_date, is_active, synced)
-     VALUES (?, ?, ?, ?, 1, 0)`,
-    [localId, userId, trimmedNotes, now]
-  );
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      `INSERT INTO fact_user_workout
+         (user_workout_id, user_id, user_pre_workout_notes, user_workout_created_date, is_active, synced)
+       VALUES (?, ?, ?, ?, 1, 0)`,
+      [localId, userId, trimmedNotes, now]
+    );
 
-  await enqueueOperation(db, {
-    table_name: 'fact_user_workout',
-    operation: 'INSERT',
-    payload: {
-      user_workout_id: localId,
-      user_id: userId,
-      user_pre_workout_notes: trimmedNotes,
-      user_workout_created_date: now,
-    },
-    local_id: localId,
+    await enqueueOperation(db, {
+      table_name: 'fact_user_workout',
+      operation: 'INSERT',
+      payload: {
+        user_workout_id: localId,
+        user_id: userId,
+        user_pre_workout_notes: trimmedNotes,
+        user_workout_created_date: now,
+      },
+      local_id: localId,
+    });
   });
 
   return localId;
@@ -151,7 +153,7 @@ export async function cancelWorkout(
 
   // Purge pending sync queue entries for this workout and its sets
   await db.runAsync(
-    `DELETE FROM sync_queue WHERE (local_id = ? OR depends_on_local_id = ?) AND status = 'pending'`,
+    `DELETE FROM sync_queue WHERE (local_id = ? OR depends_on_local_id = ?) AND status IN ('pending', 'failed')`,
     [workoutId, workoutId]
   );
 

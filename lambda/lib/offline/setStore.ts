@@ -46,44 +46,46 @@ export async function insertSet(
 ): Promise<number> {
   const localId = await getNextLocalId(db);
 
-  await db.runAsync(
-    `INSERT INTO fact_workout_set
-       (workout_set_id, user_workout_id, custom_exercise_id, custom_variation_id,
-        workout_set_number, workout_set_weight, workout_set_reps, workout_set_duration_seconds,
-        workout_set_notes, synced)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-    [
-      localId,
-      data.user_workout_id,
-      data.custom_exercise_id,
-      data.custom_variation_id,
-      data.workout_set_number,
-      data.workout_set_weight,
-      JSON.stringify(data.workout_set_reps),
-      JSON.stringify(data.workout_set_duration_seconds),
-      data.workout_set_notes,
-    ]
-  );
-
   // If the workout was created offline, wait for its INSERT to sync first
   const dependsOnLocalId = data.user_workout_id < 0 ? data.user_workout_id : null;
 
-  await enqueueOperation(db, {
-    table_name: 'fact_workout_set',
-    operation: 'INSERT',
-    payload: {
-      workout_set_id: localId,
-      user_workout_id: data.user_workout_id,
-      custom_exercise_id: data.custom_exercise_id,
-      custom_variation_id: data.custom_variation_id,
-      workout_set_number: data.workout_set_number,
-      workout_set_weight: data.workout_set_weight,
-      workout_set_reps: data.workout_set_reps,
-      workout_set_duration_seconds: data.workout_set_duration_seconds,
-      workout_set_notes: data.workout_set_notes,
-    },
-    local_id: localId,
-    depends_on_local_id: dependsOnLocalId,
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      `INSERT INTO fact_workout_set
+         (workout_set_id, user_workout_id, custom_exercise_id, custom_variation_id,
+          workout_set_number, workout_set_weight, workout_set_reps, workout_set_duration_seconds,
+          workout_set_notes, synced)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      [
+        localId,
+        data.user_workout_id,
+        data.custom_exercise_id,
+        data.custom_variation_id,
+        data.workout_set_number,
+        data.workout_set_weight,
+        JSON.stringify(data.workout_set_reps),
+        JSON.stringify(data.workout_set_duration_seconds),
+        data.workout_set_notes,
+      ]
+    );
+
+    await enqueueOperation(db, {
+      table_name: 'fact_workout_set',
+      operation: 'INSERT',
+      payload: {
+        workout_set_id: localId,
+        user_workout_id: data.user_workout_id,
+        custom_exercise_id: data.custom_exercise_id,
+        custom_variation_id: data.custom_variation_id,
+        workout_set_number: data.workout_set_number,
+        workout_set_weight: data.workout_set_weight,
+        workout_set_reps: data.workout_set_reps,
+        workout_set_duration_seconds: data.workout_set_duration_seconds,
+        workout_set_notes: data.workout_set_notes,
+      },
+      local_id: localId,
+      depends_on_local_id: dependsOnLocalId,
+    });
   });
 
   return localId;
