@@ -625,6 +625,43 @@ The edit modals for both exercises and variations use a **draft pattern**: all c
 
 ---
 
+## Known Quirks & Non-Issues
+
+These are recurring false alarms that look like bugs but are not. Do not attempt to fix them.
+
+### Tamagui TypeScript errors on `T.*` values
+
+**Every file that uses Tamagui layout components will show TypeScript errors like:**
+
+```
+Type '"#eb912b"' has no properties in common with type 'WithThemeShorthandsAndPseudos<...>'
+Type '16' has no properties in common with type 'WithThemeShorthandsAndPseudos<...>'
+```
+
+**This is a known Tamagui v2 generic inference bug.** It affects every prop where a `T.*` value (e.g. `T.accent`, `T.space.md`, `T.fontSize.lg`) is passed to a Tamagui component (`XStack`, `YStack`, `Text`, etc.). The app compiles and runs correctly. Ignore all errors of this pattern — do not work around them by changing `T.*` usage, adding casts, or switching to hardcoded values.
+
+### `withTransactionAsync` removed from syncEngine
+
+`db.withTransactionAsync(...)` was removed from `lib/sync/syncEngine.ts` because expo-sqlite throws "cannot start a transaction within a transaction" when another db operation is in flight. The three post-INSERT operations (`setRemap`, `updateLocalRowId`, `markDone`) are now run sequentially without a wrapping transaction. This is intentional — the remap itself acts as an idempotency guard for retries.
+
+### SlideUpModal always-mounted rule
+
+`SlideUpModal` (and any Tamagui `Sheet`) must **never** be inside a conditional render block (`{condition && <SlideUpModal>}`). Conditionally unmounting a Sheet breaks Tamagui's portal registry and causes the open trigger to stop working. This also applies to `DropdownSelect`, which renders a Sheet internally — do not conditionally unmount `DropdownSelect` components. Control visibility via the `visible` prop only.
+
+The wrong pattern that breaks things:
+```tsx
+{modalVisible && <SlideUpModal visible={modalVisible} ...>}   // ❌ breaks portal
+{modalVisible && <DropdownSelect ...>}                         // ❌ breaks nested sheet
+```
+
+The correct pattern:
+```tsx
+<SlideUpModal visible={modalVisible} ...>  // ✅ always mounted
+  <DropdownSelect ...>                     // ✅ always mounted
+```
+
+---
+
 ## What's Not Built Yet
 
 | Feature | Notes |

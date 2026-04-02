@@ -1,12 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Alert,
-  Keyboard,
-  ScrollView,
-} from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Alert, Keyboard, ScrollView } from 'react-native';
 import SlidePages from '@/components/SlidePages';
 import { useSlidePages } from '@/hooks/useSlidePages';
-import { Spinner, Text, XStack, YStack } from 'tamagui';
+import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import { useSQLiteContext } from 'expo-sqlite';
 import PageHeader from '@/components/PageHeader';
 import SyncStatusIcon from '@/components/SyncStatusIcon';
@@ -39,6 +35,41 @@ function formatValues(arr: number[] | null): string {
   return arr.join(', ');
 }
 
+// ─── SetRow — memoized to avoid re-renders on modal/input state changes ───────
+
+interface SetRowProps {
+  s: WorkoutSet;
+  exName: string;
+  varName: string | null;
+  repsStr: string;
+  onEdit: (s: WorkoutSet) => void;
+  onDelete: (id: number) => void;
+}
+
+const SetRow = React.memo(function SetRow({ s, exName, varName, repsStr, onEdit, onDelete }: SetRowProps) {
+  return (
+    <XStack borderBottomWidth={0.5} borderBottomColor={T.border} paddingVertical={T.space.sm} alignItems="center" gap={T.space.sm}>
+      <Text fontWeight="700" fontSize={15} color={T.accent}>#{s.workout_set_number}</Text>
+      <YStack flex={1}>
+        <XStack alignItems="flex-end" gap={T.space.sm}>
+          <Text fontSize={15} fontWeight="500" color={T.primary}>{exName}</Text>
+          {varName && <Text fontSize={T.fontSize.sm} color={T.muted}>{varName}</Text>}
+        </XStack>
+        <Text fontSize={T.fontSize.xs} marginTop={T.space.xs} color={T.muted}>
+          {s.workout_set_weight != null ? `${s.workout_set_weight}kg · ` : ''}{repsStr}
+          {s.workout_set_notes
+            ? <Text fontSize={T.fontSize.xs} color={T.muted} fontStyle="italic">{` · "${s.workout_set_notes}"`}</Text>
+            : null}
+        </Text>
+      </YStack>
+      <XStack gap={T.space.sm}>
+        <GlassButton icon="pencil" iconSize={14} onPress={() => onEdit(s)} />
+        <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => onDelete(s.workout_set_id)} />
+      </XStack>
+    </XStack>
+  );
+});
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function WorkoutLogScreen() {
@@ -48,7 +79,11 @@ export default function WorkoutLogScreen() {
   const { exercises, variations, exerciseDetailMap, refreshExercises, refreshVariations, refreshExerciseDetails } = useExerciseData();
   const { lastSyncAt } = useSyncContext();
 
+  // ── Workout state ──────────────────────────────────────────────────────────
+
   const [currentWorkoutId, setCurrentWorkoutId] = useState<number | null>(null);
+  const [sets, setSets]               = useState<WorkoutSet[]>([]);
+  const [setsLoading, setSetsLoading] = useState(false);
   const [startNotes, setStartNotes]   = useState('');
   const [endNotes, setEndNotes]       = useState('');
   const [startLoading, setStartLoading] = useState(false);
@@ -56,57 +91,85 @@ export default function WorkoutLogScreen() {
 
   const slidePages = useSlidePages();
 
+  // ── Log set form state ─────────────────────────────────────────────────────
 
-  const [selectedExId, setSelectedExId]     = useState<number | null>(null);
-  const selectedEx = selectedExId ? (exerciseDetailMap[selectedExId] ?? null) : null;
-  const [weight, setWeight]                 = useState('');
-  const [repsOrDuration, setRepsOrDuration] = useState('');
-  const [setNotes, setSetNotes]             = useState('');
-  const [selectedVarId, setSelectedVarId]   = useState<number | null>(null);
-  const [logLoading, setLogLoading]         = useState(false);
   const [logSetModalVisible, setLogSetModalVisible] = useState(false);
+  const [selectedExId, setSelectedExId]   = useState<number | null>(null);
+  const [selectedVarId, setSelectedVarId] = useState<number | null>(null);
+  const [weight, setWeight]               = useState('');
+  const [repsOrDuration, setRepsOrDuration] = useState('');
+  const [setNotes, setSetNotes]           = useState('');
+  const [logLoading, setLogLoading]       = useState(false);
+
+  const selectedEx = selectedExId ? (exerciseDetailMap[selectedExId] ?? null) : null;
+
+  // ── Edit set form state ────────────────────────────────────────────────────
+
+  const [editingSet, setEditingSet]   = useState<WorkoutSet | null>(null);
+  const [editExId, setEditExId]       = useState<number | null>(null);
+  const [editVarId, setEditVarId]     = useState<number | null>(null);
+  const [editWeight, setEditWeight]   = useState('');
+  const [editRepsOrDuration, setEditRepsOrDuration] = useState('');
+  const [editNotes, setEditNotes]     = useState('');
+  const [editLoading, setEditLoading] = useState(false);
+
+  const editEx = editExId ? (exerciseDetailMap[editExId] ?? null) : null;
+
+  // ── New exercise modal state ───────────────────────────────────────────────
 
   const [newExVisible, setNewExVisible]   = useState(false);
   const [newExName, setNewExName]         = useState('');
   const [newExVolume, setNewExVolume]     = useState<'reps' | 'duration'>('reps');
   const [newExCreating, setNewExCreating] = useState(false);
 
+  // ── Assign + new variation state ───────────────────────────────────────────
+
   const [assignVarVisible, setAssignVarVisible] = useState(false);
   const [assignVarForEdit, setAssignVarForEdit] = useState(false);
+  const [newVarVisible, setNewVarVisible]       = useState(false);
+  const [newVarForEdit, setNewVarForEdit]       = useState(false);
+  const [newVarName, setNewVarName]             = useState('');
+  const [newVarCreating, setNewVarCreating]     = useState(false);
 
-  const [newVarVisible, setNewVarVisible]     = useState(false);
-  const [newVarForEdit, setNewVarForEdit]     = useState(false); // true = edit set flow
-  const [newVarName, setNewVarName]           = useState('');
-  const [newVarCreating, setNewVarCreating]   = useState(false);
+  // ─── Derived / memoized options ───────────────────────────────────────────
 
-  const [sets, setSets]               = useState<WorkoutSet[]>([]);
-  const [setsLoading, setSetsLoading] = useState(false);
+  const exerciseOptions = useMemo(
+    () => exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id })),
+    [exercises]
+  );
 
-  const [editingSet, setEditingSet]         = useState<WorkoutSet | null>(null);
-  const [editExId, setEditExId]             = useState<number | null>(null);
-  const editEx = editExId ? (exerciseDetailMap[editExId] ?? null) : null;
-  const [editWeight, setEditWeight]         = useState('');
-  const [editRepsOrDuration, setEditRepsOrDuration] = useState('');
-  const [editNotes, setEditNotes]           = useState('');
-  const [editVarId, setEditVarId]           = useState<number | null>(null);
-  const [editLoading, setEditLoading]       = useState(false);
+  const logVarOptions = useMemo(() => [
+    { label: 'None', value: null as number | null },
+    ...(selectedEx?.assigned_variations ?? []).map((v) => ({ label: v.variation_name, value: v.custom_variation_id as number | null })),
+  ], [selectedEx]);
+
+  const editVarOptions = useMemo(() => [
+    { label: 'None', value: null as number | null },
+    ...(editEx?.assigned_variations ?? []).map((v) => ({ label: v.variation_name, value: v.custom_variation_id as number | null })),
+  ], [editEx]);
+
+  // ── Workout state helper ───────────────────────────────────────────────────
+
+  function clearLogForm() {
+    setSelectedExId(null);
+    setSelectedVarId(null);
+    setWeight('');
+    setRepsOrDuration('');
+    setSetNotes('');
+  }
 
   // ── Load sets from SQLite ──────────────────────────────────────────────────
 
   const loadSets = useCallback(async (workoutId: number) => {
     setSetsLoading(true);
-    // If the ID is negative (offline), check if sync has remapped it to a server ID
     let id = workoutId;
     if (id < 0) {
       const remap = await getRemap(db, id);
-      if (remap) {
-        id = remap.serverId;
-        setCurrentWorkoutId(id);
-      }
+      if (remap) { id = remap.serverId; setCurrentWorkoutId(id); }
     }
     const data = await loadSetsForWorkout(db, id);
-    setSetsLoading(false);
     setSets(data);
+    setSetsLoading(false);
   }, [db]);
 
   // ── Restore active workout on mount ───────────────────────────────────────
@@ -122,20 +185,19 @@ export default function WorkoutLogScreen() {
     })();
   }, [db]);
 
-  // ── Re-check after sync (ID may have changed from local to server) ─────────
+  // ── Re-check after sync (negative ID may have been remapped) ──────────────
 
   useEffect(() => {
     if (!lastSyncAt || currentWorkoutId == null || currentWorkoutId >= 0) return;
     (async () => {
       const remap = await getRemap(db, currentWorkoutId);
-      if (remap) {
-        setCurrentWorkoutId(remap.serverId);
-        loadSets(remap.serverId);
-      }
+      if (remap) { setCurrentWorkoutId(remap.serverId); loadSets(remap.serverId); }
     })();
   }, [lastSyncAt]);
 
-  async function onSelectExercise(exId: number | null) {
+  // ── Exercise selection ─────────────────────────────────────────────────────
+
+  const onSelectExercise = useCallback(async (exId: number | null) => {
     setSelectedExId(exId);
     setSelectedVarId(null);
     setWeight('');
@@ -148,7 +210,9 @@ export default function WorkoutLogScreen() {
         setSelectedVarId(defaults.last_variation_id);
       }
     }
-  }
+  }, [db]);
+
+  // ── Assign variation sheet ─────────────────────────────────────────────────
 
   function openAssignVar(forEdit: boolean) {
     setAssignVarForEdit(forEdit);
@@ -166,6 +230,8 @@ export default function WorkoutLogScreen() {
     else setSelectedVarId(varId);
   }
 
+  // ── New variation ──────────────────────────────────────────────────────────
+
   function openNewVariation(forEdit: boolean) {
     setAssignVarVisible(false);
     setNewVarName('');
@@ -180,19 +246,14 @@ export default function WorkoutLogScreen() {
     const existing = await findVariationByName(db, name);
     let localId: number;
     if (existing) {
-      if (existing.is_active) {
-        setNewVarCreating(false);
-        return Alert.alert('Already exists', `"${name}" already exists.`);
-      }
+      if (existing.is_active) { setNewVarCreating(false); return Alert.alert('Already exists', `"${name}" already exists.`); }
       await reactivateVariation(db, existing.custom_variation_id);
       localId = existing.custom_variation_id;
     } else {
       localId = await createVariation(db, user!.id, name);
     }
     const exId = newVarForEdit ? editExId : selectedExId;
-    if (exId !== null) {
-      await addBridgeRow(db, user!.id, exId, localId);
-    }
+    if (exId !== null) await addBridgeRow(db, user!.id, exId, localId);
     await refreshVariations();
     await refreshExerciseDetails();
     setNewVarCreating(false);
@@ -200,6 +261,8 @@ export default function WorkoutLogScreen() {
     if (newVarForEdit) setEditVarId(localId);
     else setSelectedVarId(localId);
   }); }
+
+  // ── New exercise ───────────────────────────────────────────────────────────
 
   function openNewExercise() {
     setNewExName('');
@@ -214,10 +277,7 @@ export default function WorkoutLogScreen() {
     const existing = await findExerciseByName(db, name);
     let localId: number;
     if (existing) {
-      if (existing.is_active) {
-        setNewExCreating(false);
-        return Alert.alert('Already exists', `"${name}" already exists.`);
-      }
+      if (existing.is_active) { setNewExCreating(false); return Alert.alert('Already exists', `"${name}" already exists.`); }
       await reactivateExercise(db, existing.custom_exercise_id, newExVolume);
       localId = existing.custom_exercise_id;
     } else {
@@ -242,7 +302,7 @@ export default function WorkoutLogScreen() {
     slidePages.slideIn();
   }); }
 
-  // ── End workout ────────────────────────────────────────────────────────────
+  // ── End / cancel workout ───────────────────────────────────────────────────
 
   function confirmCancelWorkout() {
     Alert.alert('Cancel Workout', 'Discard this workout and all logged sets?', [
@@ -253,11 +313,7 @@ export default function WorkoutLogScreen() {
         setCurrentWorkoutId(null);
         setEndNotes('');
         setSets([]);
-        setSelectedExId(null);
-        setWeight('');
-        setRepsOrDuration('');
-        setSetNotes('');
-        setSelectedVarId(null);
+        clearLogForm();
       })},
       { text: 'Keep Going' },
     ]);
@@ -279,11 +335,7 @@ export default function WorkoutLogScreen() {
     setCurrentWorkoutId(null);
     setEndNotes('');
     setSets([]);
-    setSelectedExId(null);
-    setWeight('');
-    setRepsOrDuration('');
-    setSetNotes('');
-    setSelectedVarId(null);
+    clearLogForm();
     Alert.alert('Workout saved!');
   }); }
 
@@ -297,7 +349,6 @@ export default function WorkoutLogScreen() {
     if (values.length === 0) return Alert.alert(hint);
     const isReps = selectedEx.exercise_volume_type === 'reps';
     const nextSetNum = sets.length > 0 ? Math.max(...sets.map((s) => s.workout_set_number)) + 1 : 1;
-
     setLogLoading(true);
     await insertSet(db, {
       user_workout_id: currentWorkoutId,
@@ -319,7 +370,7 @@ export default function WorkoutLogScreen() {
 
   // ── Edit set ───────────────────────────────────────────────────────────────
 
-  function openEditSet(s: WorkoutSet) { return guard(async () => {
+  const openEditSet = useCallback((s: WorkoutSet) => {
     Keyboard.dismiss();
     setEditingSet(s);
     setEditExId(s.custom_exercise_id);
@@ -328,7 +379,7 @@ export default function WorkoutLogScreen() {
     setEditRepsOrDuration(vals.join(','));
     setEditNotes(s.workout_set_notes ?? '');
     setEditVarId(s.custom_variation_id);
-  }); }
+  }, []);
 
   function onEditExerciseChange(exId: number | null) {
     setEditExId(exId);
@@ -354,7 +405,7 @@ export default function WorkoutLogScreen() {
     if (currentWorkoutId) loadSets(currentWorkoutId);
   }); }
 
-  function handleDeleteSet(setId: number) {
+  const handleDeleteSet = useCallback((setId: number) => {
     Alert.alert('Delete Set', 'Remove this set?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
@@ -362,15 +413,16 @@ export default function WorkoutLogScreen() {
         if (currentWorkoutId) loadSets(currentWorkoutId);
       })},
     ]);
-  }
+  }, [db, currentWorkoutId, guard, loadSets]);
 
-  // ─── Render ──────────────────────────────────────────────────────────────
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <YStack flex={1} backgroundColor={T.bg}>
       <PageHeader title="Training Session" right={<SyncStatusIcon />} />
 
       <SlidePages controller={slidePages}>
+        {/* ── Page 0: Start ── */}
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: T.space.lg, paddingBottom: T.space.xxl }}
@@ -390,6 +442,8 @@ export default function WorkoutLogScreen() {
             <Button label="Start Workout" onPress={() => startWorkout()} loading={startLoading} />
           </YStack>
         </ScrollView>
+
+        {/* ── Page 1: Active workout ── */}
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: T.space.lg, paddingBottom: T.space.xxl }}
@@ -397,128 +451,48 @@ export default function WorkoutLogScreen() {
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets={true}
         >
-          {/* ── Sets table ── */}
           <XStack alignItems="center" marginBottom={T.space.sm}>
             <Text fontSize={T.fontSize.xl} fontWeight="700" color={T.primary} flex={1}>Sets this workout</Text>
             <GlassButton icon="plus" label="Log Set" onPress={() => setLogSetModalVisible(true)} />
           </XStack>
+
           {setsLoading ? (
             <Spinner size="large" color={T.accent} marginTop={T.space.md} />
           ) : sets.length === 0 ? (
             <Text color={T.muted} marginTop={T.space.sm}>No sets logged yet.</Text>
-          ) : (
-            sets.map((s) => {
-              const exName = exerciseDetailMap[s.custom_exercise_id]?.exercise_name ?? `#${s.custom_exercise_id}`;
-              const varName = s.custom_variation_id
-                ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations.find((v) => v.custom_variation_id === s.custom_variation_id)?.variation_name
-                : null;
-              const repsStr = s.workout_set_reps?.length
-                ? `${formatValues(s.workout_set_reps)} reps`
-                : s.workout_set_duration_seconds?.length ? `${formatValues(s.workout_set_duration_seconds)}s` : '—';
-              return (
-                <XStack key={s.workout_set_id} borderBottomWidth={0.5} borderBottomColor={T.border} paddingVertical={T.space.sm} alignItems="center" gap={T.space.sm}>
-                  <Text fontWeight="700" fontSize={15} color={T.accent}>#{s.workout_set_number}</Text>
-                  <YStack flex={1}>
-                    <XStack alignItems="flex-end" gap={T.space.sm}>
-                      <Text fontSize={15} fontWeight="500" color={T.primary}>{exName}</Text>
-                      {varName && <Text fontSize={T.fontSize.sm} color={T.muted}>{varName}</Text>}
-                    </XStack>
-                    <Text fontSize={T.fontSize.xs} marginTop={T.space.xs} color={T.muted}>
-                      {s.workout_set_weight != null ? `${s.workout_set_weight}kg · ` : ''}{repsStr}
-                      {s.workout_set_notes ? <Text fontSize={T.fontSize.xs} color={T.muted} fontStyle="italic">{` · "${s.workout_set_notes}"`}</Text> : ''}
-                    </Text>
-                  </YStack>
-                  <XStack gap={T.space.sm}>
-                    <GlassButton icon="pencil" iconSize={14} onPress={() => openEditSet(s)} />
-                    <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => handleDeleteSet(s.workout_set_id)} />
-                  </XStack>
-                </XStack>
-              );
-            })
-          )}
+          ) : sets.map((s) => {
+            const exName = exerciseDetailMap[s.custom_exercise_id]?.exercise_name ?? `#${s.custom_exercise_id}`;
+            const varName = s.custom_variation_id
+              ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations.find((v) => v.custom_variation_id === s.custom_variation_id)?.variation_name ?? null
+              : null;
+            const repsStr = s.workout_set_reps?.length
+              ? `${formatValues(s.workout_set_reps)} reps`
+              : s.workout_set_duration_seconds?.length ? `${formatValues(s.workout_set_duration_seconds)}s` : '—';
+            return (
+              <SetRow
+                key={s.workout_set_id}
+                s={s}
+                exName={exName}
+                varName={varName}
+                repsStr={repsStr}
+                onEdit={openEditSet}
+                onDelete={handleDeleteSet}
+              />
+            );
+          })}
 
-          {/* ── End workout ── */}
           <YStack marginTop={T.space.xxl} paddingTop={T.space.lg} gap={T.space.md}>
             <NotesField label="Post-workout notes (optional)" value={endNotes} onChange={setEndNotes} />
-            <XStack justifyContent="center">
-              <XStack gap={T.space.sm}>
-                <Button label="Cancel Workout" onPress={confirmCancelWorkout} variant="danger-ghost" />
-                <Button label="End Workout" onPress={confirmEndWorkout} loading={endLoading} />
-              </XStack>
+            <XStack justifyContent="center" gap={T.space.sm}>
+              <Button label="Cancel Workout" onPress={confirmCancelWorkout} variant="danger-ghost" />
+              <Button label="End Workout" onPress={confirmEndWorkout} loading={endLoading} />
             </XStack>
           </YStack>
         </ScrollView>
       </SlidePages>
 
-      {/* ── Log Set Modal ── */}
+      {/* ── Log Set Modal — always mounted, visibility via prop ── */}
       <SlideUpModal visible={logSetModalVisible} onClose={() => setLogSetModalVisible(false)}>
-        {logSetModalVisible && (
-          <YStack
-            backgroundColor={T.surface}
-            borderTopLeftRadius={T.radius.lg}
-            borderTopRightRadius={T.radius.lg}
-            padding={T.space.xl}
-            maxHeight="85%"
-          >
-            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              <YStack gap={T.space.md}>
-                <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Log Set</Text>
-                <XStack gap={T.space.sm} alignItems="flex-end">
-                  <YStack flex={3}>
-                    <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
-                    <DropdownSelect
-                      options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
-                      value={selectedExId}
-                      onChange={onSelectExercise}
-                      placeholder="Select exercise…"
-                      searchable
-                      onCreateNew={openNewExercise}
-                      createNewLabel="New Exercise"
-                    />
-                  </YStack>
-                  {selectedEx && (
-                    <YStack flex={2}>
-                      <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
-                      <DropdownSelect
-                        options={[
-                          { label: 'None', value: null },
-                          ...(selectedEx?.assigned_variations ?? []).map((v) => ({ label: v.variation_name, value: v.custom_variation_id })),
-                        ]}
-                        value={selectedVarId}
-                        onChange={setSelectedVarId}
-                        placeholder="None"
-                        onCreateNew={() => openAssignVar(false)}
-                        createNewLabel="Assign New Variations"
-                      />
-                    </YStack>
-                  )}
-                </XStack>
-                {selectedEx && (
-                  <>
-                    <Input label="Weight (optional)" placeholder="kg" keyboardType="numbers-and-punctuation" value={weight} onChangeText={setWeight} />
-                    <Input
-                      label={selectedEx.exercise_volume_type === 'reps' ? 'Reps' : 'Duration (seconds)'}
-                      placeholder={selectedEx.exercise_volume_type === 'reps' ? 'e.g. 10,8,6' : 'e.g. 60,45'}
-                      keyboardType="numbers-and-punctuation"
-                      value={repsOrDuration}
-                      onChangeText={setRepsOrDuration}
-                    />
-                    <Input label="Set notes (optional)" placeholder="Notes…" value={setNotes} onChangeText={setSetNotes} />
-                  </>
-                )}
-                <XStack gap={T.space.sm} justifyContent="center">
-                  <Button label="Cancel" onPress={() => setLogSetModalVisible(false)} variant="danger-ghost" />
-                  <Button label="Log Set" onPress={logSet} loading={logLoading} />
-                </XStack>
-                <YStack height={T.space.xl} />
-              </YStack>
-            </ScrollView>
-          </YStack>
-        )}
-      </SlideUpModal>
-
-      {/* ── New Exercise Modal ── */}
-      <SlideUpModal visible={newExVisible} onClose={() => setNewExVisible(false)}>
         <YStack
           backgroundColor={T.surface}
           borderTopLeftRadius={T.radius.lg}
@@ -528,25 +502,50 @@ export default function WorkoutLogScreen() {
         >
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <YStack gap={T.space.md}>
-              <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>New Exercise</Text>
-              <Input
-                label="Name"
-                value={newExName}
-                onChangeText={setNewExName}
-                placeholder="e.g. Pull-up"
-                autoCapitalize="words"
-              />
-              <YStack gap={T.space.xs}>
-                <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary}>Volume type</Text>
-                <SegmentedControl
-                  options={[{ label: 'Reps', value: 'reps' }, { label: 'Duration', value: 'duration' }]}
-                  value={newExVolume}
-                  onChange={setNewExVolume}
-                />
-              </YStack>
+              <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Log Set</Text>
+              <XStack gap={T.space.sm} alignItems="flex-end">
+                <YStack flex={3}>
+                  <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
+                  <DropdownSelect
+                    options={exerciseOptions}
+                    value={selectedExId}
+                    onChange={onSelectExercise}
+                    placeholder="Select exercise…"
+                    searchable
+                    onCreateNew={openNewExercise}
+                    createNewLabel="New Exercise"
+                  />
+                </YStack>
+                {selectedEx && (
+                  <YStack flex={2}>
+                    <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
+                    <DropdownSelect
+                      options={logVarOptions}
+                      value={selectedVarId}
+                      onChange={setSelectedVarId}
+                      placeholder="None"
+                      onCreateNew={() => openAssignVar(false)}
+                      createNewLabel="Assign New Variations"
+                    />
+                  </YStack>
+                )}
+              </XStack>
+              {selectedEx && (
+                <>
+                  <Input label="Weight (optional)" placeholder="kg" keyboardType="numbers-and-punctuation" value={weight} onChangeText={setWeight} />
+                  <Input
+                    label={selectedEx.exercise_volume_type === 'reps' ? 'Reps' : 'Duration (seconds)'}
+                    placeholder={selectedEx.exercise_volume_type === 'reps' ? 'e.g. 10,8,6' : 'e.g. 60,45'}
+                    keyboardType="numbers-and-punctuation"
+                    value={repsOrDuration}
+                    onChangeText={setRepsOrDuration}
+                  />
+                  <Input label="Set notes (optional)" placeholder="Notes…" value={setNotes} onChangeText={setSetNotes} />
+                </>
+              )}
               <XStack gap={T.space.sm} justifyContent="center">
-                <Button label="Cancel" onPress={() => setNewExVisible(false)} variant="danger-ghost" />
-                <Button label="Create" onPress={createNewExercise} loading={newExCreating} />
+                <Button label="Cancel" onPress={() => setLogSetModalVisible(false)} variant="danger-ghost" />
+                <Button label="Log Set" onPress={logSet} loading={logLoading} />
               </XStack>
               <YStack height={T.space.xl} />
             </YStack>
@@ -554,11 +553,33 @@ export default function WorkoutLogScreen() {
         </YStack>
       </SlideUpModal>
 
+      {/* ── New Exercise Modal — matches library.tsx pattern ── */}
+      <SlideUpModal visible={newExVisible} onClose={() => setNewExVisible(false)}>
+        <YStack backgroundColor={T.surface} borderTopLeftRadius={T.radius.lg} borderTopRightRadius={T.radius.lg} padding={T.space.xl} paddingBottom={T.space.xxl}>
+          <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>New Exercise</Text>
+          <Input placeholder="Exercise name" value={newExName} onChangeText={setNewExName} autoCapitalize="words" />
+          <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary} marginTop={T.space.md} marginBottom={T.space.xs}>Volume type</Text>
+          <SegmentedControl
+            options={[{ label: 'Reps', value: 'reps' }, { label: 'Duration', value: 'duration' }]}
+            value={newExVolume}
+            onChange={setNewExVolume}
+          />
+          <XStack gap={T.space.sm} marginTop={T.space.md} justifyContent="center">
+            <Button label="Cancel" onPress={() => setNewExVisible(false)} variant="danger-ghost" />
+            <Button label="Create" onPress={createNewExercise} loading={newExCreating} />
+          </XStack>
+        </YStack>
+      </SlideUpModal>
+
       {/* ── Assign Variations Sheet ── */}
       <SlideUpModal visible={assignVarVisible} onClose={() => setAssignVarVisible(false)}>
-        <YStack flex={1}>
+        <YStack
+          backgroundColor={T.surface}
+          borderTopLeftRadius={T.radius.lg}
+          borderTopRightRadius={T.radius.lg}
+          maxHeight="85%"
+        >
           <ScrollView
-            style={{ flex: 1 }}
             contentContainerStyle={{ paddingVertical: T.space.md, paddingBottom: T.space.xxl }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
@@ -566,7 +587,6 @@ export default function WorkoutLogScreen() {
             <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} paddingHorizontal={T.space.xl} paddingBottom={T.space.md}>
               Assign New Variations
             </Text>
-            {/* + New Variation row */}
             <XStack
               paddingHorizontal={T.space.xl}
               paddingVertical={T.space.md}
@@ -576,7 +596,7 @@ export default function WorkoutLogScreen() {
             >
               <Text fontSize={T.fontSize.md} color={T.accent} fontWeight="500">+ New Variation</Text>
             </XStack>
-            {/* Unassigned variations */}
+            <Separator borderColor={T.border} />
             {(() => {
               const exId = assignVarForEdit ? editExId : selectedExId;
               const assignedIds = new Set(exerciseDetailMap[exId ?? -1]?.assigned_variations.map((v) => v.custom_variation_id) ?? []);
@@ -605,36 +625,19 @@ export default function WorkoutLogScreen() {
         </YStack>
       </SlideUpModal>
 
-      {/* ── New Variation Modal ── */}
+      {/* ── New Variation Modal — matches library.tsx pattern ── */}
       <SlideUpModal visible={newVarVisible} onClose={() => setNewVarVisible(false)}>
-        <YStack
-          backgroundColor={T.surface}
-          borderTopLeftRadius={T.radius.lg}
-          borderTopRightRadius={T.radius.lg}
-          padding={T.space.xl}
-          maxHeight="85%"
-        >
-          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            <YStack gap={T.space.md}>
-              <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>New Variation</Text>
-              <Input
-                label="Name"
-                value={newVarName}
-                onChangeText={setNewVarName}
-                placeholder="e.g. Wide Grip"
-                autoCapitalize="words"
-              />
-              <XStack gap={T.space.sm} justifyContent="center">
-                <Button label="Cancel" onPress={() => setNewVarVisible(false)} variant="danger-ghost" />
-                <Button label="Create" onPress={createNewVariation} loading={newVarCreating} />
-              </XStack>
-              <YStack height={T.space.xl} />
-            </YStack>
-          </ScrollView>
+        <YStack backgroundColor={T.surface} borderTopLeftRadius={T.radius.lg} borderTopRightRadius={T.radius.lg} padding={T.space.xl} paddingBottom={T.space.xxl}>
+          <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>New Variation</Text>
+          <Input placeholder="Variation name" value={newVarName} onChangeText={setNewVarName} autoCapitalize="words" />
+          <XStack gap={T.space.sm} marginTop={T.space.md} justifyContent="center">
+            <Button label="Cancel" onPress={() => setNewVarVisible(false)} variant="danger-ghost" />
+            <Button label="Create" onPress={createNewVariation} loading={newVarCreating} />
+          </XStack>
         </YStack>
       </SlideUpModal>
 
-      {/* ── Edit Set Modal ── */}
+      {/* ── Edit Set Modal — always mounted, visibility via prop ── */}
       <SlideUpModal visible={!!editingSet} onClose={() => setEditingSet(null)}>
         <YStack
           backgroundColor={T.surface}
@@ -650,7 +653,7 @@ export default function WorkoutLogScreen() {
                 <YStack flex={3}>
                   <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
                   <DropdownSelect
-                    options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
+                    options={exerciseOptions}
                     value={editExId}
                     onChange={onEditExerciseChange}
                     placeholder="Select exercise…"
@@ -660,10 +663,7 @@ export default function WorkoutLogScreen() {
                   <YStack flex={2}>
                     <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
                     <DropdownSelect
-                      options={[
-                        { label: 'None', value: null },
-                        ...(editEx?.assigned_variations ?? []).map((v) => ({ label: v.variation_name, value: v.custom_variation_id })),
-                      ]}
+                      options={editVarOptions}
                       value={editVarId}
                       onChange={setEditVarId}
                       placeholder="None"
