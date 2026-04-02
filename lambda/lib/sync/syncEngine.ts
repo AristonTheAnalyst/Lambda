@@ -170,11 +170,9 @@ export async function processSyncQueue(db: SQLiteDatabase): Promise<void> {
 
         if (!isBridgeTable && entry.local_id != null) {
           const serverId: number = data[pkCol];
-          await db.withTransactionAsync(async () => {
-            await setRemap(db, entry.local_id!, serverId, tableName);
-            await updateLocalRowId(db, tableName, entry.local_id!, serverId);
-            await markDone(db, entry.id);
-          });
+          await setRemap(db, entry.local_id!, serverId, tableName);
+          await updateLocalRowId(db, tableName, entry.local_id!, serverId);
+          await markDone(db, entry.id);
         } else {
           await markDone(db, entry.id);
         }
