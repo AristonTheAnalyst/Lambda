@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Alert, Keyboard, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SlidePages from '@/components/SlidePages';
 import { useSlidePages } from '@/hooks/useSlidePages';
 import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
@@ -83,10 +84,18 @@ interface CompactGroupProps {
 }
 
 const CompactGroup = React.memo(function CompactGroup({ exName, sets, exerciseDetailMap, startIdx, onEdit, onDelete }: CompactGroupProps) {
+  const [collapsed, setCollapsed] = useState(false);
   return (
     <YStack paddingVertical={T.space.sm}>
-      <Text fontSize={15} fontWeight="600" color={T.primary} marginBottom={T.space.xs}>{exName}</Text>
-      {sets.map((s, idx) => {
+      <XStack alignItems="center" marginBottom={T.space.xs}>
+        <Text fontSize={15} fontWeight="600" color={T.primary} flex={1}>{exName}</Text>
+        <GlassButton
+          icon={collapsed ? 'chevron-down' : 'chevron-up'}
+          iconSize={11}
+          onPress={() => setCollapsed(c => !c)}
+        />
+      </XStack>
+      {!collapsed && sets.map((s, idx) => {
         const varName = s.custom_variation_id
           ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations?.find((v: any) => v.custom_variation_id === s.custom_variation_id)?.variation_name ?? null
           : null;
@@ -122,6 +131,7 @@ const CompactGroup = React.memo(function CompactGroup({ exName, sets, exerciseDe
 export default function WorkoutLogScreen() {
   const db = useSQLiteContext();
   const guard = useAsyncGuard();
+  const insets = useSafeAreaInsets();
   const { user } = useAuthContext();
   const { exercises, variations, exerciseDetailMap, refreshExercises, refreshVariations, refreshExerciseDetails } = useExerciseData();
   const { lastSyncAt } = useSyncContext();
@@ -132,9 +142,10 @@ export default function WorkoutLogScreen() {
   const [sets, setSets]               = useState<WorkoutSet[]>([]);
   const [setsLoading, setSetsLoading] = useState(false);
   const [startNotes, setStartNotes]   = useState('');
-  const [endNotes, setEndNotes]       = useState('');
-  const [startLoading, setStartLoading] = useState(false);
-  const [endLoading, setEndLoading]   = useState(false);
+  const [endNotes, setEndNotes]             = useState('');
+  const [endWorkoutModalVisible, setEndWorkoutModalVisible] = useState(false);
+  const [startLoading, setStartLoading]     = useState(false);
+  const [endLoading, setEndLoading]         = useState(false);
 
   const slidePages = useSlidePages();
 
@@ -393,18 +404,12 @@ export default function WorkoutLogScreen() {
     ]);
   }
 
-  function confirmEndWorkout() {
-    Alert.alert('End Workout', 'Are you sure you want to end this workout?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'End Workout', style: 'destructive', onPress: doEndWorkout },
-    ]);
-  }
-
   function doEndWorkout() { return guard(async () => {
     if (!currentWorkoutId) return;
     setEndLoading(true);
     await endWorkout(db, currentWorkoutId, endNotes);
     setEndLoading(false);
+    setEndWorkoutModalVisible(false);
     slidePages.slideOut();
     setCurrentWorkoutId(null);
     setEndNotes('');
@@ -493,7 +498,38 @@ export default function WorkoutLogScreen() {
 
   return (
     <YStack flex={1} backgroundColor={T.bg}>
-      <PageHeader title="Training Session" right={<SyncStatusIcon />} />
+      <PageHeader
+        title="Training Session"
+        left={currentWorkoutId !== null ? (
+          <XStack
+            borderRadius={999}
+            paddingVertical={4}
+            paddingHorizontal={T.space.xs}
+            borderWidth={1}
+            borderColor={T.danger}
+            pressStyle={{ opacity: 0.7 }}
+            onPress={confirmCancelWorkout}
+            cursor="pointer"
+            alignItems="center"
+          >
+            <Text color={T.danger} fontSize={T.fontSize.sm} fontWeight="600" numberOfLines={1}>Cancel</Text>
+          </XStack>
+        ) : undefined}
+        right={currentWorkoutId !== null ? (
+          <XStack
+            borderRadius={999}
+            paddingVertical={4}
+            paddingHorizontal={T.space.md}
+            backgroundColor={T.accent}
+            pressStyle={{ opacity: 0.7 }}
+            onPress={() => setEndWorkoutModalVisible(true)}
+            cursor="pointer"
+            alignItems="center"
+          >
+            <Text color={T.accentText} fontSize={T.fontSize.sm} fontWeight="600" numberOfLines={1}>End</Text>
+          </XStack>
+        ) : undefined}
+      />
 
       <SlidePages controller={slidePages}>
         {/* ── Page 0: Start ── */}
@@ -518,49 +554,76 @@ export default function WorkoutLogScreen() {
         </ScrollView>
 
         {/* ── Page 1: Active workout ── */}
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ padding: T.space.lg, paddingBottom: T.space.xxl }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          automaticallyAdjustKeyboardInsets={true}
-        >
-          <XStack alignItems="center" marginBottom={T.space.sm}>
-            <Text fontSize={T.fontSize.xl} fontWeight="700" color={T.primary} flex={1}>Sets this workout</Text>
-            <GlassButton icon="plus" label="Log Set" onPress={() => setLogSetModalVisible(true)} />
-          </XStack>
+        <YStack flex={1}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: T.space.lg, paddingBottom: T.space.md }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets={true}
+          >
+            <Text fontSize={T.fontSize.xl} fontWeight="700" color={T.primary} marginBottom={T.space.sm}>Sets this workout</Text>
 
-          {setsLoading ? (
-            <Spinner size="large" color={T.accent} marginTop={T.space.md} />
-          ) : sets.length === 0 ? (
-            <Text color={T.muted} marginTop={T.space.sm}>No sets logged yet.</Text>
-          ) : groupedSets.map(({ exId, sets: groupSets, startIdx }, groupIdx) => {
-            const exName = exerciseDetailMap[exId]?.exercise_name ?? `#${exId}`;
-            return (
-              <React.Fragment key={`${exId}-${groupIdx}`}>
-                {groupIdx > 0 && <Separator marginVertical={T.space.sm} borderColor={T.border} />}
-                <CompactGroup
-                  exId={exId}
-                  exName={exName}
-                  sets={groupSets}
-                  startIdx={startIdx}
-                  exerciseDetailMap={exerciseDetailMap}
-                  onEdit={openEditSet}
-                  onDelete={handleDeleteSet}
-                />
-              </React.Fragment>
-            );
-          })}
+            {setsLoading ? (
+              <Spinner size="large" color={T.accent} marginTop={T.space.md} />
+            ) : sets.length === 0 ? (
+              <Text color={T.muted} marginTop={T.space.sm}>No sets logged yet.</Text>
+            ) : groupedSets.map(({ exId, sets: groupSets, startIdx }, groupIdx) => {
+              const exName = exerciseDetailMap[exId]?.exercise_name ?? `#${exId}`;
+              return (
+                <React.Fragment key={`${exId}-${groupIdx}`}>
+                  {groupIdx > 0 && <Separator marginVertical={T.space.sm} borderColor={T.border} />}
+                  <CompactGroup
+                    exId={exId}
+                    exName={exName}
+                    sets={groupSets}
+                    startIdx={startIdx}
+                    exerciseDetailMap={exerciseDetailMap}
+                    onEdit={openEditSet}
+                    onDelete={handleDeleteSet}
+                  />
+                </React.Fragment>
+              );
+            })}
+          </ScrollView>
 
-          <YStack marginTop={T.space.xxl} paddingTop={T.space.lg} gap={T.space.md}>
-            <NotesField label="Post-workout notes (optional)" value={endNotes} onChange={setEndNotes} />
-            <XStack justifyContent="center" gap={T.space.sm}>
-              <Button label="Cancel Workout" onPress={confirmCancelWorkout} variant="danger-ghost" />
-              <Button label="End Workout" onPress={confirmEndWorkout} loading={endLoading} />
-            </XStack>
+          {/* ── Sticky Log Set footer ── */}
+          <YStack
+            paddingHorizontal={T.space.lg}
+            paddingVertical={T.space.md}
+            borderTopWidth={0.5}
+            borderTopColor={T.border}
+            backgroundColor={T.bg}
+          >
+            <Button label="Log Set" onPress={() => setLogSetModalVisible(true)} variant="ghost" />
           </YStack>
-        </ScrollView>
+        </YStack>
       </SlidePages>
+
+      {/* ── Sync indicator — bottom right overlay ── */}
+      <YStack
+        position="absolute"
+        bottom={80}
+        right={T.space.lg}
+        pointerEvents="none"
+      >
+        <SyncStatusIcon />
+      </YStack>
+
+      {/* ── End Workout Modal ── */}
+      <SlideUpModal visible={endWorkoutModalVisible} onClose={() => setEndWorkoutModalVisible(false)}>
+        <YStack flex={1}>
+          <ScrollView contentContainerStyle={{ padding: T.space.xl, paddingBottom: T.space.md }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>End Workout</Text>
+            <NotesField label="Post-workout notes (optional)" value={endNotes} onChange={setEndNotes} />
+          </ScrollView>
+          <XStack gap={T.space.sm} paddingHorizontal={T.space.xl} paddingTop={T.space.md} paddingBottom={T.space.xxl}
+            borderTopWidth={0.5} borderTopColor={T.border} justifyContent="center" backgroundColor={T.surface}>
+            <Button label="Cancel" onPress={() => setEndWorkoutModalVisible(false)} variant="danger-ghost" />
+            <Button label="End Workout" onPress={doEndWorkout} loading={endLoading} />
+          </XStack>
+        </YStack>
+      </SlideUpModal>
 
       {/* ── Log Set Modal ── */}
       <SlideUpModal visible={logSetModalVisible} onClose={() => setLogSetModalVisible(false)}>
