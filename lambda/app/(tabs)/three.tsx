@@ -77,15 +77,16 @@ interface CompactGroupProps {
   exName: string;
   sets: WorkoutSet[];
   exerciseDetailMap: Record<number, any>;
+  startIdx: number;
   onEdit: (s: WorkoutSet) => void;
   onDelete: (id: number) => void;
 }
 
-const CompactGroup = React.memo(function CompactGroup({ exName, sets, exerciseDetailMap, onEdit, onDelete }: CompactGroupProps) {
+const CompactGroup = React.memo(function CompactGroup({ exName, sets, exerciseDetailMap, startIdx, onEdit, onDelete }: CompactGroupProps) {
   return (
-    <YStack borderBottomWidth={0.5} borderBottomColor={T.border} paddingVertical={T.space.sm}>
+    <YStack paddingVertical={T.space.sm}>
       <Text fontSize={15} fontWeight="600" color={T.primary} marginBottom={T.space.xs}>{exName}</Text>
-      {sets.map((s) => {
+      {sets.map((s, idx) => {
         const varName = s.custom_variation_id
           ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations?.find((v: any) => v.custom_variation_id === s.custom_variation_id)?.variation_name ?? null
           : null;
@@ -93,10 +94,10 @@ const CompactGroup = React.memo(function CompactGroup({ exName, sets, exerciseDe
           ? `${formatValues(s.workout_set_reps)} reps`
           : s.workout_set_duration_seconds?.length ? `${formatValues(s.workout_set_duration_seconds)}s` : '—';
         const subParts: string[] = [
-          `#${s.workout_set_number}`,
+          `#${startIdx + idx + 1}`,
           ...(s.workout_set_weight != null ? [`${s.workout_set_weight}kg`] : []),
-          repsStr,
           ...(varName ? [varName] : []),
+          repsStr,
         ];
         return (
           <XStack key={s.workout_set_id} alignItems="center" gap={T.space.sm} paddingVertical={T.space.xs}>
@@ -200,13 +201,18 @@ export default function WorkoutLogScreen() {
   ], [editEx]);
 
   const groupedSets = useMemo(() => {
-    const order: number[] = [];
-    const map: Record<number, WorkoutSet[]> = {};
+    const groups: { exId: number; sets: WorkoutSet[]; startIdx: number }[] = [];
+    const exCounts: Record<number, number> = {};
     for (const s of sets) {
-      if (!map[s.custom_exercise_id]) { order.push(s.custom_exercise_id); map[s.custom_exercise_id] = []; }
-      map[s.custom_exercise_id].push(s);
+      const last = groups[groups.length - 1];
+      if (last && last.exId === s.custom_exercise_id) {
+        last.sets.push(s);
+      } else {
+        groups.push({ exId: s.custom_exercise_id, sets: [s], startIdx: exCounts[s.custom_exercise_id] ?? 0 });
+      }
+      exCounts[s.custom_exercise_id] = (exCounts[s.custom_exercise_id] ?? 0) + 1;
     }
-    return order.map((exId) => ({ exId, sets: map[exId] }));
+    return groups;
   }, [sets]);
 
   // ── Workout state helper ───────────────────────────────────────────────────
@@ -528,24 +534,21 @@ export default function WorkoutLogScreen() {
             <Spinner size="large" color={T.accent} marginTop={T.space.md} />
           ) : sets.length === 0 ? (
             <Text color={T.muted} marginTop={T.space.sm}>No sets logged yet.</Text>
-          ) : sets.map((s) => {
-            const exName = exerciseDetailMap[s.custom_exercise_id]?.exercise_name ?? `#${s.custom_exercise_id}`;
-            const varName = s.custom_variation_id
-              ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations.find((v) => v.custom_variation_id === s.custom_variation_id)?.variation_name ?? null
-              : null;
-            const repsStr = s.workout_set_reps?.length
-              ? `${formatValues(s.workout_set_reps)} reps`
-              : s.workout_set_duration_seconds?.length ? `${formatValues(s.workout_set_duration_seconds)}s` : '—';
+          ) : groupedSets.map(({ exId, sets: groupSets, startIdx }, groupIdx) => {
+            const exName = exerciseDetailMap[exId]?.exercise_name ?? `#${exId}`;
             return (
-              <SetRow
-                key={s.workout_set_id}
-                s={s}
-                exName={exName}
-                varName={varName}
-                repsStr={repsStr}
-                onEdit={openEditSet}
-                onDelete={handleDeleteSet}
-              />
+              <React.Fragment key={`${exId}-${groupIdx}`}>
+                {groupIdx > 0 && <Separator marginVertical={T.space.sm} borderColor={T.border} />}
+                <CompactGroup
+                  exId={exId}
+                  exName={exName}
+                  sets={groupSets}
+                  startIdx={startIdx}
+                  exerciseDetailMap={exerciseDetailMap}
+                  onEdit={openEditSet}
+                  onDelete={handleDeleteSet}
+                />
+              </React.Fragment>
             );
           })}
 
