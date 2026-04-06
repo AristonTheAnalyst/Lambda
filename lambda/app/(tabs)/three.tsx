@@ -504,7 +504,7 @@ export default function WorkoutLogScreen() {
           <XStack
             borderRadius={999}
             paddingVertical={4}
-            paddingHorizontal={T.space.xs}
+            paddingHorizontal={T.space.sm}
             borderWidth={1}
             borderColor={T.danger}
             pressStyle={{ opacity: 0.7 }}

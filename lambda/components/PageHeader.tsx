@@ -21,7 +21,7 @@ export default function PageHeader({ title, left, right }: Props) {
         justifyContent="space-between"
       >
         {/* Left — optional slot */}
-        <XStack width={73} alignItems="center" paddingLeft={T.space.md}>
+        <XStack width={90} alignItems="center" paddingLeft={T.space.md}>
           {left ?? null}
         </XStack>
 
@@ -38,7 +38,7 @@ export default function PageHeader({ title, left, right }: Props) {
         </Text>
 
         {/* Right — optional slot */}
-        <XStack width={73} justifyContent="flex-end" paddingRight={T.space.lg} alignItems="center">
+        <XStack width={90} justifyContent="flex-end" paddingRight={T.space.lg} alignItems="center">
           {right ?? null}
         </XStack>
       </XStack>
