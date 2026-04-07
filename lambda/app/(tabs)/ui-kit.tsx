@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView, useWindowDimensions } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Text, XStack, YStack } from 'tamagui';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PageHeader from '@/components/PageHeader';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
@@ -49,11 +50,25 @@ function Swatch({ name, color, textColor }: { name: string; color: string; textC
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function UIKitScreen() {
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const modalBottomSpacer = windowHeight * 0.15;
+
   const [inputValue, setInputValue]       = useState('');
   const [segValue, setSegValue]           = useState<'reps' | 'duration'>('reps');
   const [dropValue, setDropValue]         = useState<string | null>(null);
   const [modalVisible, setModalVisible]   = useState(false);
   const [notesValue, setNotesValue]       = useState('');
+
+  // ── Modal preview state ──────────────────────────────────────────────────────
+  const [logSetNoExVisible,   setLogSetNoExVisible]   = useState(false);
+  const [logSetWithExVisible, setLogSetWithExVisible] = useState(false);
+  const [endWorkoutVisible,   setEndWorkoutVisible]   = useState(false);
+  const [newExVisible,        setNewExVisible]        = useState(false);
+  const [newVarVisible,       setNewVarVisible]       = useState(false);
+  const [editExVisible,       setEditExVisible]       = useState(false);
+  const [editVarVisible,      setEditVarVisible]      = useState(false);
+  const [demoVolumeType, setDemoVolumeType]           = useState<'reps' | 'duration'>('reps');
 
   const DROP_OPTIONS = [
     { label: 'Option A', value: 'a' },
@@ -396,6 +411,161 @@ export default function UIKitScreen() {
                 </YStack>
               ))}
             </XStack>
+          </Section>
+
+          {/* ── Modals ── */}
+          <Section title="Modals">
+            <Text color={T.muted} fontSize={T.fontSize.xs}>
+              Every SlideUpModal variant used in the app. Tap to preview.
+            </Text>
+
+            <Button label="Log Set — no exercise selected" onPress={() => setLogSetNoExVisible(true)} variant="ghost" />
+            <Button label="Log Set — exercise selected" onPress={() => setLogSetWithExVisible(true)} variant="ghost" />
+            <Button label="End Workout" onPress={() => setEndWorkoutVisible(true)} variant="ghost" />
+            <Button label="New Exercise" onPress={() => setNewExVisible(true)} variant="ghost" />
+            <Button label="New Variation" onPress={() => setNewVarVisible(true)} variant="ghost" />
+            <Button label="Edit Exercise (complex)" onPress={() => setEditExVisible(true)} variant="ghost" />
+            <Button label="Edit Variation (complex)" onPress={() => setEditVarVisible(true)} variant="ghost" />
+
+            {/* ── Log Set — no exercise ── */}
+            <SlideUpModal visible={logSetNoExVisible} onClose={() => setLogSetNoExVisible(false)} fitContent>
+              <YStack padding={T.space.xl} gap={T.space.md}>
+                <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Log Set</Text>
+                <YStack>
+                  <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
+                  <DropdownSelect options={[{ label: 'Pull-up', value: 'pullup' }, { label: 'Dip', value: 'dip' }]} value={null} onChange={() => {}} placeholder="Select exercise…" searchable />
+                </YStack>
+                <XStack gap={T.space.sm} justifyContent="center">
+                  <Button label="Cancel" onPress={() => setLogSetNoExVisible(false)} variant="danger-ghost" />
+                  <Button label="Log Set" onPress={() => {}} />
+                </XStack>
+                <YStack height={modalBottomSpacer} />
+              </YStack>
+            </SlideUpModal>
+
+            {/* ── Log Set — with exercise ── */}
+            <SlideUpModal visible={logSetWithExVisible} onClose={() => setLogSetWithExVisible(false)} fitContent>
+              <YStack padding={T.space.xl} gap={T.space.md}>
+                <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Log Set</Text>
+                <XStack gap={T.space.sm} alignItems="flex-end">
+                  <YStack flex={3}>
+                    <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
+                    <DropdownSelect options={[{ label: 'Pull-up', value: 'pullup' }]} value="pullup" onChange={() => {}} placeholder="Select exercise…" searchable />
+                  </YStack>
+                  <YStack flex={2}>
+                    <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
+                    <DropdownSelect options={[{ label: 'Wide Grip', value: 'wide' }]} value={null} onChange={() => {}} placeholder="None" />
+                  </YStack>
+                </XStack>
+                <Input label="Weight (optional)" placeholder="kg" keyboardType="numbers-and-punctuation" value="" onChangeText={() => {}} />
+                <Input label="Reps" placeholder="e.g. 10,8,6" keyboardType="numbers-and-punctuation" value="" onChangeText={() => {}} />
+                <Input label="Set notes (optional)" placeholder="Notes…" value="" onChangeText={() => {}} />
+                <XStack gap={T.space.sm} justifyContent="center">
+                  <Button label="Cancel" onPress={() => setLogSetWithExVisible(false)} variant="danger-ghost" />
+                  <Button label="Log Set" onPress={() => {}} />
+                </XStack>
+                <YStack height={modalBottomSpacer} />
+              </YStack>
+            </SlideUpModal>
+
+            {/* ── End Workout ── */}
+            <SlideUpModal visible={endWorkoutVisible} onClose={() => setEndWorkoutVisible(false)} fitContent>
+              <YStack padding={T.space.xl} gap={T.space.md}>
+                <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>End Workout</Text>
+                <NotesField label="Post-workout notes (optional)" value="" onChange={() => {}} />
+                <XStack gap={T.space.sm} justifyContent="center">
+                  <Button label="Cancel" onPress={() => setEndWorkoutVisible(false)} variant="danger-ghost" />
+                  <Button label="End Workout" onPress={() => {}} />
+                </XStack>
+                <YStack height={modalBottomSpacer} />
+              </YStack>
+            </SlideUpModal>
+
+            {/* ── New Exercise ── */}
+            <SlideUpModal visible={newExVisible} onClose={() => setNewExVisible(false)} fitContent>
+              <YStack padding={T.space.xl} gap={T.space.md}>
+                <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>New Exercise</Text>
+                <Input label="Exercise name" placeholder="e.g. Pull-up" value="" onChangeText={() => {}} />
+                <YStack gap={T.space.xs}>
+                  <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary}>Volume type</Text>
+                  <SegmentedControl
+                    options={[{ label: 'Reps', value: 'reps' }, { label: 'Duration', value: 'duration' }]}
+                    value={demoVolumeType}
+                    onChange={setDemoVolumeType}
+                  />
+                </YStack>
+                <XStack gap={T.space.sm} justifyContent="center">
+                  <Button label="Cancel" onPress={() => setNewExVisible(false)} variant="danger-ghost" />
+                  <Button label="Create" onPress={() => {}} />
+                </XStack>
+                <YStack height={modalBottomSpacer} />
+              </YStack>
+            </SlideUpModal>
+
+            {/* ── New Variation ── */}
+            <SlideUpModal visible={newVarVisible} onClose={() => setNewVarVisible(false)} fitContent>
+              <YStack padding={T.space.xl} gap={T.space.md}>
+                <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>New Variation</Text>
+                <Input label="Variation name" placeholder="e.g. Wide Grip" value="" onChangeText={() => {}} />
+                <XStack gap={T.space.sm} justifyContent="center">
+                  <Button label="Cancel" onPress={() => setNewVarVisible(false)} variant="danger-ghost" />
+                  <Button label="Create" onPress={() => {}} />
+                </XStack>
+                <YStack height={modalBottomSpacer} />
+              </YStack>
+            </SlideUpModal>
+
+            {/* ── Edit Exercise ── */}
+            <SlideUpModal visible={editExVisible} onClose={() => setEditExVisible(false)} fitContent>
+              <YStack padding={T.space.xl} gap={T.space.md}>
+                <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Edit Exercise</Text>
+                <Input label="Exercise name" value="Pull-up" onChangeText={() => {}} />
+                <YStack gap={T.space.xs}>
+                  <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary}>Volume type</Text>
+                  <SegmentedControl
+                    options={[{ label: 'Reps', value: 'reps' }, { label: 'Duration', value: 'duration' }]}
+                    value={demoVolumeType}
+                    onChange={setDemoVolumeType}
+                  />
+                </YStack>
+                <YStack height={0.5} backgroundColor={T.border} />
+                <Text fontSize={T.fontSize.sm} fontWeight="600" color={T.primary}>Assigned Variations</Text>
+                {['Wide Grip', 'Neutral Grip'].map((v) => (
+                  <XStack key={v} alignItems="center" gap={T.space.sm}>
+                    <Text flex={1} color={T.primary} fontSize={T.fontSize.sm}>{v}</Text>
+                    <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => {}} />
+                  </XStack>
+                ))}
+                <DropdownSelect options={[{ label: 'Tempo', value: 'tempo' }, { label: 'Weighted', value: 'weighted' }]} value={null} onChange={() => {}} placeholder="Add variations…" />
+                <XStack gap={T.space.sm} justifyContent="center">
+                  <Button label="Cancel" onPress={() => setEditExVisible(false)} variant="danger-ghost" />
+                  <Button label="Save" onPress={() => {}} />
+                </XStack>
+                <YStack height={modalBottomSpacer} />
+              </YStack>
+            </SlideUpModal>
+
+            {/* ── Edit Variation ── */}
+            <SlideUpModal visible={editVarVisible} onClose={() => setEditVarVisible(false)} fitContent>
+              <YStack padding={T.space.xl} gap={T.space.md}>
+                <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Edit Variation</Text>
+                <Input label="Variation name" value="Wide Grip" onChangeText={() => {}} />
+                <YStack height={0.5} backgroundColor={T.border} />
+                <Text fontSize={T.fontSize.sm} fontWeight="600" color={T.primary}>Assigned Exercises</Text>
+                {['Pull-up', 'Lat Pulldown'].map((e) => (
+                  <XStack key={e} alignItems="center" gap={T.space.sm}>
+                    <Text flex={1} color={T.primary} fontSize={T.fontSize.sm}>{e}</Text>
+                    <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => {}} />
+                  </XStack>
+                ))}
+                <DropdownSelect options={[{ label: 'Chin-up', value: 'chinup' }, { label: 'Ring Row', value: 'ringrow' }]} value={null} onChange={() => {}} placeholder="Add exercises…" />
+                <XStack gap={T.space.sm} justifyContent="center">
+                  <Button label="Cancel" onPress={() => setEditVarVisible(false)} variant="danger-ghost" />
+                  <Button label="Save" onPress={() => {}} />
+                </XStack>
+                <YStack height={modalBottomSpacer} />
+              </YStack>
+            </SlideUpModal>
           </Section>
 
           <YStack height={T.space.xl} />
