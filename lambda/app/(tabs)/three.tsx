@@ -16,8 +16,6 @@ import { createExercise, findExerciseByName, reactivateExercise } from '@/lib/of
 import { createVariation, findVariationByName, reactivateVariation } from '@/lib/offline/variationStore';
 import { addBridgeRow } from '@/lib/offline/bridgeStore';
 import { useAuthContext } from '@/lib/AuthContext';
-import { useSyncContext } from '@/lib/sync/syncContext';
-import { getRemap } from '@/lib/db/idRemap';
 import { createWorkout, endWorkout, cancelWorkout, getActiveWorkoutId } from '@/lib/offline/workoutStore';
 import { getExerciseDefault, saveExerciseDefault } from '@/lib/offline/exerciseDefaultsStore';
 import { insertSet, updateSet, deleteSet, loadSetsForWorkout, WorkoutSet } from '@/lib/offline/setStore';
@@ -44,7 +42,7 @@ interface SetRowProps {
   varName: string | null;
   repsStr: string;
   onEdit: (s: WorkoutSet) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }
 
 const SetRow = React.memo(function SetRow({ s, exName, varName, repsStr, onEdit, onDelete }: SetRowProps) {
@@ -74,13 +72,13 @@ const SetRow = React.memo(function SetRow({ s, exName, varName, repsStr, onEdit,
 // ─── CompactGroup — memoized grouped exercise view ────────────────────────────
 
 interface CompactGroupProps {
-  exId: number;
+  exId: string;
   exName: string;
   sets: WorkoutSet[];
-  exerciseDetailMap: Record<number, any>;
+  exerciseDetailMap: Record<string, any>;
   startIdx: number;
   onEdit: (s: WorkoutSet) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }
 
 const CompactGroup = React.memo(function CompactGroup({ exName, sets, exerciseDetailMap, startIdx, onEdit, onDelete }: CompactGroupProps) {
@@ -134,11 +132,9 @@ export default function WorkoutLogScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuthContext();
   const { exercises, variations, exerciseDetailMap, refreshExercises, refreshVariations, refreshExerciseDetails } = useExerciseData();
-  const { lastSyncAt, triggerSync } = useSyncContext();
-
   // ── Workout state ──────────────────────────────────────────────────────────
 
-  const [currentWorkoutId, setCurrentWorkoutId] = useState<number | null>(null);
+  const [currentWorkoutId, setCurrentWorkoutId] = useState<string | null>(null);
   const [sets, setSets]               = useState<WorkoutSet[]>([]);
   const [setsLoading, setSetsLoading] = useState(false);
   const [startNotes, setStartNotes]   = useState('');
@@ -152,8 +148,8 @@ export default function WorkoutLogScreen() {
   // ── Log set form state ─────────────────────────────────────────────────────
 
   const [logSetModalVisible, setLogSetModalVisible] = useState(false);
-  const [selectedExId, setSelectedExId]   = useState<number | null>(null);
-  const [selectedVarId, setSelectedVarId] = useState<number | null>(null);
+  const [selectedExId, setSelectedExId]   = useState<string | null>(null);
+  const [selectedVarId, setSelectedVarId] = useState<string | null>(null);
   const [weight, setWeight]               = useState('');
   const [repsOrDuration, setRepsOrDuration] = useState('');
   const [setNotes, setSetNotes]           = useState('');
@@ -164,8 +160,8 @@ export default function WorkoutLogScreen() {
   // ── Edit set form state ────────────────────────────────────────────────────
 
   const [editingSet, setEditingSet]   = useState<WorkoutSet | null>(null);
-  const [editExId, setEditExId]       = useState<number | null>(null);
-  const [editVarId, setEditVarId]     = useState<number | null>(null);
+  const [editExId, setEditExId]       = useState<string | null>(null);
+  const [editVarId, setEditVarId]     = useState<string | null>(null);
   const [editWeight, setEditWeight]   = useState('');
   const [editRepsOrDuration, setEditRepsOrDuration] = useState('');
   const [editNotes, setEditNotes]     = useState('');
@@ -202,18 +198,18 @@ export default function WorkoutLogScreen() {
   );
 
   const logVarOptions = useMemo(() => [
-    { label: 'None', value: null as number | null },
-    ...(selectedEx?.assigned_variations ?? []).map((v) => ({ label: v.variation_name, value: v.custom_variation_id as number | null })),
+    { label: 'None', value: null as string | null },
+    ...(selectedEx?.assigned_variations ?? []).map((v) => ({ label: v.variation_name, value: v.custom_variation_id as string | null })),
   ], [selectedEx]);
 
   const editVarOptions = useMemo(() => [
-    { label: 'None', value: null as number | null },
-    ...(editEx?.assigned_variations ?? []).map((v) => ({ label: v.variation_name, value: v.custom_variation_id as number | null })),
+    { label: 'None', value: null as string | null },
+    ...(editEx?.assigned_variations ?? []).map((v) => ({ label: v.variation_name, value: v.custom_variation_id as string | null })),
   ], [editEx]);
 
   const groupedSets = useMemo(() => {
-    const groups: { exId: number; sets: WorkoutSet[]; startIdx: number }[] = [];
-    const exCounts: Record<number, number> = {};
+    const groups: { exId: string; sets: WorkoutSet[]; startIdx: number }[] = [];
+    const exCounts: Record<string, number> = {};
     for (const s of sets) {
       const last = groups[groups.length - 1];
       if (last && last.exId === s.custom_exercise_id) {
@@ -238,14 +234,9 @@ export default function WorkoutLogScreen() {
 
   // ── Load sets from SQLite ──────────────────────────────────────────────────
 
-  const loadSets = useCallback(async (workoutId: number) => {
+  const loadSets = useCallback(async (workoutId: string) => {
     setSetsLoading(true);
-    let id = workoutId;
-    if (id < 0) {
-      const remap = await getRemap(db, id);
-      if (remap) { id = remap.serverId; setCurrentWorkoutId(id); }
-    }
-    const data = await loadSetsForWorkout(db, id);
+    const data = await loadSetsForWorkout(db, workoutId);
     setSets(data);
     setSetsLoading(false);
   }, [db]);
@@ -263,19 +254,9 @@ export default function WorkoutLogScreen() {
     })();
   }, [db]);
 
-  // ── Re-check after sync (negative ID may have been remapped) ──────────────
-
-  useEffect(() => {
-    if (!lastSyncAt || currentWorkoutId == null || currentWorkoutId >= 0) return;
-    (async () => {
-      const remap = await getRemap(db, currentWorkoutId);
-      if (remap) { setCurrentWorkoutId(remap.serverId); loadSets(remap.serverId); }
-    })();
-  }, [lastSyncAt]);
-
   // ── Exercise selection ─────────────────────────────────────────────────────
 
-  const onSelectExercise = useCallback(async (exId: number | null) => {
+  const onSelectExercise = useCallback(async (exId: string | null) => {
     setSelectedExId(exId);
     setSelectedVarId(null);
     setWeight('');
@@ -297,7 +278,7 @@ export default function WorkoutLogScreen() {
     setAssignVarVisible(true);
   }
 
-  async function pickUnassignedVar(varId: number) {
+  async function pickUnassignedVar(varId: string) {
     const exId = assignVarForEdit ? editExId : selectedExId;
     if (exId !== null) {
       await addBridgeRow(db, user!.id, exId, varId);
@@ -322,7 +303,7 @@ export default function WorkoutLogScreen() {
     if (!name) return Alert.alert('Enter a name');
     setNewVarCreating(true);
     const existing = await findVariationByName(db, name);
-    let localId: number;
+    let localId: string;
     if (existing) {
       if (existing.is_active) { setNewVarCreating(false); return Alert.alert('Already exists', `"${name}" already exists.`); }
       await reactivateVariation(db, existing.custom_variation_id);
@@ -354,7 +335,7 @@ export default function WorkoutLogScreen() {
     if (!name) return Alert.alert('Enter a name');
     setNewExCreating(true);
     const existing = await findExerciseByName(db, name);
-    let localId: number;
+    let localId: string;
     if (existing) {
       if (existing.is_active) { setNewExCreating(false); return Alert.alert('Already exists', `"${name}" already exists.`); }
       await reactivateExercise(db, existing.custom_exercise_id, newExVolume);
@@ -408,7 +389,6 @@ export default function WorkoutLogScreen() {
     if (!currentWorkoutId) return;
     setEndLoading(true);
     await endWorkout(db, currentWorkoutId, endNotes);
-    triggerSync();
     setEndLoading(false);
     setEndWorkoutModalVisible(false);
     slidePages.slideOut();
@@ -461,7 +441,7 @@ export default function WorkoutLogScreen() {
     setEditVarId(s.custom_variation_id);
   }, []);
 
-  function onEditExerciseChange(exId: number | null) {
+  function onEditExerciseChange(exId: string | null) {
     setEditExId(exId);
     setEditVarId(null);
   }
@@ -485,7 +465,7 @@ export default function WorkoutLogScreen() {
     if (currentWorkoutId) loadSets(currentWorkoutId);
   }); }
 
-  const handleDeleteSet = useCallback((setId: number) => {
+  const handleDeleteSet = useCallback((setId: string) => {
     Alert.alert('Delete Set', 'Remove this set?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {

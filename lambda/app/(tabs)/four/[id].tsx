@@ -36,7 +36,7 @@ function formatDate(iso: string): string {
 
 export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const workoutId = parseInt(id, 10);
+  const workoutId = id;
   const db = useSQLiteContext();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -55,22 +55,22 @@ export default function WorkoutDetailScreen() {
 
   // ── Log Set modal ──────────────────────────────────────────────────────────
   const [logSetModalVisible, setLogSetModalVisible] = useState(false);
-  const [selectedExId, setSelectedExId] = useState<number | null>(null);
+  const [selectedExId, setSelectedExId] = useState<string | null>(null);
   const selectedEx = selectedExId ? (exerciseDetailMap[selectedExId] ?? null) : null;
   const [weight, setWeight] = useState('');
   const [repsOrDuration, setRepsOrDuration] = useState('');
   const [setNotes, setSetNotes] = useState('');
-  const [selectedVarId, setSelectedVarId] = useState<number | null>(null);
+  const [selectedVarId, setSelectedVarId] = useState<string | null>(null);
   const [logLoading, setLogLoading] = useState(false);
 
   // ── Edit Set modal ─────────────────────────────────────────────────────────
   const [editingSet, setEditingSet] = useState<WorkoutSet | null>(null);
-  const [editExId, setEditExId] = useState<number | null>(null);
+  const [editExId, setEditExId] = useState<string | null>(null);
   const editEx = editExId ? (exerciseDetailMap[editExId] ?? null) : null;
   const [editWeight, setEditWeight] = useState('');
   const [editRepsOrDuration, setEditRepsOrDuration] = useState('');
   const [editNotes, setEditNotes] = useState('');
-  const [editVarId, setEditVarId] = useState<number | null>(null);
+  const [editVarId, setEditVarId] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -106,7 +106,7 @@ export default function WorkoutDetailScreen() {
 
   // ── Log Set ────────────────────────────────────────────────────────────────
 
-  function onSelectExercise(exId: number | null) {
+  function onSelectExercise(exId: string | null) {
     setSelectedExId(exId);
     setSelectedVarId(null);
   }
@@ -171,7 +171,7 @@ export default function WorkoutDetailScreen() {
     loadData();
   }); }
 
-  function handleDeleteSet(setId: number) {
+  function handleDeleteSet(setId: string) {
     Alert.alert('Delete Set', 'Remove this set?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {

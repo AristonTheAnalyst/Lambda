@@ -36,14 +36,14 @@ import T from '@/constants/Theme';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Exercise {
-  custom_exercise_id: number;
+  custom_exercise_id: string;
   exercise_name: string;
   exercise_volume_type: string;
   is_active: boolean;
 }
 
 interface Variation {
-  custom_variation_id: number;
+  custom_variation_id: string;
   variation_name: string;
   is_active: boolean;
 }
@@ -75,7 +75,7 @@ const ExRow = React.memo(function ExRow({
 }: {
   ex: Exercise;
   onEdit: (ex: Exercise) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }) {
   return (
     <XStack alignItems="center" paddingVertical={T.space.md} borderBottomWidth={0.5} borderBottomColor={T.border}>
@@ -100,7 +100,7 @@ const VarRow = React.memo(function VarRow({
 }: {
   v: Variation;
   onEdit: (v: Variation) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }) {
   return (
     <XStack alignItems="center" paddingVertical={T.space.md} borderBottomWidth={0.5} borderBottomColor={T.border}>
@@ -140,9 +140,9 @@ export default function LibraryScreen() {
   // original: DB state when modal opened (used to compute diff on Save)
   // draft: what's shown in the modal (updates as user adds/removes)
   // selection: what's checked in the dropdown right now (cleared after Add)
-  const [exOriginalVarIds, setExOriginalVarIds] = useState<Set<number>>(new Set());
-  const [exDraftVarIds, setExDraftVarIds]       = useState<Set<number>>(new Set());
-  const [exSelection, setExSelection]           = useState<number[]>([]);
+  const [exOriginalVarIds, setExOriginalVarIds] = useState<Set<string>>(new Set());
+  const [exDraftVarIds, setExDraftVarIds]       = useState<Set<string>>(new Set());
+  const [exSelection, setExSelection]           = useState<string[]>([]);
   const [loadingExVars, setLoadingExVars]       = useState(false);
 
   // ── Variations state ─────────────────────────────────────────────────────
@@ -153,9 +153,9 @@ export default function LibraryScreen() {
   const [editVar, setEditVar]                   = useState<Variation | null>(null);
 
   // ── Edit variation — draft bridge state ──────────────────────────────────
-  const [varOriginalExIds, setVarOriginalExIds] = useState<Set<number>>(new Set());
-  const [varDraftExIds, setVarDraftExIds]       = useState<Set<number>>(new Set());
-  const [varSelection, setVarSelection]         = useState<number[]>([]);
+  const [varOriginalExIds, setVarOriginalExIds] = useState<Set<string>>(new Set());
+  const [varDraftExIds, setVarDraftExIds]       = useState<Set<string>>(new Set());
+  const [varSelection, setVarSelection]         = useState<string[]>([]);
   const [loadingVarExs, setLoadingVarExs]       = useState(false);
 
   // ── Filtered lists ───────────────────────────────────────────────────────
@@ -190,7 +190,7 @@ export default function LibraryScreen() {
 
   // ── Bridge loaders ───────────────────────────────────────────────────────
 
-  const loadExVars = useCallback(async (exId: number) => {
+  const loadExVars = useCallback(async (exId: string) => {
     setLoadingExVars(true);
     const rows = await getBridgeForExercises(db, [exId]);
     const ids = new Set(rows.map((r) => r.custom_variation_id));
@@ -200,7 +200,7 @@ export default function LibraryScreen() {
     setLoadingExVars(false);
   }, [db]);
 
-  const loadVarExs = useCallback(async (varId: number) => {
+  const loadVarExs = useCallback(async (varId: string) => {
     setLoadingVarExs(true);
     const rows = await getBridgeForVariations(db, [varId]);
     const ids = new Set(rows.map((r) => r.custom_exercise_id));
@@ -254,7 +254,7 @@ export default function LibraryScreen() {
     await Promise.all(tasks);
   }); }
 
-  const confirmDeleteEx = useCallback((id: number) => {
+  const confirmDeleteEx = useCallback((id: string) => {
     Alert.alert('Delete Exercise', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
@@ -302,7 +302,7 @@ export default function LibraryScreen() {
     await Promise.all(tasks);
   }); }
 
-  const confirmDeleteVar = useCallback((id: number) => {
+  const confirmDeleteVar = useCallback((id: string) => {
     Alert.alert('Delete Variation', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {

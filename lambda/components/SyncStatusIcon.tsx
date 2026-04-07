@@ -1,9 +1,9 @@
 import { Spinner, Text, XStack, YStack } from 'tamagui';
-import { useSyncContext } from '@/lib/sync/syncContext';
+import { useSyncStore } from '@/lib/sync/useSyncEngine';
 import T from '@/constants/Theme';
 
 export default function SyncStatusIcon() {
-  const { isSyncing, pendingCount } = useSyncContext();
+  const { isSyncing, pendingCount } = useSyncStore();
 
   if (isSyncing) {
     return <Spinner size="small" color={T.accent} />;

@@ -7,14 +7,14 @@ import { useNetwork } from '@/hooks/useNetwork';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface Exercise {
-  custom_exercise_id: number;
+  custom_exercise_id: string;
   exercise_name: string;
   exercise_volume_type: string;
   is_active: boolean;
 }
 
 export interface AssignedVariation {
-  custom_variation_id: number;
+  custom_variation_id: string;
   variation_name: string;
 }
 
@@ -23,7 +23,7 @@ export interface ExerciseDetail extends Exercise {
 }
 
 export interface Variation {
-  custom_variation_id: number;
+  custom_variation_id: string;
   variation_name: string;
 }
 
@@ -32,7 +32,7 @@ export interface Variation {
 interface ExerciseDataContextValue {
   exercises: Exercise[];
   variations: Variation[];
-  exerciseDetailMap: Record<number, ExerciseDetail>;
+  exerciseDetailMap: Record<string, ExerciseDetail>;
   loading: boolean;
   refreshExercises: () => Promise<void>;
   refreshVariations: () => Promise<void>;
@@ -56,7 +56,7 @@ export function useExerciseData() {
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 interface RawBridgeRow {
-  custom_exercise_id: number;
+  custom_exercise_id: string;
   variation: AssignedVariation;
 }
 
@@ -73,7 +73,7 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
   const refreshExercises = useCallback(async () => {
     if (!user) return;
     const rows = await db.getAllAsync<{
-      custom_exercise_id: number;
+      custom_exercise_id: string;
       exercise_name: string;
       exercise_volume_type: string;
       is_active: number;
@@ -102,8 +102,8 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
   const refreshExerciseDetails = useCallback(async () => {
     if (!user) return;
     const rows = await db.getAllAsync<{
-      custom_exercise_id: number;
-      custom_variation_id: number;
+      custom_exercise_id: string;
+      custom_variation_id: string;
       variation_name: string;
     }>(
       `SELECT b.custom_exercise_id, b.custom_variation_id, v.variation_name
@@ -124,7 +124,7 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
   }, [db, user]);
 
   const exerciseDetailMap = useMemo(() => {
-    const map: Record<number, ExerciseDetail> = {};
+    const map: Record<string, ExerciseDetail> = {};
     exercises.forEach((ex) => {
       map[ex.custom_exercise_id] = { ...ex, assigned_variations: [] };
     });
@@ -145,7 +145,6 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
   }, [user?.id]);
 
   // Background seed from Supabase on first install (non-blocking)
-  // Only refreshes if seeding actually wrote new rows
   useEffect(() => {
     if (!user || !isConnected) return;
     seedFromSupabase(db, user.id)
@@ -174,9 +173,9 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
 // ─── Supabase seed helper ─────────────────────────────────────────────────────
 
 async function seedFromSupabase(db: any, userId: string): Promise<boolean> {
-  // Only seed if SQLite has no positive-ID exercises (i.e. first install)
+  // Only seed if SQLite has no exercises for this user (i.e. first install)
   const existing = await db.getFirstAsync<{ n: number }>(
-    `SELECT COUNT(*) AS n FROM user_custom_exercise WHERE user_id = ? AND custom_exercise_id > 0`,
+    `SELECT COUNT(*) AS n FROM user_custom_exercise WHERE user_id = ?`,
     [userId]
   );
   if (existing && existing.n > 0) return false;
@@ -196,31 +195,29 @@ async function seedFromSupabase(db: any, userId: string): Promise<boolean> {
       .eq('user_id', userId),
   ]);
 
-  await db.withTransactionAsync(async () => {
-    for (const ex of exRes.data ?? []) {
-      await db.runAsync(
-        `INSERT OR IGNORE INTO user_custom_exercise
-           (custom_exercise_id, user_id, exercise_name, exercise_volume_type, is_active, synced)
-         VALUES (?, ?, ?, ?, ?, 1)`,
-        [ex.custom_exercise_id, ex.user_id, ex.exercise_name, ex.exercise_volume_type, ex.is_active ? 1 : 0]
-      );
-    }
-    for (const v of varRes.data ?? []) {
-      await db.runAsync(
-        `INSERT OR IGNORE INTO user_custom_variation
-           (custom_variation_id, user_id, variation_name, is_active, synced)
-         VALUES (?, ?, ?, ?, 1)`,
-        [v.custom_variation_id, v.user_id, v.variation_name, v.is_active ? 1 : 0]
-      );
-    }
-    for (const b of bridgeRes.data ?? []) {
-      await db.runAsync(
-        `INSERT OR IGNORE INTO user_custom_exercise_variation_bridge
-           (custom_exercise_id, custom_variation_id, user_id, synced)
-         VALUES (?, ?, ?, 1)`,
-        [b.custom_exercise_id, b.custom_variation_id, b.user_id]
-      );
-    }
-  });
+  for (const ex of exRes.data ?? []) {
+    await db.runAsync(
+      `INSERT OR IGNORE INTO user_custom_exercise
+         (custom_exercise_id, user_id, exercise_name, exercise_volume_type, is_active)
+       VALUES (?, ?, ?, ?, ?)`,
+      [ex.custom_exercise_id, ex.user_id, ex.exercise_name, ex.exercise_volume_type, ex.is_active ? 1 : 0]
+    );
+  }
+  for (const v of varRes.data ?? []) {
+    await db.runAsync(
+      `INSERT OR IGNORE INTO user_custom_variation
+         (custom_variation_id, user_id, variation_name, is_active)
+       VALUES (?, ?, ?, ?)`,
+      [v.custom_variation_id, v.user_id, v.variation_name, v.is_active ? 1 : 0]
+    );
+  }
+  for (const b of bridgeRes.data ?? []) {
+    await db.runAsync(
+      `INSERT OR IGNORE INTO user_custom_exercise_variation_bridge
+         (custom_exercise_id, custom_variation_id, user_id)
+       VALUES (?, ?, ?)`,
+      [b.custom_exercise_id, b.custom_variation_id, b.user_id]
+    );
+  }
   return true;
 }

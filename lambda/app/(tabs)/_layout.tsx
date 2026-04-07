@@ -5,8 +5,14 @@ import { Tabs, useRouter, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import T from '@/constants/Theme';
 import { ExerciseDataProvider } from '@/lib/ExerciseDataContext';
-import { SyncProvider } from '@/lib/sync/syncContext';
+import { useSyncEngine } from '@/lib/sync/useSyncEngine';
 import OfflineBanner from '@/components/OfflineBanner';
+
+/** Mounts the sync engine once for the entire tab session. */
+function SyncMount() {
+  useSyncEngine();
+  return null;
+}
 
 const NAV_ITEMS = [
   { route: '/five',    icon: 'stats-chart'   as const, label: 'Statistics', alwaysSolid: true },
@@ -48,7 +54,7 @@ function BottomNav() {
 export default function TabLayout() {
   return (
     <ExerciseDataProvider>
-    <SyncProvider>
+      <SyncMount />
       <View style={{ flex: 1, backgroundColor: T.bg }}>
         <OfflineBanner />
         <Tabs screenOptions={{ tabBarStyle: { display: 'none' } }}>
@@ -62,7 +68,6 @@ export default function TabLayout() {
         </Tabs>
         <BottomNav />
       </View>
-    </SyncProvider>
     </ExerciseDataProvider>
   );
 }

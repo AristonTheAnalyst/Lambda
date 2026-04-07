@@ -8,6 +8,7 @@ import { StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 import { TamaguiProvider } from 'tamagui';
 import { SQLiteProvider } from 'expo-sqlite';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import config from '../tamagui.config';
 import { useColorScheme } from '@/hooks';
 import { AuthProvider, useAuthContext } from '@/lib/AuthContext';
@@ -16,12 +17,21 @@ import { initializeDatabase } from '@/lib/db/database';
 import LoadingScreen from '@/components/LoadingScreen';
 import T from '@/constants/Theme';
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    },
+  },
+});
+
 export {
   ErrorBoundary,
 } from 'expo-router';
 
 export const unstable_settings = {
-  initialRouteName: '(tabs)',
+  initialRouteName: '(tabs)/',
 };
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -45,11 +55,13 @@ export default function RootLayout() {
   return (
     <View style={rootStyles.root}>
       <TamaguiProvider config={config} defaultTheme="dark">
-        <SQLiteProvider databaseName={DATABASE_NAME} onInit={initializeDatabase}>
-          <AuthProvider>
-            <RootLayoutNav />
-          </AuthProvider>
-        </SQLiteProvider>
+        <QueryClientProvider client={queryClient}>
+          <SQLiteProvider databaseName={DATABASE_NAME} onInit={initializeDatabase}>
+            <AuthProvider>
+              <RootLayoutNav />
+            </AuthProvider>
+          </SQLiteProvider>
+        </QueryClientProvider>
       </TamaguiProvider>
     </View>
   );
@@ -72,7 +84,7 @@ function RootLayoutNav() {
     } else if (onboarded === false) {
       target = '/(onboarding)';
     } else {
-      target = '/(tabs)';
+      target = '/(tabs)/';
     }
 
     if (lastTarget.current !== target) {

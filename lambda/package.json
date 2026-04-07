@@ -19,6 +19,7 @@
     "@tamagui/animations-reanimated": "^2.0.0-rc.31",
     "@tamagui/config": "^2.0.0-rc.31",
     "@tamagui/portal": "^2.0.0-rc.31",
+    "@tanstack/react-query": "^5.96.2",
     "expo": "~54.0.33",
     "expo-apple-authentication": "~8.0.8",
     "expo-constants": "~18.0.13",
@@ -44,11 +45,14 @@
     "react-native-web": "~0.21.0",
     "react-native-worklets": "0.5.1",
     "tamagui": "^2.0.0-rc.31",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@tamagui/babel-plugin": "^2.0.0-rc.31",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.1.0",
+    "jest-expo": "^55.0.14",
     "react-test-renderer": "19.1.0",
     "typescript": "~5.9.2"
   },
