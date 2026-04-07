@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Alert, ScrollView } from 'react-native';
+import { Alert, ScrollView, useWindowDimensions } from 'react-native';
 import { Spinner, Text, XStack, YStack } from 'tamagui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -40,6 +40,7 @@ export default function WorkoutDetailScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const guard = useAsyncGuard();
   const { exercises, exerciseDetailMap } = useExerciseData();
 
@@ -335,154 +336,132 @@ export default function WorkoutDetailScreen() {
       )}
 
       {/* ── Log Set Modal ── */}
-      <SlideUpModal visible={logSetModalVisible} onClose={() => setLogSetModalVisible(false)}>
-        {logSetModalVisible && (
-          <YStack
-            backgroundColor={T.surface}
-            borderTopLeftRadius={T.radius.lg}
-            borderTopRightRadius={T.radius.lg}
-            padding={T.space.xl}
-            maxHeight="85%"
-          >
-            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              <YStack gap={T.space.md}>
-                <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Log Set</Text>
-                <XStack gap={T.space.sm} alignItems="flex-end">
-                  <YStack flex={3}>
-                    <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
-                    <DropdownSelect
-                      options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
-                      value={selectedExId}
-                      onChange={onSelectExercise}
-                      placeholder="Select exercise…"
-                    />
-                  </YStack>
-                  {selectedEx && (
-                    <YStack flex={2}>
-                      <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
-                      {selectedEx.assigned_variations.length > 0 ? (
-                        <DropdownSelect
-                          options={[
-                            { label: 'None', value: null },
-                            ...selectedEx.assigned_variations.map((v) => ({ label: v.variation_name, value: v.custom_variation_id })),
-                          ]}
-                          value={selectedVarId}
-                          onChange={setSelectedVarId}
-                          placeholder="None"
-                        />
-                      ) : (
-                        <XStack
-                          alignItems="center"
-                          borderWidth={1}
-                          borderColor={T.border}
-                          borderRadius={T.radius.md}
-                          paddingHorizontal={T.space.md}
-                          height={48}
-                          backgroundColor={T.surface}
-                          opacity={0.5}
-                        >
-                          <Text fontSize={T.fontSize.md} color={T.muted} flex={1} numberOfLines={1}>Zero Assigned</Text>
-                        </XStack>
-                      )}
-                    </YStack>
-                  )}
-                </XStack>
-                {selectedEx && (
-                  <>
-                    <Input label="Weight (optional)" placeholder="kg" keyboardType="numbers-and-punctuation" value={weight} onChangeText={setWeight} />
-                    <Input
-                      label={selectedEx.exercise_volume_type === 'reps' ? 'Reps' : 'Duration (seconds)'}
-                      placeholder={selectedEx.exercise_volume_type === 'reps' ? 'e.g. 10,8,6' : 'e.g. 60,45'}
-                      keyboardType="numbers-and-punctuation"
-                      value={repsOrDuration}
-                      onChangeText={setRepsOrDuration}
-                    />
-                    <Input label="Set notes (optional)" placeholder="Notes…" value={setNotes} onChangeText={setSetNotes} />
-                  </>
+      <SlideUpModal visible={logSetModalVisible} onClose={() => setLogSetModalVisible(false)} fitContent>
+        <YStack padding={T.space.xl} gap={T.space.md}>
+          <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Log Set</Text>
+          <XStack gap={T.space.sm} alignItems="flex-end">
+            <YStack flex={3}>
+              <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
+              <DropdownSelect
+                options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
+                value={selectedExId}
+                onChange={onSelectExercise}
+                placeholder="Select exercise…"
+              />
+            </YStack>
+            {selectedEx && (
+              <YStack flex={2}>
+                <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
+                {selectedEx.assigned_variations.length > 0 ? (
+                  <DropdownSelect
+                    options={[
+                      { label: 'None', value: null },
+                      ...selectedEx.assigned_variations.map((v) => ({ label: v.variation_name, value: v.custom_variation_id })),
+                    ]}
+                    value={selectedVarId}
+                    onChange={setSelectedVarId}
+                    placeholder="None"
+                  />
+                ) : (
+                  <XStack
+                    alignItems="center"
+                    borderWidth={1}
+                    borderColor={T.border}
+                    borderRadius={T.radius.md}
+                    paddingHorizontal={T.space.md}
+                    height={48}
+                    backgroundColor={T.surface}
+                    opacity={0.5}
+                  >
+                    <Text fontSize={T.fontSize.md} color={T.muted} flex={1} numberOfLines={1}>Zero Assigned</Text>
+                  </XStack>
                 )}
-                <XStack gap={T.space.sm} justifyContent="center">
-                  <Button label="Cancel" onPress={() => setLogSetModalVisible(false)} variant="danger-ghost" />
-                  <Button label="Log Set" onPress={logSet} loading={logLoading} />
-                </XStack>
-                <YStack height={T.space.xl} />
               </YStack>
-            </ScrollView>
-          </YStack>
-        )}
+            )}
+          </XStack>
+          {selectedEx && (
+            <>
+              <Input label="Weight (optional)" placeholder="kg" keyboardType="numbers-and-punctuation" value={weight} onChangeText={setWeight} />
+              <Input
+                label={selectedEx.exercise_volume_type === 'reps' ? 'Reps' : 'Duration (seconds)'}
+                placeholder={selectedEx.exercise_volume_type === 'reps' ? 'e.g. 10,8,6' : 'e.g. 60,45'}
+                keyboardType="numbers-and-punctuation"
+                value={repsOrDuration}
+                onChangeText={setRepsOrDuration}
+              />
+              <Input label="Set notes (optional)" placeholder="Notes…" value={setNotes} onChangeText={setSetNotes} />
+            </>
+          )}
+          <XStack gap={T.space.sm} justifyContent="center">
+            <Button label="Cancel" onPress={() => setLogSetModalVisible(false)} variant="danger-ghost" />
+            <Button label="Log Set" onPress={logSet} loading={logLoading} />
+          </XStack>
+          <YStack height={windowHeight * 0.15} />
+        </YStack>
       </SlideUpModal>
 
       {/* ── Edit Set Modal ── */}
-      <SlideUpModal visible={!!editingSet} onClose={() => setEditingSet(null)}>
-        <YStack
-          backgroundColor={T.surface}
-          borderTopLeftRadius={T.radius.lg}
-          borderTopRightRadius={T.radius.lg}
-          padding={T.space.xl}
-          maxHeight="85%"
-        >
-          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            <YStack gap={T.space.md}>
-              <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Edit Set</Text>
-              <XStack gap={T.space.sm} alignItems="flex-end">
-                <YStack flex={3}>
-                  <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
-                  <DropdownSelect
-                    options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
-                    value={editExId}
-                    onChange={(exId) => { setEditExId(exId); setEditVarId(null); }}
-                    placeholder="Select exercise…"
-                  />
-                </YStack>
-                {editEx && (
-                  <YStack flex={2}>
-                    <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
-                    {editEx.assigned_variations.length > 0 ? (
-                      <DropdownSelect
-                        options={[
-                          { label: 'None', value: null },
-                          ...editEx.assigned_variations.map((v) => ({ label: v.variation_name, value: v.custom_variation_id })),
-                        ]}
-                        value={editVarId}
-                        onChange={setEditVarId}
-                        placeholder="None"
-                      />
-                    ) : (
-                      <XStack
-                        alignItems="center"
-                        borderWidth={1}
-                        borderColor={T.border}
-                        borderRadius={T.radius.md}
-                        paddingHorizontal={T.space.md}
-                        height={48}
-                        backgroundColor={T.surface}
-                        opacity={0.5}
-                      >
-                        <Text fontSize={T.fontSize.md} color={T.muted} flex={1} numberOfLines={1}>Zero Assigned</Text>
-                      </XStack>
-                    )}
-                  </YStack>
-                )}
-              </XStack>
-              {editEx && (
-                <>
-                  <Input label="Weight (optional)" placeholder="kg" keyboardType="numbers-and-punctuation" value={editWeight} onChangeText={setEditWeight} />
-                  <Input
-                    label={editEx.exercise_volume_type === 'reps' ? 'Reps' : 'Duration (seconds)'}
-                    placeholder={editEx.exercise_volume_type === 'reps' ? 'e.g. 10,8,6' : 'e.g. 60,45'}
-                    keyboardType="numbers-and-punctuation"
-                    value={editRepsOrDuration}
-                    onChangeText={setEditRepsOrDuration}
-                  />
-                  <Input label="Set notes (optional)" placeholder="Notes…" value={editNotes} onChangeText={setEditNotes} />
-                </>
-              )}
-              <XStack gap={T.space.sm} justifyContent="center">
-                <Button label="Cancel" onPress={() => setEditingSet(null)} variant="danger-ghost" />
-                <Button label="Save" onPress={saveEditSet} loading={editLoading} />
-              </XStack>
-              <YStack height={T.space.xl} />
+      <SlideUpModal visible={!!editingSet} onClose={() => setEditingSet(null)} fitContent>
+        <YStack padding={T.space.xl} gap={T.space.md}>
+          <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Edit Set</Text>
+          <XStack gap={T.space.sm} alignItems="flex-end">
+            <YStack flex={3}>
+              <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
+              <DropdownSelect
+                options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
+                value={editExId}
+                onChange={(exId) => { setEditExId(exId); setEditVarId(null); }}
+                placeholder="Select exercise…"
+              />
             </YStack>
-          </ScrollView>
+            {editEx && (
+              <YStack flex={2}>
+                <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
+                {editEx.assigned_variations.length > 0 ? (
+                  <DropdownSelect
+                    options={[
+                      { label: 'None', value: null },
+                      ...editEx.assigned_variations.map((v) => ({ label: v.variation_name, value: v.custom_variation_id })),
+                    ]}
+                    value={editVarId}
+                    onChange={setEditVarId}
+                    placeholder="None"
+                  />
+                ) : (
+                  <XStack
+                    alignItems="center"
+                    borderWidth={1}
+                    borderColor={T.border}
+                    borderRadius={T.radius.md}
+                    paddingHorizontal={T.space.md}
+                    height={48}
+                    backgroundColor={T.surface}
+                    opacity={0.5}
+                  >
+                    <Text fontSize={T.fontSize.md} color={T.muted} flex={1} numberOfLines={1}>Zero Assigned</Text>
+                  </XStack>
+                )}
+              </YStack>
+            )}
+          </XStack>
+          {editEx && (
+            <>
+              <Input label="Weight (optional)" placeholder="kg" keyboardType="numbers-and-punctuation" value={editWeight} onChangeText={setEditWeight} />
+              <Input
+                label={editEx.exercise_volume_type === 'reps' ? 'Reps' : 'Duration (seconds)'}
+                placeholder={editEx.exercise_volume_type === 'reps' ? 'e.g. 10,8,6' : 'e.g. 60,45'}
+                keyboardType="numbers-and-punctuation"
+                value={editRepsOrDuration}
+                onChangeText={setEditRepsOrDuration}
+              />
+              <Input label="Set notes (optional)" placeholder="Notes…" value={editNotes} onChangeText={setEditNotes} />
+            </>
+          )}
+          <XStack gap={T.space.sm} justifyContent="center">
+            <Button label="Cancel" onPress={() => setEditingSet(null)} variant="danger-ghost" />
+            <Button label="Save" onPress={saveEditSet} loading={editLoading} />
+          </XStack>
+          <YStack height={windowHeight * 0.15} />
         </YStack>
       </SlideUpModal>
     </YStack>
