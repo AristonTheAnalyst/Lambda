@@ -162,15 +162,19 @@ export async function deleteSet(
   );
 
   if (setId < 0) {
-    // Cancel the pending INSERT — nothing to delete on server for an unsynced record
+    // Cancel the INSERT and any UPDATEs — nothing to delete on server for an unsynced record.
+    // Must include 'failed' entries too: if the INSERT failed transiently and later gets reset
+    // to pending by the sync engine, it would re-create a set the user already deleted.
     await db.runAsync(
       `UPDATE sync_queue SET status = 'done'
-       WHERE status = 'pending' AND operation = 'INSERT' AND table_name = 'fact_workout_set' AND local_id = ?`,
+       WHERE status IN ('pending', 'failed') AND operation = 'INSERT'
+         AND table_name = 'fact_workout_set' AND local_id = ?`,
       [setId]
     );
     await db.runAsync(
       `UPDATE sync_queue SET status = 'done'
-       WHERE status = 'pending' AND operation = 'UPDATE' AND table_name = 'fact_workout_set'
+       WHERE status IN ('pending', 'failed') AND operation = 'UPDATE'
+         AND table_name = 'fact_workout_set'
          AND json_extract(payload, '$.workout_set_id') = ?`,
       [setId]
     );

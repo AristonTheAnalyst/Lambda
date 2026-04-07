@@ -4,6 +4,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useNetwork } from '@/hooks/useNetwork';
 import { getPendingCount } from './syncQueue';
 import { processSyncQueue } from './syncEngine';
+import supabase from '@/lib/supabase';
 
 interface SyncContextValue {
   isSyncing: boolean;
@@ -31,10 +32,25 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   const refreshPendingCount = useCallback(async () => {
     const count = await getPendingCount(db);
     setPendingCount(count);
+
+    // TEMP: dump full queue
+    const all = await db.getAllAsync('SELECT id, table_name, operation, status, local_id, depends_on_local_id, last_error FROM sync_queue ORDER BY id ASC');
+    console.log('[SyncQueue dump]', JSON.stringify(all, null, 2));
   }, [db]);
 
   const triggerSync = useCallback(async () => {
     if (syncLock.current || !isConnected) return;
+
+    // Guard: verify the session is readable before touching the network.
+    // If SecureStore is still locked (device just woke up), getSession() may throw —
+    // skip this cycle and let the next foreground/reconnect event retry.
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) return;
+    } catch {
+      return;
+    }
+
     syncLock.current = true;
     setIsSyncing(true);
     try {

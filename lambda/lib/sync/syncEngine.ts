@@ -3,6 +3,71 @@ import supabase from '@/lib/supabase';
 import { getPendingEntries, getPkColumn, markDone, markFailed } from './syncQueue';
 import { getRemap, setRemap } from '@/lib/db/idRemap';
 
+// ─── Transient error detection ────────────────────────────────────────────────
+
+/**
+ * Transient errors are caused by temporary conditions (no network, device locked)
+ * and should be retried on the next sync run rather than permanently failed.
+ */
+const TRANSIENT_PATTERNS = [
+  'Network request failed',
+  'getValueWithKeyAsync',
+  'User interaction is not allowed',
+];
+
+function isTransientError(err: any): boolean {
+  const msg: string = err?.message ?? '';
+  return TRANSIENT_PATTERNS.some((p) => msg.includes(p));
+}
+
+/**
+ * Resets failed queue entries that can be retried:
+ * 1. Entries that failed transiently (network, SecureStore locked).
+ * 2. Cascading dependency failures whose direct parent was just reset to pending.
+ *
+ * Called at the top of every processSyncQueue run.
+ */
+async function resetTransientFailures(db: SQLiteDatabase): Promise<void> {
+  // Step 1: reset entries that failed due to transient conditions
+  const patternClauses = TRANSIENT_PATTERNS.map(() => `last_error LIKE ?`).join(' OR ');
+  const patternArgs = TRANSIENT_PATTERNS.map((p) => `%${p}%`);
+  await db.runAsync(
+    `UPDATE sync_queue SET status = 'pending', last_error = NULL
+     WHERE status = 'failed' AND (${patternClauses})`,
+    patternArgs
+  );
+
+  // Step 1b: RLS violations are often caused by unauthenticated requests (SecureStore locked
+  // → token refresh failed → request went out without auth → auth.uid() was null).
+  // Retry up to 3 times so they succeed once the session is valid. After 3 attempts we
+  // give up in case it is a genuine data-ownership mismatch.
+  await db.runAsync(
+    `UPDATE sync_queue SET status = 'pending', last_error = NULL
+     WHERE status = 'failed'
+       AND last_error LIKE '%row-level security policy%'
+       AND retry_count < 3`
+  );
+
+  // Step 2: reset cascading "Dependency X unresolvable" / "referenced local ID" failures
+  // whose direct parent dependency is now pending (was just reset in step 1).
+  // Only resets if the parent itself is recoverable — avoids resetting entries whose
+  // parent failed permanently (e.g. RLS violation).
+  await db.runAsync(
+    `UPDATE sync_queue SET status = 'pending', last_error = NULL
+     WHERE status = 'failed'
+       AND depends_on_local_id IS NOT NULL
+       AND (
+         last_error LIKE '%Dependency%unresolvable%' OR
+         last_error LIKE '%referenced local ID could not be resolved%'
+       )
+       AND EXISTS (
+         SELECT 1 FROM sync_queue sq2
+         WHERE sq2.local_id = sync_queue.depends_on_local_id
+           AND sq2.status = 'pending'
+       )`
+  );
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Replaces every value in payload equal to localId with serverId. */
@@ -85,6 +150,8 @@ function stripLocalFields(
  * picked up on the next sync run.
  */
 export async function processSyncQueue(db: SQLiteDatabase): Promise<void> {
+  await resetTransientFailures(db);
+
   const entries = await getPendingEntries(db);
   if (entries.length === 0) return;
 
@@ -220,8 +287,13 @@ export async function processSyncQueue(db: SQLiteDatabase): Promise<void> {
       }
     } catch (err: any) {
       const message = err?.message ?? 'Unknown error';
-      console.warn(`[SyncEngine] Entry ${entry.id} failed: ${message}`);
-      await markFailed(db, entry.id, message);
+      if (isTransientError(err)) {
+        // Leave as pending — will be picked up on the next sync run
+        console.warn(`[SyncEngine] Entry ${entry.id} transient error (will retry): ${message}`);
+      } else {
+        console.warn(`[SyncEngine] Entry ${entry.id} failed permanently: ${message}`);
+        await markFailed(db, entry.id, message);
+      }
     }
   }
 }

@@ -134,7 +134,7 @@ export default function WorkoutLogScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuthContext();
   const { exercises, variations, exerciseDetailMap, refreshExercises, refreshVariations, refreshExerciseDetails } = useExerciseData();
-  const { lastSyncAt } = useSyncContext();
+  const { lastSyncAt, triggerSync } = useSyncContext();
 
   // ── Workout state ──────────────────────────────────────────────────────────
 
@@ -408,6 +408,7 @@ export default function WorkoutLogScreen() {
     if (!currentWorkoutId) return;
     setEndLoading(true);
     await endWorkout(db, currentWorkoutId, endNotes);
+    triggerSync();
     setEndLoading(false);
     setEndWorkoutModalVisible(false);
     slidePages.slideOut();
