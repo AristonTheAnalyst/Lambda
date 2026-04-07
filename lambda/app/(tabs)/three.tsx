@@ -571,10 +571,12 @@ export default function WorkoutLogScreen() {
           {/* ── Sticky Log Set footer ── */}
           <YStack
             paddingHorizontal={T.space.lg}
-            paddingVertical={T.space.md}
+            paddingTop={T.space.lg}
+            paddingBottom={insets.bottom + T.space.xxl + T.space.lg}
             borderTopWidth={0.5}
             borderTopColor={T.border}
             backgroundColor={T.bg}
+            justifyContent="center"
           >
             <Button label="Log Set" onPress={() => setLogSetModalVisible(true)} variant="ghost" />
           </YStack>
@@ -607,64 +609,57 @@ export default function WorkoutLogScreen() {
       </SlideUpModal>
 
       {/* ── Log Set Modal ── */}
-      <SlideUpModal visible={logSetModalVisible} onClose={() => setLogSetModalVisible(false)}>
+      <SlideUpModal visible={logSetModalVisible} onClose={() => setLogSetModalVisible(false)} fitContent>
         <YStack
-          backgroundColor={T.surface}
-          borderTopLeftRadius={T.radius.lg}
-          borderTopRightRadius={T.radius.lg}
           padding={T.space.xl}
-          maxHeight="85%"
+          paddingBottom={Math.max(insets.bottom, T.space.xl)}
+          gap={T.space.md}
         >
-          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            <YStack gap={T.space.md}>
-              <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Log Set</Text>
-              <XStack gap={T.space.sm} alignItems="flex-end">
-                <YStack flex={3}>
-                  <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
-                  <DropdownSelect
-                    options={exerciseOptions}
-                    value={selectedExId}
-                    onChange={onSelectExercise}
-                    placeholder="Select exercise…"
-                    searchable
-                    onCreateNew={() => openNewExercise(false)}
-                    createNewLabel="New Exercise"
-                  />
-                </YStack>
-                {selectedEx && (
-                  <YStack flex={2}>
-                    <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
-                    <DropdownSelect
-                      options={logVarOptions}
-                      value={selectedVarId}
-                      onChange={setSelectedVarId}
-                      placeholder="None"
-                      onCreateNew={() => openAssignVar(false)}
-                      createNewLabel="Assign New Variations"
-                    />
-                  </YStack>
-                )}
-              </XStack>
-              {selectedEx && (
-                <>
-                  <Input label="Weight (optional)" placeholder="kg" keyboardType="numbers-and-punctuation" value={weight} onChangeText={setWeight} />
-                  <Input
-                    label={selectedEx.exercise_volume_type === 'reps' ? 'Reps' : 'Duration (seconds)'}
-                    placeholder={selectedEx.exercise_volume_type === 'reps' ? 'e.g. 10,8,6' : 'e.g. 60,45'}
-                    keyboardType="numbers-and-punctuation"
-                    value={repsOrDuration}
-                    onChangeText={setRepsOrDuration}
-                  />
-                  <Input label="Set notes (optional)" placeholder="Notes…" value={setNotes} onChangeText={setSetNotes} />
-                </>
-              )}
-              <XStack gap={T.space.sm} justifyContent="center">
-                <Button label="Cancel" onPress={() => setLogSetModalVisible(false)} variant="danger-ghost" />
-                <Button label="Log Set" onPress={logSet} loading={logLoading} />
-              </XStack>
-              <YStack height={T.space.xl} />
+          <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Log Set</Text>
+          <XStack gap={T.space.sm} alignItems="flex-end">
+            <YStack flex={3}>
+              <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
+              <DropdownSelect
+                options={exerciseOptions}
+                value={selectedExId}
+                onChange={onSelectExercise}
+                placeholder="Select exercise…"
+                searchable
+                onCreateNew={() => openNewExercise(false)}
+                createNewLabel="New Exercise"
+              />
             </YStack>
-          </ScrollView>
+            {selectedEx && (
+              <YStack flex={2}>
+                <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
+                <DropdownSelect
+                  options={logVarOptions}
+                  value={selectedVarId}
+                  onChange={setSelectedVarId}
+                  placeholder="None"
+                  onCreateNew={() => openAssignVar(false)}
+                  createNewLabel="Assign New Variations"
+                />
+              </YStack>
+            )}
+          </XStack>
+          {selectedEx && (
+            <>
+              <Input label="Weight (optional)" placeholder="kg" keyboardType="numbers-and-punctuation" value={weight} onChangeText={setWeight} />
+              <Input
+                label={selectedEx.exercise_volume_type === 'reps' ? 'Reps' : 'Duration (seconds)'}
+                placeholder={selectedEx.exercise_volume_type === 'reps' ? 'e.g. 10,8,6' : 'e.g. 60,45'}
+                keyboardType="numbers-and-punctuation"
+                value={repsOrDuration}
+                onChangeText={setRepsOrDuration}
+              />
+              <Input label="Set notes (optional)" placeholder="Notes…" value={setNotes} onChangeText={setSetNotes} />
+            </>
+          )}
+          <XStack gap={T.space.sm} justifyContent="center">
+            <Button label="Cancel" onPress={() => setLogSetModalVisible(false)} variant="danger-ghost" />
+            <Button label="Log Set" onPress={logSet} loading={logLoading} />
+          </XStack>
         </YStack>
       </SlideUpModal>
 

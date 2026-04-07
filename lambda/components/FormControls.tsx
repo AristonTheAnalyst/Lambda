@@ -85,9 +85,11 @@ interface SlideUpModalProps {
   onClose: () => void;
   children: React.ReactNode;
   zIndex?: number;
+  snapPoints?: number[];
+  fitContent?: boolean;
 }
 
-export function SlideUpModal({ visible, onClose, children, zIndex }: SlideUpModalProps) {
+export function SlideUpModal({ visible, onClose, children, zIndex, snapPoints, fitContent }: SlideUpModalProps) {
   React.useEffect(() => { if (visible) Keyboard.dismiss(); }, [visible]);
   return (
     <Sheet
@@ -95,7 +97,8 @@ export function SlideUpModal({ visible, onClose, children, zIndex }: SlideUpModa
       open={visible}
       onOpenChange={(open: boolean) => { if (!open) onClose(); }}
       animation="medium"
-      snapPoints={[85]}
+      snapPoints={fitContent ? undefined : (snapPoints ?? [85])}
+      snapPointsMode={fitContent ? 'fit' : undefined}
       disableDrag
       zIndex={zIndex ?? 100_000}
     >
