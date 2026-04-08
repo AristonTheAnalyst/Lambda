@@ -139,11 +139,14 @@ async function executeMutation(
   }
 
   if (mutation.operation === 'DELETE') {
-    // Soft-delete: Supabase rows use is_active / deleted_at flags via the payload.
-    const { error } = await supabase
-      .from(table)
-      .upsert(payload, { onConflict: getPkColumn(table) });
-
+    // Hard-delete from Supabase using the PK column(s).
+    // `deleted_locally` is a local-only SQLite flag — never sent to Supabase.
+    const pkColumns = getPkColumn(table).split(',');
+    let query = supabase.from(table).delete() as any;
+    for (const col of pkColumns) {
+      query = query.eq(col, payload[col] as string);
+    }
+    const { error } = await query;
     if (error) throw new Error(error.message);
     return { serverVersion: mutation.local_version };
   }
