@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Alert, Keyboard, ScrollView, useWindowDimensions } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SlidePages from '@/components/SlidePages';
 import { useSlidePages } from '@/hooks/useSlidePages';
@@ -109,13 +110,15 @@ const CompactGroup = React.memo(function CompactGroup({ exName, sets, exerciseDe
           <XStack
             key={s.workout_set_id}
             paddingVertical={T.space.xs}
+            alignItems="center"
             pressStyle={{ opacity: 0.6 }}
             onPress={() => onEdit(s)}
             cursor="pointer"
           >
-            <Text flex={1} fontSize={T.fontSize.sm} color={T.muted} numberOfLines={2}>
+            <Text flex={1} fontSize={T.fontSize.sm} color={T.accent} numberOfLines={2}>
               {subParts[0]}{subParts.length > 1 ? ` - ${subParts.slice(1).join(' · ')}` : ''}{s.workout_set_notes ? ` · "${s.workout_set_notes}"` : ''}
             </Text>
+            <FontAwesome name="pencil" size={10} color={T.muted} style={{ marginLeft: T.space.sm }} />
           </XStack>
         );
       })}
@@ -536,7 +539,12 @@ export default function WorkoutLogScreen() {
             automaticallyAdjustKeyboardInsets={true}
           >
             <XStack alignItems="center" marginBottom={T.space.sm}>
-              <Text fontSize={T.fontSize.xl} fontWeight="700" color={T.primary} flex={1}>Sets this workout</Text>
+              <Text fontSize={T.fontSize.xl} fontWeight="700" color={T.primary} flex={1}>
+                Sets this workout{' '}
+                <Text fontSize={T.fontSize.sm} fontWeight="400" color={T.muted}>
+                  ({viewMode === 'grouped' ? 'grouped' : 'full'})
+                </Text>
+              </Text>
               {sets.length > 0 && (
                 <GlassButton
                   icon={viewMode === 'grouped' ? 'list-ol' : 'th-list'}
@@ -570,29 +578,28 @@ export default function WorkoutLogScreen() {
               const varName = s.custom_variation_id
                 ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations?.find((v: any) => v.custom_variation_id === s.custom_variation_id)?.variation_name ?? null
                 : null;
-              const repsStr = s.workout_set_reps?.length
+              const volume = s.workout_set_reps?.length
                 ? `${formatValues(s.workout_set_reps)} reps`
                 : s.workout_set_duration_seconds?.length ? `${formatValues(s.workout_set_duration_seconds)}s` : '—';
-              const parts: string[] = [
-                `#${idx + 1}`,
-                exName,
-                ...(varName ? [varName] : []),
-                ...(s.workout_set_weight != null ? [`${s.workout_set_weight}kg`] : []),
-                repsStr,
-              ];
+              const exerciseLabel = varName ? `${exName} (${varName})` : exName;
               return (
                 <XStack
                   key={s.workout_set_id}
                   paddingVertical={T.space.xs}
                   borderBottomWidth={0.5}
                   borderBottomColor={T.border}
+                  alignItems="center"
                   pressStyle={{ opacity: 0.6 }}
                   onPress={() => openEditSet(s)}
                   cursor="pointer"
                 >
-                  <Text flex={1} fontSize={T.fontSize.sm} color={T.muted} numberOfLines={2}>
-                    {parts[0]}{parts.length > 1 ? ` - ${parts.slice(1).join(' · ')}` : ''}{s.workout_set_notes ? ` · "${s.workout_set_notes}"` : ''}
+                  <Text flex={1} fontSize={T.fontSize.sm} color={T.accent} numberOfLines={2}>
+                    {`#${idx + 1} - ${exerciseLabel} x ${volume}`}
+                    {s.workout_set_notes ? (
+                      <Text color={T.accent}>{' · '}<Text fontStyle="italic">{`"${s.workout_set_notes}"`}</Text></Text>
+                    ) : null}
                   </Text>
+                  <FontAwesome name="pencil" size={10} color={T.muted} style={{ marginLeft: T.space.sm }} />
                 </XStack>
               );
             })}
