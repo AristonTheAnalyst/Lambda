@@ -87,10 +87,11 @@ interface SlideUpModalProps {
   zIndex?: number;
   snapPoints?: number[];
   fitContent?: boolean;
+  keyboardAware?: boolean;
 }
 
-export function SlideUpModal({ visible, onClose, children, zIndex, snapPoints, fitContent }: SlideUpModalProps) {
-  React.useEffect(() => { if (visible) Keyboard.dismiss(); }, [visible]);
+export function SlideUpModal({ visible, onClose, children, zIndex, snapPoints, fitContent, keyboardAware }: SlideUpModalProps) {
+  React.useEffect(() => { if (visible && !keyboardAware) Keyboard.dismiss(); }, [visible, keyboardAware]);
   return (
     <Sheet
       modal
@@ -101,6 +102,7 @@ export function SlideUpModal({ visible, onClose, children, zIndex, snapPoints, f
       snapPointsMode={fitContent ? 'fit' : undefined}
       disableDrag
       zIndex={zIndex ?? 100_000}
+      moveOnKeyboardChange={keyboardAware}
     >
       <Sheet.Overlay
         animation="medium"

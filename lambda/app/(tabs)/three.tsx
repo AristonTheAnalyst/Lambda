@@ -502,13 +502,14 @@ export default function WorkoutLogScreen() {
             borderRadius={999}
             paddingVertical={4}
             paddingHorizontal={T.space.md}
-            backgroundColor={T.accent}
+            borderWidth={1}
+            borderColor={T.accent}
             pressStyle={{ opacity: 0.7 }}
             onPress={() => setEndWorkoutModalVisible(true)}
             cursor="pointer"
             alignItems="center"
           >
-            <Text color={T.accentText} fontSize={T.fontSize.sm} fontWeight="600" numberOfLines={1}>End</Text>
+            <Text color={T.accent} fontSize={T.fontSize.sm} fontWeight="600" numberOfLines={1}>End</Text>
           </XStack>
         ) : undefined}
       />
@@ -579,7 +580,7 @@ export default function WorkoutLogScreen() {
             backgroundColor={T.bg}
             justifyContent="center"
           >
-            <Button label="Log Set" onPress={() => setLogSetModalVisible(true)} variant="ghost" />
+            <Button label="Log Set" onPress={() => setLogSetModalVisible(true)} />
           </YStack>
         </YStack>
       </SlidePages>
@@ -595,27 +596,21 @@ export default function WorkoutLogScreen() {
       </YStack>
 
       {/* ── End Workout Modal ── */}
-      <SlideUpModal visible={endWorkoutModalVisible} onClose={() => setEndWorkoutModalVisible(false)}>
-        <YStack flex={1}>
-          <ScrollView contentContainerStyle={{ padding: T.space.xl, paddingBottom: T.space.md }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} marginBottom={T.space.md}>End Workout</Text>
-            <NotesField label="Post-workout notes (optional)" value={endNotes} onChange={setEndNotes} />
-          </ScrollView>
-          <XStack gap={T.space.sm} paddingHorizontal={T.space.xl} paddingTop={T.space.md} paddingBottom={T.space.xxl}
-            borderTopWidth={0.5} borderTopColor={T.border} justifyContent="center" backgroundColor={T.surface}>
+      <SlideUpModal visible={endWorkoutModalVisible} onClose={() => setEndWorkoutModalVisible(false)} fitContent keyboardAware>
+        <YStack padding={T.space.xl} gap={T.space.md}>
+          <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>End Workout</Text>
+          <NotesField label="Post-workout notes (optional)" value={endNotes} onChange={setEndNotes} />
+          <XStack gap={T.space.sm} justifyContent="center">
             <Button label="Cancel" onPress={() => setEndWorkoutModalVisible(false)} variant="danger-ghost" />
             <Button label="End Workout" onPress={doEndWorkout} loading={endLoading} />
           </XStack>
+          <YStack height={windowHeight * 0.15} />
         </YStack>
       </SlideUpModal>
 
       {/* ── Log Set Modal ── */}
-      <SlideUpModal visible={logSetModalVisible} onClose={() => setLogSetModalVisible(false)} fitContent>
-        <YStack
-          padding={T.space.xl}
-          paddingBottom={Math.max(insets.bottom, T.space.xl)}
-          gap={T.space.md}
-        >
+      <SlideUpModal visible={logSetModalVisible} onClose={() => setLogSetModalVisible(false)} fitContent keyboardAware>
+        <YStack padding={T.space.xl} gap={T.space.md}>
           <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Log Set</Text>
           <XStack gap={T.space.sm} alignItems="flex-end">
             <YStack flex={3}>
@@ -661,11 +656,12 @@ export default function WorkoutLogScreen() {
             <Button label="Cancel" onPress={() => setLogSetModalVisible(false)} variant="danger-ghost" />
             <Button label="Log Set" onPress={logSet} loading={logLoading} />
           </XStack>
+          <YStack height={windowHeight * 0.15} />
         </YStack>
       </SlideUpModal>
 
       {/* ── Edit Set Modal ── */}
-      <SlideUpModal visible={!!editingSet} onClose={() => setEditingSet(null)} fitContent>
+      <SlideUpModal visible={!!editingSet} onClose={() => setEditingSet(null)} fitContent keyboardAware>
         <YStack padding={T.space.xl} gap={T.space.md}>
           <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Edit Set</Text>
           <XStack gap={T.space.sm} alignItems="flex-end">
