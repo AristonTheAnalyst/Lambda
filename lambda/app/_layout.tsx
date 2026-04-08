@@ -91,8 +91,10 @@ function RootLayoutNav() {
       prevUserId.current = currentUserId;
       return;
     }
-    if (currentUserId !== prevUserId.current) {
-      prevUserId.current = currentUserId;
+    const prev = prevUserId.current;
+    prevUserId.current = currentUserId;
+    // Only clear when switching between two real users — not on initial load (null → user)
+    if (prev !== null && currentUserId !== null && currentUserId !== prev) {
       clearLocalUserData(db).catch((e) => console.warn('[Auth] clearLocalUserData error:', e));
     }
   }, [session?.user?.id]);
