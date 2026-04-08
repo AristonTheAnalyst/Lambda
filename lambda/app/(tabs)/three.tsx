@@ -594,7 +594,7 @@ export default function WorkoutLogScreen() {
                   cursor="pointer"
                 >
                   <Text flex={1} fontSize={T.fontSize.sm} color={T.accent} numberOfLines={2}>
-                    {`#${idx + 1} - ${exerciseLabel} x ${volume}`}
+                    {`#${idx + 1} - ${exerciseLabel}${s.workout_set_weight != null ? ` : ${s.workout_set_weight}kg x` : ' :'} ${volume}`}
                     {s.workout_set_notes ? (
                       <Text color={T.accent}>{' · '}<Text fontStyle="italic">{`"${s.workout_set_notes}"`}</Text></Text>
                     ) : null}
