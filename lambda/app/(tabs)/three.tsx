@@ -114,7 +114,7 @@ const CompactGroup = React.memo(function CompactGroup({ exName, sets, exerciseDe
             cursor="pointer"
           >
             <Text flex={1} fontSize={T.fontSize.sm} color={T.muted} numberOfLines={2}>
-              {subParts.join(' · ')}{s.workout_set_notes ? ` · "${s.workout_set_notes}"` : ''}
+              {subParts[0]}{subParts.length > 1 ? ` - ${subParts.slice(1).join(' · ')}` : ''}{s.workout_set_notes ? ` · "${s.workout_set_notes}"` : ''}
             </Text>
           </XStack>
         );
@@ -591,7 +591,7 @@ export default function WorkoutLogScreen() {
                   cursor="pointer"
                 >
                   <Text flex={1} fontSize={T.fontSize.sm} color={T.muted} numberOfLines={2}>
-                    {parts.join(' · ')}{s.workout_set_notes ? ` · "${s.workout_set_notes}"` : ''}
+                    {parts[0]}{parts.length > 1 ? ` - ${parts.slice(1).join(' · ')}` : ''}{s.workout_set_notes ? ` · "${s.workout_set_notes}"` : ''}
                   </Text>
                 </XStack>
               );
