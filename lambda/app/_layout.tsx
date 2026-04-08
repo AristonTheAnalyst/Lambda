@@ -7,7 +7,7 @@ import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 import { TamaguiProvider } from 'tamagui';
-import { SQLiteProvider } from 'expo-sqlite';
+import { SQLiteProvider, useSQLiteContext, type SQLiteDatabase } from 'expo-sqlite';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import config from '../tamagui.config';
 import { useColorScheme } from '@/hooks';
@@ -16,6 +16,16 @@ import { DATABASE_NAME } from '@/lib/db/schema';
 import { initializeDatabase } from '@/lib/db/database';
 import LoadingScreen from '@/components/LoadingScreen';
 import T from '@/constants/Theme';
+
+async function clearLocalUserData(db: SQLiteDatabase) {
+  await db.runAsync('DELETE FROM fact_workout_set');
+  await db.runAsync('DELETE FROM fact_user_workout');
+  await db.runAsync('DELETE FROM user_custom_exercise');
+  await db.runAsync('DELETE FROM user_custom_variation');
+  await db.runAsync('DELETE FROM user_custom_exercise_variation_bridge');
+  await db.runAsync('DELETE FROM exercise_defaults');
+  await db.runAsync('DELETE FROM mutation_queue');
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -70,8 +80,22 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const { session, loading, onboarded } = useAuthContext();
   const router = useRouter();
+  const db = useSQLiteContext();
   const hasNavigated = useRef(false);
   const lastTarget = useRef<string | null>(null);
+  const prevUserId = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    const currentUserId = session?.user?.id ?? null;
+    if (prevUserId.current === undefined) {
+      prevUserId.current = currentUserId;
+      return;
+    }
+    if (currentUserId !== prevUserId.current) {
+      prevUserId.current = currentUserId;
+      clearLocalUserData(db).catch((e) => console.warn('[Auth] clearLocalUserData error:', e));
+    }
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (loading) return;

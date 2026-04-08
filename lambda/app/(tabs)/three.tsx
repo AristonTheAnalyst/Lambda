@@ -116,7 +116,7 @@ const CompactGroup = React.memo(function CompactGroup({ exName, sets, exerciseDe
             cursor="pointer"
           >
             <Text flex={1} fontSize={T.fontSize.sm} color={T.accent} numberOfLines={2}>
-              {subParts[0]}{subParts.length > 1 ? ` - ${subParts.slice(1).join(' · ')}` : ''}{s.workout_set_notes ? ` · "${s.workout_set_notes}"` : ''}
+              <Text color={T.primary}>{subParts[0]} :</Text>{subParts.length > 1 ? ` ${subParts.slice(1).join(' · ')}` : ''}{s.workout_set_notes ? ` · "${s.workout_set_notes}"` : ''}
             </Text>
             <FontAwesome name="pencil" size={10} color={T.muted} style={{ marginLeft: T.space.sm }} />
           </XStack>
@@ -594,7 +594,7 @@ export default function WorkoutLogScreen() {
                   cursor="pointer"
                 >
                   <Text flex={1} fontSize={T.fontSize.sm} color={T.accent} numberOfLines={2}>
-                    {`#${idx + 1} - ${exerciseLabel}${s.workout_set_weight != null ? ` : ${s.workout_set_weight}kg x` : ' :'} ${volume}`}
+                    <Text color={T.primary}>{`#${idx + 1} :`}</Text>{` ${exerciseLabel}${s.workout_set_weight != null ? ` : ${s.workout_set_weight}kg x` : ' :'} ${volume}`}
                     {s.workout_set_notes ? (
                       <Text color={T.accent}>{' · '}<Text fontStyle="italic">{`"${s.workout_set_notes}"`}</Text></Text>
                     ) : null}
@@ -764,7 +764,7 @@ export default function WorkoutLogScreen() {
       {/* ── Secondary sheets — rendered after primary modals so they stack above them ── */}
 
       {/* ── New Exercise Modal ── */}
-      <SlideUpModal visible={newExVisible} onClose={() => setNewExVisible(false)} zIndex={200_000} fitContent>
+      <SlideUpModal visible={newExVisible} onClose={() => setNewExVisible(false)} zIndex={200_000} fitContent keyboardAware>
         <YStack padding={T.space.xl} gap={T.space.md}>
           <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>New Exercise</Text>
           <Input placeholder="Exercise name" value={newExName} onChangeText={setNewExName} autoCapitalize="words" />
