@@ -28,6 +28,12 @@ const SECTIONS: { route: string; label: string; description: string; icon: React
     description: 'Learn how to set up and use the app',
     icon: <FontAwesome name="book" size={22} color={T.accent} />,
   },
+  {
+    route: '/two/programs',
+    label: 'Programs',
+    description: 'Structured training programs and templates',
+    icon: <FontAwesome name="list-alt" size={22} color={T.accent} />,
+  },
 ];
 
 export default function AdminExercisesHub() {
