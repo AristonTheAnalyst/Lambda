@@ -78,10 +78,9 @@ interface CompactGroupProps {
   exerciseDetailMap: Record<string, any>;
   startIdx: number;
   onEdit: (s: WorkoutSet) => void;
-  onDelete: (id: string) => void;
 }
 
-const CompactGroup = React.memo(function CompactGroup({ exName, sets, exerciseDetailMap, startIdx, onEdit, onDelete }: CompactGroupProps) {
+const CompactGroup = React.memo(function CompactGroup({ exName, sets, exerciseDetailMap, startIdx, onEdit }: CompactGroupProps) {
   const [collapsed, setCollapsed] = useState(false);
   return (
     <YStack paddingVertical={T.space.sm}>
@@ -107,16 +106,16 @@ const CompactGroup = React.memo(function CompactGroup({ exName, sets, exerciseDe
           repsStr,
         ];
         return (
-          <XStack key={s.workout_set_id} alignItems="center" gap={T.space.sm} paddingVertical={T.space.xs}>
-            <YStack flex={1}>
-              <Text fontSize={T.fontSize.sm} color={T.muted} numberOfLines={2}>
-                {subParts.join(' · ')}{s.workout_set_notes ? ` · "${s.workout_set_notes}"` : ''}
-              </Text>
-            </YStack>
-            <XStack gap={T.space.xs}>
-              <GlassButton icon="pencil" iconSize={12} onPress={() => onEdit(s)} />
-              <GlassButton icon="trash" iconSize={12} color={T.danger} onPress={() => onDelete(s.workout_set_id)} />
-            </XStack>
+          <XStack
+            key={s.workout_set_id}
+            paddingVertical={T.space.xs}
+            pressStyle={{ opacity: 0.6 }}
+            onPress={() => onEdit(s)}
+            cursor="pointer"
+          >
+            <Text flex={1} fontSize={T.fontSize.sm} color={T.muted} numberOfLines={2}>
+              {subParts.join(' · ')}{s.workout_set_notes ? ` · "${s.workout_set_notes}"` : ''}
+            </Text>
           </XStack>
         );
       })}
@@ -172,7 +171,7 @@ export default function WorkoutLogScreen() {
 
   // ── View mode ──────────────────────────────────────────────────────────────
 
-  const [viewMode, setViewMode] = useState<'detailed' | 'compact'>('detailed');
+  const [viewMode, setViewMode] = useState<'grouped' | 'chrono'>('grouped');
 
   // ── New exercise modal state ───────────────────────────────────────────────
 
@@ -466,15 +465,6 @@ export default function WorkoutLogScreen() {
     if (currentWorkoutId) loadSets(currentWorkoutId);
   }); }
 
-  const handleDeleteSet = useCallback((setId: string) => {
-    Alert.alert('Delete Set', 'Remove this set?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
-        await deleteSet(db, setId);
-        if (currentWorkoutId) loadSets(currentWorkoutId);
-      })},
-    ]);
-  }, [db, currentWorkoutId, guard, loadSets]);
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -545,13 +535,22 @@ export default function WorkoutLogScreen() {
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets={true}
           >
-            <Text fontSize={T.fontSize.xl} fontWeight="700" color={T.primary} marginBottom={T.space.sm}>Sets this workout</Text>
+            <XStack alignItems="center" marginBottom={T.space.sm}>
+              <Text fontSize={T.fontSize.xl} fontWeight="700" color={T.primary} flex={1}>Sets this workout</Text>
+              {sets.length > 0 && (
+                <GlassButton
+                  icon={viewMode === 'grouped' ? 'list-ol' : 'th-list'}
+                  iconSize={13}
+                  onPress={() => setViewMode(v => v === 'grouped' ? 'chrono' : 'grouped')}
+                />
+              )}
+            </XStack>
 
             {setsLoading ? (
               <Spinner size="large" color={T.accent} marginTop={T.space.md} />
             ) : sets.length === 0 ? (
-              <Text color={T.muted} marginTop={T.space.sm}>No sets logged yet.</Text>
-            ) : groupedSets.map(({ exId, sets: groupSets, startIdx }, groupIdx) => {
+              <Text color={T.muted}>No sets logged yet.</Text>
+            ) : viewMode === 'grouped' ? groupedSets.map(({ exId, sets: groupSets, startIdx }, groupIdx) => {
               const exName = exerciseDetailMap[exId]?.exercise_name ?? `#${exId}`;
               return (
                 <React.Fragment key={`${exId}-${groupIdx}`}>
@@ -563,9 +562,38 @@ export default function WorkoutLogScreen() {
                     startIdx={startIdx}
                     exerciseDetailMap={exerciseDetailMap}
                     onEdit={openEditSet}
-                    onDelete={handleDeleteSet}
                   />
                 </React.Fragment>
+              );
+            }) : sets.map((s, idx) => {
+              const exName = exerciseDetailMap[s.custom_exercise_id]?.exercise_name ?? `#${s.custom_exercise_id}`;
+              const varName = s.custom_variation_id
+                ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations?.find((v: any) => v.custom_variation_id === s.custom_variation_id)?.variation_name ?? null
+                : null;
+              const repsStr = s.workout_set_reps?.length
+                ? `${formatValues(s.workout_set_reps)} reps`
+                : s.workout_set_duration_seconds?.length ? `${formatValues(s.workout_set_duration_seconds)}s` : '—';
+              const parts: string[] = [
+                `#${idx + 1}`,
+                exName,
+                ...(varName ? [varName] : []),
+                ...(s.workout_set_weight != null ? [`${s.workout_set_weight}kg`] : []),
+                repsStr,
+              ];
+              return (
+                <XStack
+                  key={s.workout_set_id}
+                  paddingVertical={T.space.xs}
+                  borderBottomWidth={0.5}
+                  borderBottomColor={T.border}
+                  pressStyle={{ opacity: 0.6 }}
+                  onPress={() => openEditSet(s)}
+                  cursor="pointer"
+                >
+                  <Text flex={1} fontSize={T.fontSize.sm} color={T.muted} numberOfLines={2}>
+                    {parts.join(' · ')}{s.workout_set_notes ? ` · "${s.workout_set_notes}"` : ''}
+                  </Text>
+                </XStack>
               );
             })}
           </ScrollView>
@@ -663,7 +691,21 @@ export default function WorkoutLogScreen() {
       {/* ── Edit Set Modal ── */}
       <SlideUpModal visible={!!editingSet} onClose={() => setEditingSet(null)} fitContent keyboardAware>
         <YStack padding={T.space.xl} gap={T.space.md}>
-          <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Edit Set</Text>
+          <XStack alignItems="center">
+            <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} flex={1}>Edit Set</Text>
+            <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => {
+              if (!editingSet) return;
+              const id = editingSet.workout_set_id;
+              Alert.alert('Delete Set', 'Remove this set?', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
+                  setEditingSet(null);
+                  await deleteSet(db, id);
+                  if (currentWorkoutId) loadSets(currentWorkoutId);
+                })},
+              ]);
+            }} />
+          </XStack>
           <XStack gap={T.space.sm} alignItems="flex-end">
             <YStack flex={3}>
               <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
