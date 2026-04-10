@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
-import { YStack, styled } from 'tamagui';
-import T from '@/constants/Theme';
+import { YStack } from 'tamagui';
+import { useAppTheme } from '@/lib/ThemeContext';
 
 const isGlassSupported = Platform.OS === 'ios' && Number(Platform.Version) >= 26;
 
@@ -13,24 +13,6 @@ if (isGlassSupported) {
   }
 }
 
-// ─── Styled card ──────────────────────────────────────────────────────────────
-
-const StyledCard = styled(YStack, {
-  backgroundColor: T.surface,
-  borderWidth: 1,
-  borderColor: T.border,
-  borderRadius: T.radius.md,
-  padding: T.space.md,
-
-  variants: {
-    pressable: {
-      true: { pressStyle: { opacity: 0.75 }, cursor: 'pointer' },
-    },
-  } as const,
-});
-
-// ─── Props ────────────────────────────────────────────────────────────────────
-
 interface CardProps {
   children: React.ReactNode;
   onPress?: () => void;
@@ -39,20 +21,21 @@ interface CardProps {
   variant?: 'default' | 'glass';
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export default function Card({ children, onPress, onPressIn, flex, variant = 'default' }: CardProps) {
+  const { colors, space, radius } = useAppTheme();
+  const pressable = !!(onPress || onPressIn);
+
   if (variant === 'glass' && isGlassSupported && GlassView) {
     return (
       <YStack
         flex={flex}
-        borderRadius={T.radius.md}
+        borderRadius={radius.md}
         overflow="hidden"
-        pressStyle={onPress || onPressIn ? { opacity: 0.8 } : undefined}
+        pressStyle={pressable ? { opacity: 0.8 } : undefined}
         onPress={onPress}
         onPressIn={onPressIn}
       >
-        <GlassView glassEffectStyle="systemMaterial" style={{ borderRadius: T.radius.md, padding: T.space.md }}>
+        <GlassView glassEffectStyle="systemMaterial" style={{ borderRadius: radius.md, padding: space.md }}>
           {children}
         </GlassView>
       </YStack>
@@ -60,8 +43,19 @@ export default function Card({ children, onPress, onPressIn, flex, variant = 'de
   }
 
   return (
-    <StyledCard flex={flex} pressable={!!(onPress || onPressIn)} onPress={onPress} onPressIn={onPressIn}>
+    <YStack
+      flex={flex}
+      backgroundColor={colors.surface}
+      borderWidth={1}
+      borderColor={colors.border}
+      borderRadius={radius.md}
+      padding={space.md}
+      pressStyle={pressable ? { opacity: 0.75 } : undefined}
+      onPress={onPress}
+      onPressIn={onPressIn}
+      cursor={pressable ? 'pointer' : undefined}
+    >
       {children}
-    </StyledCard>
+    </YStack>
   );
 }

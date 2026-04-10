@@ -7,9 +7,10 @@ import supabase from '@/lib/supabase';
 import { useAsyncGuard } from '@/lib/asyncGuard';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
-import T from '@/constants/Theme';
+import { useAppTheme } from '@/lib/ThemeContext';
 
 export default function ForgotPasswordScreen() {
+  const { colors, space, radius, fontSize } = useAppTheme();
   const router = useRouter();
   const guard = useAsyncGuard();
   const [email, setEmail] = useState('');
@@ -32,15 +33,15 @@ export default function ForgotPasswordScreen() {
   });
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <YStack flex={1} justifyContent="center" paddingHorizontal={T.space.xl} gap={T.space.lg}>
+        <YStack flex={1} justifyContent="center" paddingHorizontal={space.xl} gap={space.lg}>
 
-          <YStack alignItems="center" marginBottom={T.space.xl}>
-            <Text fontSize={T.fontSize.xxl} fontWeight="bold" color={T.primary} marginBottom={T.space.sm}>
+          <YStack alignItems="center" marginBottom={space.xl}>
+            <Text fontSize={fontSize.xxl} fontWeight="bold" color={colors.primary} marginBottom={space.sm}>
               Reset Password
             </Text>
-            <Text fontSize={T.fontSize.md} color={T.muted} textAlign="center">
+            <Text fontSize={fontSize.md} color={colors.muted} textAlign="center">
               {sent
                 ? "Check your email for a reset link."
                 : "Enter your email and we'll send you a reset link."}
@@ -48,7 +49,7 @@ export default function ForgotPasswordScreen() {
           </YStack>
 
           {!sent && (
-            <YStack gap={T.space.lg}>
+            <YStack gap={space.lg}>
               <Input
                 label="Email"
                 value={email}

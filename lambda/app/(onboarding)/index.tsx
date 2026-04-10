@@ -16,7 +16,7 @@ import Button from '@/components/Button';
 import Input from '@/components/Input';
 import DatePickerField from '@/components/DatePickerField';
 import { useAsyncGuard } from '@/lib/asyncGuard';
-import T from '@/constants/Theme';
+import { useAppTheme } from '@/lib/ThemeContext';
 
 const GENDER_OPTIONS = [
   { label: 'Not specified', value: '' },
@@ -26,6 +26,7 @@ const GENDER_OPTIONS = [
 ];
 
 export default function OnboardingScreen() {
+  const { colors, space, radius, fontSize } = useAppTheme();
   const [name, setName]           = useState('');
   const [lastname, setLastname]   = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
@@ -76,17 +77,17 @@ export default function OnboardingScreen() {
   });
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView showsVerticalScrollIndicator={false}>
-          <YStack paddingHorizontal={T.space.xl} paddingTop={T.space.xl}>
+          <YStack paddingHorizontal={space.xl} paddingTop={space.xl}>
 
-            <YStack alignItems="center" marginBottom={T.space.xxl}>
-              <Text fontSize={32} fontWeight="bold" marginBottom={T.space.sm} color={T.primary}>Welcome to Lambda</Text>
-              <Text fontSize={T.fontSize.md} color={T.muted}>Let's set up your profile</Text>
+            <YStack alignItems="center" marginBottom={space.xxl}>
+              <Text fontSize={32} fontWeight="bold" marginBottom={space.sm} color={colors.primary}>Welcome to Lambda</Text>
+              <Text fontSize={fontSize.md} color={colors.muted}>Let's set up your profile</Text>
             </YStack>
 
-            <YStack gap={T.space.lg} paddingBottom={T.space.xxl}>
+            <YStack gap={space.lg} paddingBottom={space.xxl}>
               <Input
                 label="First Name *"
                 value={name}
@@ -104,8 +105,8 @@ export default function OnboardingScreen() {
                 editable={!loading}
               />
 
-              <YStack gap={T.space.xs}>
-                <Text color={T.primary} fontSize={T.fontSize.sm} fontWeight="600">Date of Birth</Text>
+              <YStack gap={space.xs}>
+                <Text color={colors.primary} fontSize={fontSize.sm} fontWeight="600">Date of Birth</Text>
                 <DatePickerField
                   value={dateOfBirth}
                   onChangeDate={(v) => { setDateOfBirth(v); setFieldErrors((e) => ({ ...e, dateOfBirth: '' })); }}
@@ -113,8 +114,8 @@ export default function OnboardingScreen() {
                 />
               </YStack>
 
-              <YStack gap={T.space.xs}>
-                <Text color={T.primary} fontSize={T.fontSize.sm} fontWeight="600">Gender</Text>
+              <YStack gap={space.xs}>
+                <Text color={colors.primary} fontSize={fontSize.sm} fontWeight="600">Gender</Text>
                 <DropdownSelect
                   options={GENDER_OPTIONS}
                   value={gender}
@@ -150,7 +151,7 @@ export default function OnboardingScreen() {
                 disabled={loading}
               />
 
-              <Text fontSize={T.fontSize.xs} color={T.muted} textAlign="center">* Required field</Text>
+              <Text fontSize={fontSize.xs} color={colors.muted} textAlign="center">* Required field</Text>
             </YStack>
 
           </YStack>

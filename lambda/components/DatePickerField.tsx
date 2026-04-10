@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Sheet, Text, YStack } from 'tamagui';
 import Button from '@/components/Button';
-import T from '@/constants/Theme';
+import { useAppTheme } from '@/lib/ThemeContext';
 
 interface DatePickerFieldProps {
   value: string;        // YYYY-MM-DD or ''
@@ -36,30 +36,30 @@ export default function DatePickerField({
   placeholder = 'Select date (optional)',
   editable = true,
 }: DatePickerFieldProps) {
-  const [open, setOpen]     = useState(false);
+  const { colors, space, radius, fontSize } = useAppTheme();
+  const [open, setOpen] = useState(false);
   const [staged, setStaged] = useState<Date>(toDate(value));
 
   const displayText = value ? formatDisplay(value) : '';
 
   const triggerContent = (
     <YStack
-      backgroundColor={T.surface}
+      backgroundColor={colors.surface}
       borderWidth={1}
-      borderColor={T.border}
-      borderRadius={T.radius.md}
-      padding={T.space.md}
+      borderColor={colors.border}
+      borderRadius={radius.md}
+      padding={space.md}
       opacity={editable ? 1 : 0.5}
       pressStyle={editable ? { opacity: 0.7 } : undefined}
       onPress={editable ? () => { setStaged(toDate(value)); setOpen(true); } : undefined}
       cursor={editable ? 'pointer' : 'default'}
     >
-      <Text fontSize={T.fontSize.md} color={displayText ? T.primary : T.muted}>
+      <Text fontSize={fontSize.md} color={displayText ? colors.primary : colors.muted}>
         {displayText || placeholder}
       </Text>
     </YStack>
   );
 
-  // ── Android: native dialog ─────────────────────────────────────────────
   if (Platform.OS === 'android') {
     return (
       <>
@@ -80,7 +80,6 @@ export default function DatePickerField({
     );
   }
 
-  // ── iOS: spinner inside Tamagui Sheet ─────────────────────────────────
   return (
     <>
       {triggerContent}
@@ -100,10 +99,9 @@ export default function DatePickerField({
           exitStyle={{ opacity: 0 }}
           backgroundColor="rgba(0,0,0,0.6)"
         />
-        <Sheet.Frame backgroundColor={T.surface}>
-          {/* Handle */}
-          <YStack alignItems="center" paddingTop={T.space.sm} paddingBottom={T.space.xs}>
-            <YStack width={36} height={4} borderRadius={2} backgroundColor={T.border} />
+        <Sheet.Frame backgroundColor={colors.surface}>
+          <YStack alignItems="center" paddingTop={space.sm} paddingBottom={space.xs}>
+            <YStack width={36} height={4} borderRadius={2} backgroundColor={colors.border} />
           </YStack>
 
           <DateTimePicker
@@ -111,7 +109,7 @@ export default function DatePickerField({
             mode="date"
             display="spinner"
             maximumDate={new Date()}
-            textColor={T.primary}
+            textColor={colors.primary}
             themeVariant="dark"
             onChange={(_event: DateTimePickerEvent, date?: Date) => {
               if (date) setStaged(date);
@@ -119,7 +117,7 @@ export default function DatePickerField({
             style={{ height: 200 }}
           />
 
-          <YStack paddingHorizontal={T.space.xl} paddingTop={T.space.sm} paddingBottom={T.space.xl}>
+          <YStack paddingHorizontal={space.xl} paddingTop={space.sm} paddingBottom={space.xl}>
             <Button
               label="Done"
               onPress={() => { onChangeDate(toISO(staged)); setOpen(false); }}

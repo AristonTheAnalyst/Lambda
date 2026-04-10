@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Platform, StyleSheet, TextInput, View } from 'react-native';
 import { Text } from 'tamagui';
-import T from '@/constants/Theme';
+import { useAppTheme } from '@/lib/ThemeContext';
 
 interface InputProps {
   value: string;
@@ -32,13 +32,46 @@ export default function Input({
   keyboardType,
   autoCorrect,
 }: InputProps) {
+  const { colors, space, radius, fontSize } = useAppTheme();
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        wrapper: {
+          gap: space.xs,
+        },
+        input: {
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderRadius: radius.md,
+          paddingHorizontal: space.md,
+          paddingVertical: space.md,
+          height: 48,
+          color: colors.primary,
+          fontSize: fontSize.md,
+          fontWeight: '400',
+          tintColor: colors.primary,
+        } as any,
+        normal: {
+          borderColor: colors.border,
+        },
+        errored: {
+          borderColor: colors.dangerBorder,
+        },
+        disabled: {
+          opacity: 0.5,
+        },
+      }),
+    [colors, space, radius, fontSize],
+  );
+
   return (
     <View style={styles.wrapper}>
       {label ? (
-        <Text color={T.primary} fontSize={T.fontSize.sm} fontWeight="600" marginBottom={T.space.xs}>
+        <Text color={colors.primary} fontSize={fontSize.sm} fontWeight="600" marginBottom={space.xs}>
           {label.split(/(\([^)]+\))/).map((part, i) =>
             /^\([^)]+\)$/.test(part)
-              ? <Text key={i} fontSize={T.fontSize.sm} fontWeight="400" color={T.muted}>{part}</Text>
+              ? <Text key={i} fontSize={fontSize.sm} fontWeight="400" color={colors.muted}>{part}</Text>
               : part
           )}
         </Text>
@@ -47,7 +80,7 @@ export default function Input({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={T.muted}
+        placeholderTextColor={colors.muted}
         editable={editable}
         multiline={multiline}
         secureTextEntry={secureTextEntry}
@@ -55,7 +88,7 @@ export default function Input({
         keyboardType={keyboardType}
         autoCorrect={autoCorrect ?? false}
         spellCheck={false}
-        selectionColor={T.primary}
+        selectionColor={colors.primary}
         keyboardAppearance={Platform.OS === 'ios' ? 'dark' : undefined}
         returnKeyType={Platform.OS === 'ios' ? (multiline ? 'default' : 'done') : undefined}
         style={[
@@ -65,34 +98,7 @@ export default function Input({
           error ? styles.errored : styles.normal,
         ]}
       />
-      {error ? <Text color={T.danger} fontSize={T.fontSize.xs} marginTop={T.space.xs}>{error}</Text> : null}
+      {error ? <Text color={colors.danger} fontSize={fontSize.xs} marginTop={space.xs}>{error}</Text> : null}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrapper: {
-    gap: T.space.xs,
-  },
-  input: {
-    backgroundColor: T.surface,
-    borderWidth: 1,
-    borderRadius: T.radius.md,
-    paddingHorizontal: T.space.md,
-    paddingVertical: T.space.md,
-    height: 48,
-    color: T.primary,
-    fontSize: T.fontSize.md,
-    fontWeight: '400',
-    tintColor: T.primary,
-  } as any,
-  normal: {
-    borderColor: T.border,
-  },
-  errored: {
-    borderColor: T.dangerBorder,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-});

@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { Text, XStack } from 'tamagui';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import T from '@/constants/Theme';
+import { useAppTheme } from '@/lib/ThemeContext';
 
 const isGlassSupported = Platform.OS === 'ios' && Number(Platform.Version) >= 26;
 
@@ -14,7 +14,7 @@ interface GlassButtonProps {
   onPress: () => void;
   icon?: string;
   label?: string;
-  /** Icon + text colour. Defaults to T.accent */
+  /** Icon + text colour. Defaults to accent */
   color?: string;
   iconSize?: number;
 }
@@ -23,18 +23,21 @@ export default function GlassButton({
   onPress,
   icon,
   label,
-  color = T.accent,
+  color: colorProp,
   iconSize = 13,
 }: GlassButtonProps) {
+  const { colors, space, fontSize } = useAppTheme();
+  const color = colorProp ?? colors.accent;
+
   const inner = (
     <XStack
       alignItems="center"
-      gap={icon && label ? T.space.xs : 0}
-      paddingVertical={T.space.sm}
-      paddingHorizontal={T.space.md}
+      gap={icon && label ? space.xs : 0}
+      paddingVertical={space.sm}
+      paddingHorizontal={space.md}
     >
       {icon ? <FontAwesome name={icon as any} size={iconSize} color={color} /> : null}
-      {label ? <Text color={color} fontSize={T.fontSize.md} fontWeight="500">{label}</Text> : null}
+      {label ? <Text color={color} fontSize={fontSize.md} fontWeight="500">{label}</Text> : null}
     </XStack>
   );
 
@@ -48,7 +51,6 @@ export default function GlassButton({
     );
   }
 
-  // Fallback — translucent capsule with warm border
   return (
     <XStack
       borderRadius={999}

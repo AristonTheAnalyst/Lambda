@@ -16,7 +16,7 @@ import Button from '@/components/Button';
 import Input from '@/components/Input';
 import DatePickerField from '@/components/DatePickerField';
 import { useAsyncGuard } from '@/lib/asyncGuard';
-import T from '@/constants/Theme';
+import { useAppTheme } from '@/lib/ThemeContext';
 
 const GENDER_OPTIONS = [
   { label: 'Not specified', value: '' },
@@ -26,6 +26,7 @@ const GENDER_OPTIONS = [
 ];
 
 export default function ProfileScreen() {
+  const { colors, space, radius, fontSize } = useAppTheme();
   const guard = useAsyncGuard();
   const router = useRouter();
   const { user, profile, signOut, refreshProfile } = useAuthContext();
@@ -120,77 +121,77 @@ export default function ProfileScreen() {
   };
 
   return (
-    <YStack flex={1} backgroundColor={T.bg}>
+    <YStack flex={1} backgroundColor={colors.bg}>
       <PageHeader
         title="User Profile"
         left={<GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} />}
         right={!editing
-          ? <Text color={T.accent} fontSize={T.fontSize.md} fontWeight="600" onPress={startEditing} cursor="pointer">Edit</Text>
+          ? <Text color={colors.accent} fontSize={fontSize.md} fontWeight="600" onPress={startEditing} cursor="pointer">Edit</Text>
           : undefined
         }
       />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView showsVerticalScrollIndicator={false}>
-          <YStack padding={T.space.xl} gap={T.space.lg}>
+          <YStack padding={space.xl} gap={space.lg}>
 
             {/* Email */}
-            <YStack gap={T.space.xs} paddingBottom={T.space.lg} borderBottomWidth={0.5} borderBottomColor={T.border}>
-              <Text fontSize={T.fontSize.xs} color={T.muted}>Email</Text>
-              <Text fontSize={T.fontSize.md} fontWeight="500" color={T.primary}>
+            <YStack gap={space.xs} paddingBottom={space.lg} borderBottomWidth={0.5} borderBottomColor={colors.border}>
+              <Text fontSize={fontSize.xs} color={colors.muted}>Email</Text>
+              <Text fontSize={fontSize.md} fontWeight="500" color={colors.primary}>
                 {user?.email?.endsWith('@privaterelay.appleid.com') ? 'Signed in with Apple' : user?.email}
               </Text>
             </YStack>
 
             {/* Name */}
-            <YStack gap={T.space.xs} paddingBottom={T.space.lg} borderBottomWidth={0.5} borderBottomColor={T.border}>
-              <Text fontSize={T.fontSize.xs} color={T.muted}>Name</Text>
+            <YStack gap={space.xs} paddingBottom={space.lg} borderBottomWidth={0.5} borderBottomColor={colors.border}>
+              <Text fontSize={fontSize.xs} color={colors.muted}>Name</Text>
               {editing ? (
-                <XStack gap={T.space.sm}>
+                <XStack gap={space.sm}>
                   <YStack flex={1}><Input value={name} onChangeText={setName} placeholder="First" editable={!saving} /></YStack>
                   <YStack flex={1}><Input value={lastname} onChangeText={setLastname} placeholder="Last" editable={!saving} /></YStack>
                 </XStack>
               ) : (
-                <Text fontSize={T.fontSize.md} fontWeight="500" color={T.primary}>
+                <Text fontSize={fontSize.md} fontWeight="500" color={colors.primary}>
                   {[profile?.user_name, profile?.user_lastname].filter(Boolean).join(' ') || '—'}
                 </Text>
               )}
             </YStack>
 
             {/* Date of Birth */}
-            <YStack gap={T.space.xs} paddingBottom={T.space.lg} borderBottomWidth={0.5} borderBottomColor={T.border}>
-              <Text fontSize={T.fontSize.xs} color={T.muted}>Date of Birth</Text>
+            <YStack gap={space.xs} paddingBottom={space.lg} borderBottomWidth={0.5} borderBottomColor={colors.border}>
+              <Text fontSize={fontSize.xs} color={colors.muted}>Date of Birth</Text>
               {editing
                 ? <DatePickerField value={dateOfBirth} onChangeDate={setDateOfBirth} editable={!saving} />
-                : <Text fontSize={T.fontSize.md} fontWeight="500" color={T.primary}>{profile?.user_date_of_birth || '—'}</Text>
+                : <Text fontSize={fontSize.md} fontWeight="500" color={colors.primary}>{profile?.user_date_of_birth || '—'}</Text>
               }
             </YStack>
 
             {/* Gender */}
-            <YStack gap={T.space.xs} paddingBottom={T.space.lg} borderBottomWidth={0.5} borderBottomColor={T.border}>
-              <Text fontSize={T.fontSize.xs} color={T.muted}>Gender</Text>
+            <YStack gap={space.xs} paddingBottom={space.lg} borderBottomWidth={0.5} borderBottomColor={colors.border}>
+              <Text fontSize={fontSize.xs} color={colors.muted}>Gender</Text>
               {editing
                 ? <DropdownSelect options={GENDER_OPTIONS} value={gender} onChange={setGender} placeholder="Not specified" />
-                : <Text fontSize={T.fontSize.md} fontWeight="500" color={T.primary}>{profile?.user_gender || '—'}</Text>
+                : <Text fontSize={fontSize.md} fontWeight="500" color={colors.primary}>{profile?.user_gender || '—'}</Text>
               }
             </YStack>
 
             {/* Height */}
-            <YStack gap={T.space.xs} paddingBottom={T.space.lg} borderBottomWidth={0.5} borderBottomColor={T.border}>
-              <Text fontSize={T.fontSize.xs} color={T.muted}>Height (cm)</Text>
+            <YStack gap={space.xs} paddingBottom={space.lg} borderBottomWidth={0.5} borderBottomColor={colors.border}>
+              <Text fontSize={fontSize.xs} color={colors.muted}>Height (cm)</Text>
               {editing
                 ? <Input value={height} onChangeText={setHeight} placeholder="Enter height in cm (optional)" keyboardType="number-pad" editable={!saving} />
-                : <Text fontSize={T.fontSize.md} fontWeight="500" color={T.primary}>
+                : <Text fontSize={fontSize.md} fontWeight="500" color={colors.primary}>
                     {profile?.user_height_cm ? `${profile.user_height_cm} cm` : '—'}
                   </Text>
               }
             </YStack>
 
             {/* Weight */}
-            <YStack gap={T.space.xs} paddingBottom={T.space.lg} borderBottomWidth={0.5} borderBottomColor={T.border}>
-              <Text fontSize={T.fontSize.xs} color={T.muted}>Weight (kg)</Text>
+            <YStack gap={space.xs} paddingBottom={space.lg} borderBottomWidth={0.5} borderBottomColor={colors.border}>
+              <Text fontSize={fontSize.xs} color={colors.muted}>Weight (kg)</Text>
               {editing
                 ? <Input value={weight} onChangeText={setWeight} placeholder="Enter weight in kg (optional)" keyboardType="decimal-pad" editable={!saving} />
-                : <Text fontSize={T.fontSize.md} fontWeight="500" color={T.primary}>
+                : <Text fontSize={fontSize.md} fontWeight="500" color={colors.primary}>
                     {(profile as any)?.user_weight_kg ? `${(profile as any).user_weight_kg} kg` : '—'}
                   </Text>
               }
@@ -198,9 +199,9 @@ export default function ProfileScreen() {
 
             {/* Actions */}
             {editing ? (
-              <YStack gap={T.space.md} marginTop={T.space.sm}>
+              <YStack gap={space.md} marginTop={space.sm}>
                 <XStack justifyContent="center">
-                  <XStack gap={T.space.sm}>
+                  <XStack gap={space.sm}>
                     <Button label="Cancel" onPress={() => setEditing(false)} variant="danger-ghost" disabled={saving} />
                     <Button label="Save" onPress={handleSave} loading={saving} disabled={saving} />
                   </XStack>
@@ -208,7 +209,7 @@ export default function ProfileScreen() {
                 <Button label="Delete Account" onPress={handleDeleteAccount} variant="danger" disabled={saving} />
               </YStack>
             ) : (
-              <YStack gap={T.space.md} marginTop={T.space.xxl}>
+              <YStack gap={space.md} marginTop={space.xxl}>
                 <Button label="Logout" onPress={handleLogout} />
               </YStack>
             )}

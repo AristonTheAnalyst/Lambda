@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Text, XStack, YStack } from 'tamagui';
 import PageHeader from '@/components/PageHeader';
-import T from '@/constants/Theme';
+import { useAppTheme } from '@/lib/ThemeContext';
 
 const SECTIONS = [
   {
@@ -21,12 +21,13 @@ const SECTIONS = [
 ];
 
 export default function DevHub() {
+  const { colors, space, radius, fontSize } = useAppTheme();
   const router = useRouter();
 
   return (
-    <YStack flex={1} backgroundColor={T.bg}>
+    <YStack flex={1} backgroundColor={colors.bg}>
       <PageHeader title="Dev" />
-      <YStack flex={1} padding={T.space.xl} gap={T.space.md}>
+      <YStack flex={1} padding={space.xl} gap={space.md}>
         {SECTIONS.map((s) => (
           <TouchableOpacity
             key={s.route}
@@ -34,28 +35,28 @@ export default function DevHub() {
             onPress={() => router.push(s.route as any)}
           >
             <YStack
-              backgroundColor={T.surface}
+              backgroundColor={colors.surface}
               borderWidth={1}
-              borderColor={T.border}
-              borderRadius={T.radius.md}
-              padding={T.space.md}
+              borderColor={colors.border}
+              borderRadius={radius.md}
+              padding={space.md}
             >
-              <XStack alignItems="center" gap={T.space.lg}>
+              <XStack alignItems="center" gap={space.lg}>
                 <XStack
                   width={44}
                   height={44}
-                  borderRadius={T.radius.md}
-                  backgroundColor={T.accentBg}
+                  borderRadius={radius.md}
+                  backgroundColor={colors.accentBg}
                   alignItems="center"
                   justifyContent="center"
                 >
-                  <FontAwesome name={s.icon} size={20} color={T.accent} />
+                  <FontAwesome name={s.icon} size={20} color={colors.accent} />
                 </XStack>
                 <YStack flex={1}>
-                  <Text fontSize={T.fontSize.lg} fontWeight="600" color={T.primary} marginBottom={T.space.xs}>{s.label}</Text>
-                  <Text fontSize={T.fontSize.sm} color={T.muted}>{s.description}</Text>
+                  <Text fontSize={fontSize.lg} fontWeight="600" color={colors.primary} marginBottom={space.xs}>{s.label}</Text>
+                  <Text fontSize={fontSize.sm} color={colors.muted}>{s.description}</Text>
                 </YStack>
-                <FontAwesome name="chevron-right" size={14} color={T.muted} />
+                <FontAwesome name="chevron-right" size={14} color={colors.muted} />
               </XStack>
             </YStack>
           </TouchableOpacity>

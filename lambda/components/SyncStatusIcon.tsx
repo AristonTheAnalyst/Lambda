@@ -1,24 +1,25 @@
 import { Spinner, Text, XStack, YStack } from 'tamagui';
 import { useSyncStore } from '@/lib/sync/useSyncEngine';
-import T from '@/constants/Theme';
+import { useAppTheme } from '@/lib/ThemeContext';
 
 export default function SyncStatusIcon() {
+  const { colors, space, fontSize } = useAppTheme();
   const { isSyncing, pendingCount } = useSyncStore();
 
   if (isSyncing) {
-    return <Spinner size="small" color={T.accent} />;
+    return <Spinner size="small" color={colors.accent} />;
   }
 
   if (pendingCount > 0) {
     return (
-      <XStack alignItems="center" gap={T.space.xs}>
+      <XStack alignItems="center" gap={space.xs}>
         <YStack
           width={8}
           height={8}
           borderRadius={4}
-          backgroundColor={T.accent}
+          backgroundColor={colors.accent}
         />
-        <Text fontSize={T.fontSize.xs} color={T.accent} fontWeight="600">
+        <Text fontSize={fontSize.xs} color={colors.accent} fontWeight="600">
           {pendingCount}
         </Text>
       </XStack>

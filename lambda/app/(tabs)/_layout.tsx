@@ -3,10 +3,9 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs, useRouter, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import T from '@/constants/Theme';
 import { ExerciseDataProvider } from '@/lib/ExerciseDataContext';
 import { useSyncEngine } from '@/lib/sync/useSyncEngine';
-import { useTheme } from '@/lib/ThemeContext';
+import { useAppTheme } from '@/lib/ThemeContext';
 import OfflineBanner from '@/components/OfflineBanner';
 
 /** Mounts the sync engine once for the entire tab session. */
@@ -28,12 +27,12 @@ function BottomNav() {
   const router   = useRouter();
   const pathname = usePathname();
   const insets   = useSafeAreaInsets();
-  useTheme(); // re-render when theme changes so colors update immediately
+  const { colors } = useAppTheme();
 
   return (
     <View style={[
       styles.navbar,
-      { paddingBottom: insets.bottom, backgroundColor: T.surface, borderTopColor: T.border },
+      { paddingBottom: insets.bottom, backgroundColor: colors.surface, borderTopColor: colors.border },
     ]}>
       {NAV_ITEMS.map((item) => {
         const isActive = pathname.startsWith(item.route);
@@ -45,8 +44,8 @@ function BottomNav() {
             onPress={() => router.navigate(item.route as any)}
             activeOpacity={0.7}
           >
-            <Ionicons name={iconName} size={24} color={isActive ? T.accent : T.muted} />
-            <Text style={[styles.navLabel, { color: isActive ? T.accent : T.muted }]}>{item.label}</Text>
+            <Ionicons name={iconName} size={24} color={isActive ? colors.accent : colors.muted} />
+            <Text style={[styles.navLabel, { color: isActive ? colors.accent : colors.muted }]}>{item.label}</Text>
           </TouchableOpacity>
         );
       })}
@@ -55,10 +54,11 @@ function BottomNav() {
 }
 
 export default function TabLayout() {
+  const { colors } = useAppTheme();
   return (
     <ExerciseDataProvider>
       <SyncMount />
-      <View style={{ flex: 1, backgroundColor: T.bg }}>
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
         <OfflineBanner />
         <Tabs screenOptions={{ tabBarStyle: { display: 'none' } }}>
           <Tabs.Screen name="index"   options={{ headerShown: false }} />

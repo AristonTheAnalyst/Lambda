@@ -2,11 +2,12 @@ import { useEffect } from 'react';
 import { Text } from 'tamagui';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useNetwork } from '@/hooks/useNetwork';
-import T from '@/constants/Theme';
+import { useAppTheme } from '@/lib/ThemeContext';
 
 const BANNER_HEIGHT = 28;
 
 export default function OfflineBanner() {
+  const { colors, fontSize } = useAppTheme();
   const { isConnected } = useNetwork();
   const translateY = useSharedValue(-BANNER_HEIGHT);
 
@@ -23,7 +24,7 @@ export default function OfflineBanner() {
       style={[
         {
           height: BANNER_HEIGHT,
-          backgroundColor: T.danger,
+          backgroundColor: colors.danger,
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
@@ -32,7 +33,7 @@ export default function OfflineBanner() {
       ]}
       pointerEvents="none"
     >
-      <Text fontSize={T.fontSize.xs} color={T.accentText} fontWeight="600">
+      <Text fontSize={fontSize.xs} color={colors.accentText} fontWeight="600">
         Offline — changes will sync when reconnected
       </Text>
     </Animated.View>

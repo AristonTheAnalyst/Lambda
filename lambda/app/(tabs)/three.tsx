@@ -22,7 +22,7 @@ import { getExerciseDefault, saveExerciseDefault } from '@/lib/offline/exerciseD
 import { insertSet, updateSet, deleteSet, loadSetsForWorkout, WorkoutSet } from '@/lib/offline/setStore';
 import GlassButton from '@/components/GlassButton';
 import { useAsyncGuard } from '@/lib/asyncGuard';
-import T from '@/constants/Theme';
+import { useAppTheme } from '@/lib/ThemeContext';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -47,24 +47,25 @@ interface SetRowProps {
 }
 
 const SetRow = React.memo(function SetRow({ s, exName, varName, repsStr, onEdit, onDelete }: SetRowProps) {
+  const { colors, space, fontSize } = useAppTheme();
   return (
-    <XStack borderBottomWidth={0.5} borderBottomColor={T.border} paddingVertical={T.space.sm} alignItems="center" gap={T.space.sm}>
-      <Text fontWeight="700" fontSize={15} color={T.accent}>#{s.workout_set_number}</Text>
+    <XStack borderBottomWidth={0.5} borderBottomColor={colors.border} paddingVertical={space.sm} alignItems="center" gap={space.sm}>
+      <Text fontWeight="700" fontSize={15} color={colors.accent}>#{s.workout_set_number}</Text>
       <YStack flex={1}>
-        <XStack alignItems="flex-end" gap={T.space.sm}>
-          <Text fontSize={15} fontWeight="500" color={T.primary}>{exName}</Text>
-          {varName && <Text fontSize={T.fontSize.sm} color={T.muted}>{varName}</Text>}
+        <XStack alignItems="flex-end" gap={space.sm}>
+          <Text fontSize={15} fontWeight="500" color={colors.primary}>{exName}</Text>
+          {varName && <Text fontSize={fontSize.sm} color={colors.muted}>{varName}</Text>}
         </XStack>
-        <Text fontSize={T.fontSize.xs} marginTop={T.space.xs} color={T.muted}>
+        <Text fontSize={fontSize.xs} marginTop={space.xs} color={colors.muted}>
           {s.workout_set_weight != null ? `${s.workout_set_weight}kg · ` : ''}{repsStr}
           {s.workout_set_notes
-            ? <Text fontSize={T.fontSize.xs} color={T.muted} fontStyle="italic">{` · "${s.workout_set_notes}"`}</Text>
+            ? <Text fontSize={fontSize.xs} color={colors.muted} fontStyle="italic">{` · "${s.workout_set_notes}"`}</Text>
             : null}
         </Text>
       </YStack>
-      <XStack gap={T.space.sm}>
+      <XStack gap={space.sm}>
         <GlassButton icon="pencil" iconSize={14} onPress={() => onEdit(s)} />
-        <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => onDelete(s.workout_set_id)} />
+        <GlassButton icon="trash" iconSize={14} color={colors.danger} onPress={() => onDelete(s.workout_set_id)} />
       </XStack>
     </XStack>
   );
@@ -82,11 +83,12 @@ interface CompactGroupProps {
 }
 
 const CompactGroup = React.memo(function CompactGroup({ exName, sets, exerciseDetailMap, startIdx, onEdit }: CompactGroupProps) {
+  const { colors, space, fontSize } = useAppTheme();
   const [collapsed, setCollapsed] = useState(false);
   return (
-    <YStack paddingVertical={T.space.sm}>
-      <XStack alignItems="center" marginBottom={T.space.xs}>
-        <Text fontSize={15} fontWeight="600" color={T.primary} flex={1}>{exName}</Text>
+    <YStack paddingVertical={space.sm}>
+      <XStack alignItems="center" marginBottom={space.xs}>
+        <Text fontSize={15} fontWeight="600" color={colors.primary} flex={1}>{exName}</Text>
         <GlassButton
           icon={collapsed ? 'chevron-down' : 'chevron-up'}
           iconSize={11}
@@ -109,16 +111,16 @@ const CompactGroup = React.memo(function CompactGroup({ exName, sets, exerciseDe
         return (
           <XStack
             key={s.workout_set_id}
-            paddingVertical={T.space.xs}
+            paddingVertical={space.xs}
             alignItems="center"
             pressStyle={{ opacity: 0.6 }}
             onPress={() => onEdit(s)}
             cursor="pointer"
           >
-            <Text flex={1} fontSize={T.fontSize.sm} color={T.accent} numberOfLines={2}>
-              <Text color={T.primary}>{subParts[0]} :</Text>{subParts.length > 1 ? ` ${subParts.slice(1).join(' · ')}` : ''}{s.workout_set_notes ? ` · "${s.workout_set_notes}"` : ''}
+            <Text flex={1} fontSize={fontSize.sm} color={colors.accent} numberOfLines={2}>
+              <Text color={colors.primary}>{subParts[0]} :</Text>{subParts.length > 1 ? ` ${subParts.slice(1).join(' · ')}` : ''}{s.workout_set_notes ? ` · "${s.workout_set_notes}"` : ''}
             </Text>
-            <FontAwesome name="pencil" size={10} color={T.muted} style={{ marginLeft: T.space.sm }} />
+            <FontAwesome name="pencil" size={10} color={colors.muted} style={{ marginLeft: space.sm }} />
           </XStack>
         );
       })}
@@ -129,6 +131,7 @@ const CompactGroup = React.memo(function CompactGroup({ exName, sets, exerciseDe
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function WorkoutLogScreen() {
+  const { colors, space, radius, fontSize } = useAppTheme();
   const db = useSQLiteContext();
   const guard = useAsyncGuard();
   const insets = useSafeAreaInsets();
@@ -472,37 +475,37 @@ export default function WorkoutLogScreen() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <YStack flex={1} backgroundColor={T.bg}>
+    <YStack flex={1} backgroundColor={colors.bg}>
       <PageHeader
         title="Training Session"
         left={currentWorkoutId !== null ? (
           <XStack
             borderRadius={999}
             paddingVertical={4}
-            paddingHorizontal={T.space.sm}
+            paddingHorizontal={space.sm}
             borderWidth={1}
-            borderColor={T.danger}
+            borderColor={colors.danger}
             pressStyle={{ opacity: 0.7 }}
             onPress={confirmCancelWorkout}
             cursor="pointer"
             alignItems="center"
           >
-            <Text color={T.danger} fontSize={T.fontSize.sm} fontWeight="600" numberOfLines={1}>Cancel</Text>
+            <Text color={colors.danger} fontSize={fontSize.sm} fontWeight="600" numberOfLines={1}>Cancel</Text>
           </XStack>
         ) : undefined}
         right={currentWorkoutId !== null ? (
           <XStack
             borderRadius={999}
             paddingVertical={4}
-            paddingHorizontal={T.space.md}
+            paddingHorizontal={space.md}
             borderWidth={1}
-            borderColor={T.accent}
+            borderColor={colors.accent}
             pressStyle={{ opacity: 0.7 }}
             onPress={() => setEndWorkoutModalVisible(true)}
             cursor="pointer"
             alignItems="center"
           >
-            <Text color={T.accent} fontSize={T.fontSize.sm} fontWeight="600" numberOfLines={1}>End</Text>
+            <Text color={colors.accent} fontSize={fontSize.sm} fontWeight="600" numberOfLines={1}>End</Text>
           </XStack>
         ) : undefined}
       />
@@ -511,23 +514,23 @@ export default function WorkoutLogScreen() {
         {/* ── Page 0: Start ── */}
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: T.space.lg, paddingBottom: T.space.xxl }}
+          contentContainerStyle={{ padding: space.lg, paddingBottom: space.xxl }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets={true}
         >
-          <YStack gap={T.space.md}>
-            <Text fontSize={T.fontSize.xl} fontWeight="700" color={T.primary}>Start a Workout</Text>
+          <YStack gap={space.md}>
+            <Text fontSize={fontSize.xl} fontWeight="700" color={colors.primary}>Start a Workout</Text>
             {exercises.length === 0 ? (
               <YStack
-                backgroundColor={T.surface}
-                borderRadius={T.radius.md}
-                padding={T.space.lg}
-                gap={T.space.sm}
+                backgroundColor={colors.surface}
+                borderRadius={radius.md}
+                padding={space.lg}
+                gap={space.sm}
                 alignItems="center"
               >
-                <Text fontSize={T.fontSize.md} color={T.primary} fontWeight="600" textAlign="center">No exercises set up yet</Text>
-                <Text fontSize={T.fontSize.sm} color={T.muted} textAlign="center">
+                <Text fontSize={fontSize.md} color={colors.primary} fontWeight="600" textAlign="center">No exercises set up yet</Text>
+                <Text fontSize={fontSize.sm} color={colors.muted} textAlign="center">
                   Go to Exercises → Library to create your first exercise before logging a workout.
                 </Text>
               </YStack>
@@ -550,15 +553,15 @@ export default function WorkoutLogScreen() {
         <YStack flex={1}>
           <ScrollView
             style={{ flex: 1 }}
-            contentContainerStyle={{ padding: T.space.lg, paddingBottom: T.space.md }}
+            contentContainerStyle={{ padding: space.lg, paddingBottom: space.md }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets={true}
           >
-            <XStack alignItems="center" marginBottom={T.space.sm}>
-              <Text fontSize={T.fontSize.xl} fontWeight="700" color={T.primary} flex={1}>
+            <XStack alignItems="center" marginBottom={space.sm}>
+              <Text fontSize={fontSize.xl} fontWeight="700" color={colors.primary} flex={1}>
                 Sets this workout{' '}
-                <Text fontSize={T.fontSize.sm} fontWeight="400" color={T.muted}>
+                <Text fontSize={fontSize.sm} fontWeight="400" color={colors.muted}>
                   ({viewMode === 'grouped' ? 'grouped' : 'full'})
                 </Text>
               </Text>
@@ -572,14 +575,14 @@ export default function WorkoutLogScreen() {
             </XStack>
 
             {setsLoading ? (
-              <Spinner size="large" color={T.accent} marginTop={T.space.md} />
+              <Spinner size="large" color={colors.accent} marginTop={space.md} />
             ) : sets.length === 0 ? (
-              <Text color={T.muted} fontSize={T.fontSize.sm}>Log your first set below.</Text>
+              <Text color={colors.muted} fontSize={fontSize.sm}>Log your first set below.</Text>
             ) : viewMode === 'grouped' ? groupedSets.map(({ exId, sets: groupSets, startIdx }, groupIdx) => {
               const exName = exerciseDetailMap[exId]?.exercise_name ?? `#${exId}`;
               return (
                 <React.Fragment key={`${exId}-${groupIdx}`}>
-                  {groupIdx > 0 && <Separator marginVertical={T.space.sm} borderColor={T.border} />}
+                  {groupIdx > 0 && <Separator marginVertical={space.sm} borderColor={colors.border} />}
                   <CompactGroup
                     exId={exId}
                     exName={exName}
@@ -602,21 +605,21 @@ export default function WorkoutLogScreen() {
               return (
                 <XStack
                   key={s.workout_set_id}
-                  paddingVertical={T.space.xs}
+                  paddingVertical={space.xs}
                   borderBottomWidth={0.5}
-                  borderBottomColor={T.border}
+                  borderBottomColor={colors.border}
                   alignItems="center"
                   pressStyle={{ opacity: 0.6 }}
                   onPress={() => openEditSet(s)}
                   cursor="pointer"
                 >
-                  <Text flex={1} fontSize={T.fontSize.sm} color={T.accent} numberOfLines={2}>
-                    <Text color={T.primary}>{`#${idx + 1} :`}</Text>{` ${exerciseLabel}${s.workout_set_weight != null ? ` : ${s.workout_set_weight}kg x` : ' :'} ${volume}`}
+                  <Text flex={1} fontSize={fontSize.sm} color={colors.accent} numberOfLines={2}>
+                    <Text color={colors.primary}>{`#${idx + 1} :`}</Text>{` ${exerciseLabel}${s.workout_set_weight != null ? ` : ${s.workout_set_weight}kg x` : ' :'} ${volume}`}
                     {s.workout_set_notes ? (
-                      <Text color={T.accent}>{' · '}<Text fontStyle="italic">{`"${s.workout_set_notes}"`}</Text></Text>
+                      <Text color={colors.accent}>{' · '}<Text fontStyle="italic">{`"${s.workout_set_notes}"`}</Text></Text>
                     ) : null}
                   </Text>
-                  <FontAwesome name="pencil" size={10} color={T.muted} style={{ marginLeft: T.space.sm }} />
+                  <FontAwesome name="pencil" size={10} color={colors.muted} style={{ marginLeft: space.sm }} />
                 </XStack>
               );
             })}
@@ -624,12 +627,12 @@ export default function WorkoutLogScreen() {
 
           {/* ── Sticky Log Set footer ── */}
           <YStack
-            paddingHorizontal={T.space.lg}
-            paddingTop={T.space.lg}
-            paddingBottom={insets.bottom + T.space.xxl + T.space.lg}
+            paddingHorizontal={space.lg}
+            paddingTop={space.lg}
+            paddingBottom={insets.bottom + space.xxl + space.lg}
             borderTopWidth={0.5}
-            borderTopColor={T.border}
-            backgroundColor={T.bg}
+            borderTopColor={colors.border}
+            backgroundColor={colors.bg}
             justifyContent="center"
           >
             <Button label="Log Set" onPress={() => setLogSetModalVisible(true)} />
@@ -641,7 +644,7 @@ export default function WorkoutLogScreen() {
       <YStack
         position="absolute"
         bottom={80}
-        right={T.space.lg}
+        right={space.lg}
         pointerEvents="none"
       >
         <SyncStatusIcon />
@@ -649,10 +652,10 @@ export default function WorkoutLogScreen() {
 
       {/* ── End Workout Modal ── */}
       <SlideUpModal visible={endWorkoutModalVisible} onClose={() => setEndWorkoutModalVisible(false)} fitContent keyboardAware>
-        <YStack padding={T.space.xl} gap={T.space.md}>
-          <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>End Workout</Text>
+        <YStack padding={space.xl} gap={space.md}>
+          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>End Workout</Text>
           <NotesField label="Post-workout notes (optional)" value={endNotes} onChange={setEndNotes} />
-          <XStack gap={T.space.sm} justifyContent="center">
+          <XStack gap={space.sm} justifyContent="center">
             <Button label="Cancel" onPress={() => setEndWorkoutModalVisible(false)} variant="danger-ghost" />
             <Button label="End Workout" onPress={doEndWorkout} loading={endLoading} />
           </XStack>
@@ -662,11 +665,11 @@ export default function WorkoutLogScreen() {
 
       {/* ── Log Set Modal ── */}
       <SlideUpModal visible={logSetModalVisible} onClose={() => setLogSetModalVisible(false)} fitContent keyboardAware>
-        <YStack padding={T.space.xl} gap={T.space.md}>
-          <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Log Set</Text>
-          <XStack gap={T.space.sm} alignItems="flex-end">
+        <YStack padding={space.xl} gap={space.md}>
+          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>Log Set</Text>
+          <XStack gap={space.sm} alignItems="flex-end">
             <YStack flex={3}>
-              <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
+              <Text fontSize={fontSize.sm} fontWeight="500" marginBottom={space.xs} color={colors.primary}>Exercise</Text>
               <DropdownSelect
                 options={exerciseOptions}
                 value={selectedExId}
@@ -679,7 +682,7 @@ export default function WorkoutLogScreen() {
             </YStack>
             {selectedEx && (
               <YStack flex={2}>
-                <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
+                <Text fontSize={fontSize.sm} fontWeight="500" marginBottom={space.xs} color={colors.primary}>Variation</Text>
                 <DropdownSelect
                   options={logVarOptions}
                   value={selectedVarId}
@@ -704,7 +707,7 @@ export default function WorkoutLogScreen() {
               <Input label="Set notes (optional)" placeholder="Notes…" value={setNotes} onChangeText={setSetNotes} />
             </>
           )}
-          <XStack gap={T.space.sm} justifyContent="center">
+          <XStack gap={space.sm} justifyContent="center">
             <Button label="Cancel" onPress={() => setLogSetModalVisible(false)} variant="danger-ghost" />
             <Button label="Log Set" onPress={logSet} loading={logLoading} />
           </XStack>
@@ -714,10 +717,10 @@ export default function WorkoutLogScreen() {
 
       {/* ── Edit Set Modal ── */}
       <SlideUpModal visible={!!editingSet} onClose={() => setEditingSet(null)} fitContent keyboardAware>
-        <YStack padding={T.space.xl} gap={T.space.md}>
+        <YStack padding={space.xl} gap={space.md}>
           <XStack alignItems="center">
-            <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary} flex={1}>Edit Set</Text>
-            <GlassButton icon="trash" iconSize={14} color={T.danger} onPress={() => {
+            <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary} flex={1}>Edit Set</Text>
+            <GlassButton icon="trash" iconSize={14} color={colors.danger} onPress={() => {
               if (!editingSet) return;
               const id = editingSet.workout_set_id;
               Alert.alert('Delete Set', 'Remove this set?', [
@@ -730,9 +733,9 @@ export default function WorkoutLogScreen() {
               ]);
             }} />
           </XStack>
-          <XStack gap={T.space.sm} alignItems="flex-end">
+          <XStack gap={space.sm} alignItems="flex-end">
             <YStack flex={3}>
-              <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Exercise</Text>
+              <Text fontSize={fontSize.sm} fontWeight="500" marginBottom={space.xs} color={colors.primary}>Exercise</Text>
               <DropdownSelect
                 options={exerciseOptions}
                 value={editExId}
@@ -745,7 +748,7 @@ export default function WorkoutLogScreen() {
             </YStack>
             {editEx && (
               <YStack flex={2}>
-                <Text fontSize={T.fontSize.sm} fontWeight="500" marginBottom={T.space.xs} color={T.primary}>Variation</Text>
+                <Text fontSize={fontSize.sm} fontWeight="500" marginBottom={space.xs} color={colors.primary}>Variation</Text>
                 <DropdownSelect
                   options={editVarOptions}
                   value={editVarId}
@@ -770,7 +773,7 @@ export default function WorkoutLogScreen() {
               <Input label="Set notes (optional)" placeholder="Notes…" value={editNotes} onChangeText={setEditNotes} />
             </>
           )}
-          <XStack gap={T.space.sm} justifyContent="center">
+          <XStack gap={space.sm} justifyContent="center">
             <Button label="Cancel" onPress={() => setEditingSet(null)} variant="danger-ghost" />
             <Button label="Save" onPress={saveEditSet} loading={editLoading} />
           </XStack>
@@ -782,18 +785,18 @@ export default function WorkoutLogScreen() {
 
       {/* ── New Exercise Modal ── */}
       <SlideUpModal visible={newExVisible} onClose={() => setNewExVisible(false)} zIndex={200_000} fitContent keyboardAware>
-        <YStack padding={T.space.xl} gap={T.space.md}>
-          <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>New Exercise</Text>
+        <YStack padding={space.xl} gap={space.md}>
+          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>New Exercise</Text>
           <Input placeholder="Exercise name" value={newExName} onChangeText={setNewExName} autoCapitalize="words" />
-          <YStack gap={T.space.xs}>
-            <Text fontSize={T.fontSize.sm} fontWeight="500" color={T.primary}>Volume type</Text>
+          <YStack gap={space.xs}>
+            <Text fontSize={fontSize.sm} fontWeight="500" color={colors.primary}>Volume type</Text>
             <SegmentedControl
               options={[{ label: 'Reps', value: 'reps' }, { label: 'Duration', value: 'duration' }]}
               value={newExVolume}
               onChange={setNewExVolume}
             />
           </YStack>
-          <XStack gap={T.space.sm} justifyContent="center">
+          <XStack gap={space.sm} justifyContent="center">
             <Button label="Cancel" onPress={() => setNewExVisible(false)} variant="danger-ghost" />
             <Button label="Create" onPress={createNewExercise} loading={newExCreating} />
           </XStack>
@@ -803,36 +806,36 @@ export default function WorkoutLogScreen() {
 
       {/* ── Assign Variations Sheet ── */}
       <SlideUpModal visible={assignVarVisible} onClose={() => setAssignVarVisible(false)} zIndex={200_000} fitContent>
-        <YStack padding={T.space.xl} gap={T.space.md}>
-          <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>Assign New Variations</Text>
+        <YStack padding={space.xl} gap={space.md}>
+          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>Assign New Variations</Text>
           <XStack
             pressStyle={{ opacity: 0.7 }}
             onPress={() => openNewVariation(assignVarForEdit)}
             cursor="pointer"
           >
-            <Text fontSize={T.fontSize.md} color={T.accent} fontWeight="500">+ New Variation</Text>
+            <Text fontSize={fontSize.md} color={colors.accent} fontWeight="500">+ New Variation</Text>
           </XStack>
-          <Separator borderColor={T.border} />
+          <Separator borderColor={colors.border} />
           {(() => {
             const exId = assignVarForEdit ? editExId : selectedExId;
             const assignedIds = new Set(exerciseDetailMap[exId ?? -1]?.assigned_variations.map((v) => v.custom_variation_id) ?? []);
             const unassigned = variations.filter((v) => !assignedIds.has(v.custom_variation_id));
             if (unassigned.length === 0) return (
-              <Text color={T.muted} fontSize={T.fontSize.sm}>
+              <Text color={colors.muted} fontSize={fontSize.sm}>
                 No existing variations to assign.
               </Text>
             );
             return unassigned.map((v) => (
               <XStack
                 key={v.custom_variation_id}
-                paddingVertical={T.space.sm}
+                paddingVertical={space.sm}
                 pressStyle={{ opacity: 0.7 }}
                 onPress={() => pickUnassignedVar(v.custom_variation_id)}
                 cursor="pointer"
                 borderTopWidth={0.5}
-                borderTopColor={T.border}
+                borderTopColor={colors.border}
               >
-                <Text fontSize={T.fontSize.md} color={T.primary}>{v.variation_name}</Text>
+                <Text fontSize={fontSize.md} color={colors.primary}>{v.variation_name}</Text>
               </XStack>
             ));
           })()}
@@ -842,10 +845,10 @@ export default function WorkoutLogScreen() {
 
       {/* ── New Variation Modal ── */}
       <SlideUpModal visible={newVarVisible} onClose={() => setNewVarVisible(false)} zIndex={200_000} fitContent>
-        <YStack padding={T.space.xl} gap={T.space.md}>
-          <Text fontSize={T.fontSize.lg} fontWeight="700" color={T.primary}>New Variation</Text>
+        <YStack padding={space.xl} gap={space.md}>
+          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>New Variation</Text>
           <Input placeholder="Variation name" value={newVarName} onChangeText={setNewVarName} autoCapitalize="words" />
-          <XStack gap={T.space.sm} justifyContent="center">
+          <XStack gap={space.sm} justifyContent="center">
             <Button label="Cancel" onPress={() => setNewVarVisible(false)} variant="danger-ghost" />
             <Button label="Create" onPress={createNewVariation} loading={newVarCreating} />
           </XStack>

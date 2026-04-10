@@ -7,9 +7,8 @@ import {
   Text,
   XStack,
   YStack,
-  styled,
 } from 'tamagui';
-import T from '@/constants/Theme';
+import { useAppTheme } from '@/lib/ThemeContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,52 +25,44 @@ interface SegmentedControlProps<T extends string> {
   onChange: (value: T) => void;
 }
 
-const SegItem = styled(YStack, {
-  flex: 1,
-  paddingVertical: T.space.sm,
-  alignItems: 'center',
-  justifyContent: 'center',
-  borderRadius: T.radius.sm,
-  cursor: 'pointer',
-
-  variants: {
-    active: {
-      true:  { backgroundColor: T.accent, pressStyle: { opacity: 0.85 } },
-      false: { backgroundColor: 'transparent', pressStyle: { opacity: 0.7 } },
-    },
-  } as const,
-});
-
 export function SegmentedControl<T extends string>({
   options,
   value,
   onChange,
 }: SegmentedControlProps<T>) {
+  const { colors, space, radius, fontSize } = useAppTheme();
   return (
     <XStack
-      backgroundColor={T.surface}
-      borderRadius={T.radius.sm}
+      backgroundColor={colors.surface}
+      borderRadius={radius.sm}
       borderWidth={1}
-      borderColor={T.border}
-      padding={T.space.xs}
-      marginBottom={T.space.xs}
+      borderColor={colors.border}
+      padding={space.xs}
+      marginBottom={space.xs}
     >
       {options.map((opt) => {
         const active = opt.value === value;
         return (
-          <SegItem
+          <YStack
             key={String(opt.value)}
-            active={active}
+            flex={1}
+            paddingVertical={space.sm}
+            alignItems="center"
+            justifyContent="center"
+            borderRadius={radius.sm}
+            cursor="pointer"
+            backgroundColor={active ? colors.accent : 'transparent'}
+            pressStyle={{ opacity: active ? 0.85 : 0.7 }}
             onPress={() => onChange(opt.value)}
           >
             <Text
-              color={active ? T.accentText : T.muted}
-              fontSize={T.fontSize.sm}
+              color={active ? colors.accentText : colors.muted}
+              fontSize={fontSize.sm}
               fontWeight={active ? '600' : '400'}
             >
               {opt.label}
             </Text>
-          </SegItem>
+          </YStack>
         );
       })}
     </XStack>
@@ -91,6 +82,7 @@ interface SlideUpModalProps {
 }
 
 export function SlideUpModal({ visible, onClose, children, zIndex, snapPoints, fitContent, keyboardAware }: SlideUpModalProps) {
+  const { colors } = useAppTheme();
   React.useEffect(() => { if (visible && !keyboardAware) Keyboard.dismiss(); }, [visible, keyboardAware]);
   return (
     <Sheet
@@ -110,7 +102,7 @@ export function SlideUpModal({ visible, onClose, children, zIndex, snapPoints, f
         exitStyle={{ opacity: 0 }}
         backgroundColor="rgba(0,0,0,0.6)"
       />
-      <Sheet.Frame backgroundColor={T.surface}>
+      <Sheet.Frame backgroundColor={colors.surface}>
         {children}
       </Sheet.Frame>
     </Sheet>
@@ -174,6 +166,7 @@ export function DropdownSelect<T = any>(
   const onCreateNew    = !multiSelect ? (props as DropdownSelectProps<T>).onCreateNew    : undefined;
   const createNewLabel = !multiSelect ? (props as DropdownSelectProps<T>).createNewLabel : undefined;
 
+  const { colors, space, radius, fontSize } = useAppTheme();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const insets = useSafeAreaInsets();
@@ -220,26 +213,26 @@ export function DropdownSelect<T = any>(
         alignItems="center"
         justifyContent="space-between"
         borderWidth={1}
-        borderColor={T.border}
-        borderRadius={T.radius.md}
-        paddingHorizontal={T.space.md}
+        borderColor={colors.border}
+        borderRadius={radius.md}
+        paddingHorizontal={space.md}
         height={48}
-        backgroundColor={T.surface}
+        backgroundColor={colors.surface}
         pressStyle={{ opacity: 0.75 }}
         onPress={handleOpen}
         cursor="pointer"
       >
         <Text
-          fontSize={T.fontSize.md}
+          fontSize={fontSize.md}
           fontWeight="400"
           flex={1}
-          marginRight={T.space.sm}
+          marginRight={space.sm}
           numberOfLines={1}
-          color={triggerHasValue ? T.primary : T.muted}
+          color={triggerHasValue ? colors.primary : colors.muted}
         >
           {triggerLabel}
         </Text>
-        <Text color={T.muted} fontSize={T.fontSize.lg}>▾</Text>
+        <Text color={colors.muted} fontSize={fontSize.lg}>▾</Text>
       </XStack>
 
       {/* ── Sheet ── */}
@@ -253,31 +246,31 @@ export function DropdownSelect<T = any>(
         zIndex={100_000}
       >
         <DropdownOverlay />
-        <Sheet.Frame backgroundColor={T.surface} paddingBottom={insets.bottom}>
+        <Sheet.Frame backgroundColor={colors.surface} paddingBottom={insets.bottom}>
           {/* Handle */}
-          <YStack alignItems="center" paddingTop={T.space.sm} paddingBottom={T.space.xs}>
-            <YStack width={36} height={4} borderRadius={2} backgroundColor={T.border} />
+          <YStack alignItems="center" paddingTop={space.sm} paddingBottom={space.xs}>
+            <YStack width={36} height={4} borderRadius={2} backgroundColor={colors.border} />
           </YStack>
 
           {searchable && (
-            <YStack paddingHorizontal={T.space.lg} paddingBottom={T.space.sm}>
+            <YStack paddingHorizontal={space.lg} paddingBottom={space.sm}>
               <TextInput
                 value={query}
                 onChangeText={setQuery}
                 placeholder="Search…"
-                placeholderTextColor={T.muted}
+                placeholderTextColor={colors.muted}
                 spellCheck={false}
-                selectionColor={T.primary}
+                selectionColor={colors.primary}
                 style={{
-                  backgroundColor: T.bg,
+                  backgroundColor: colors.bg,
                   borderWidth: 1,
-                  borderColor: T.border,
-                  borderRadius: T.radius.md,
-                  paddingHorizontal: T.space.md,
+                  borderColor: colors.border,
+                  borderRadius: radius.md,
+                  paddingHorizontal: space.md,
                   paddingVertical: 10,
-                  color: T.primary,
-                  fontSize: T.fontSize.md,
-                  tintColor: T.primary,
+                  color: colors.primary,
+                  fontSize: fontSize.md,
+                  tintColor: colors.primary,
                 } as any}
               />
             </YStack>
@@ -287,21 +280,21 @@ export function DropdownSelect<T = any>(
             data={filtered}
             keyExtractor={(item) => String(item.value)}
             keyboardShouldPersistTaps="handled"
-            ItemSeparatorComponent={() => <Separator borderColor={T.border} />}
+            ItemSeparatorComponent={() => <Separator borderColor={colors.border} />}
             ListHeaderComponent={onCreateNew ? (() => (
               <YStack>
                 <XStack
-                  paddingHorizontal={T.space.xl}
+                  paddingHorizontal={space.xl}
                   paddingVertical={15}
                   pressStyle={{ opacity: 0.7 }}
                   onPress={() => { setOpen(false); onCreateNew!(); }}
                   cursor="pointer"
                 >
-                  <Text fontSize={T.fontSize.md} color={T.accent} fontWeight="500">
+                  <Text fontSize={fontSize.md} color={colors.accent} fontWeight="500">
                     {`+ ${createNewLabel ?? 'New'}`}
                   </Text>
                 </XStack>
-                <Separator borderColor={T.border} />
+                <Separator borderColor={colors.border} />
               </YStack>
             )) as any : undefined}
             renderItem={({ item }) => {
@@ -312,9 +305,9 @@ export function DropdownSelect<T = any>(
                 <XStack
                   alignItems="center"
                   justifyContent="space-between"
-                  paddingHorizontal={T.space.xl}
+                  paddingHorizontal={space.xl}
                   paddingVertical={15}
-                  backgroundColor={active ? T.accentBg : 'transparent'}
+                  backgroundColor={active ? colors.accentBg : 'transparent'}
                   pressStyle={{ opacity: 0.7 }}
                   onPress={() => {
                     Keyboard.dismiss();
@@ -324,31 +317,31 @@ export function DropdownSelect<T = any>(
                   cursor="pointer"
                 >
                   <Text
-                    fontSize={T.fontSize.md}
-                    color={active ? T.accent : T.primary}
+                    fontSize={fontSize.md}
+                    color={active ? colors.accent : colors.primary}
                     fontWeight={active ? '600' : '400'}
                   >
                     {item.label}
                   </Text>
-                  {active && <Text color={T.accent} fontSize={T.fontSize.md}>✓</Text>}
+                  {active && <Text color={colors.accent} fontSize={fontSize.md}>✓</Text>}
                 </XStack>
               );
             }}
           />
 
           {multiSelect && (
-            <YStack paddingHorizontal={T.space.lg} paddingVertical={T.space.md}>
+            <YStack paddingHorizontal={space.lg} paddingVertical={space.md}>
               <XStack
-                backgroundColor={T.accent}
-                borderRadius={T.radius.md}
-                paddingVertical={T.space.md}
+                backgroundColor={colors.accent}
+                borderRadius={radius.md}
+                paddingVertical={space.md}
                 alignItems="center"
                 justifyContent="center"
                 pressStyle={{ opacity: 0.8 }}
                 onPress={() => { setOpen(false); onConfirm?.(); }}
                 cursor="pointer"
               >
-                <Text color={T.accentText} fontSize={T.fontSize.md} fontWeight="600">{confirmLabel ?? 'Done'}</Text>
+                <Text color={colors.accentText} fontSize={fontSize.md} fontWeight="600">{confirmLabel ?? 'Done'}</Text>
               </XStack>
             </YStack>
           )}

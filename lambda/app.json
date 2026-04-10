@@ -17,7 +17,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.pietroariston.lambda",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIViewControllerBasedStatusBarAppearance": false
       }
     },
     "android": {
@@ -35,6 +36,16 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "infoPlist": {
+              "UIViewControllerBasedStatusBarAppearance": false
+            }
+          }
+        }
+      ],
       "expo-router",
       "expo-web-browser",
       "expo-apple-authentication",

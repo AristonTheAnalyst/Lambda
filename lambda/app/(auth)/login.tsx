@@ -14,9 +14,10 @@ import { useAsyncGuard } from '@/lib/asyncGuard';
 import { loginSchema, getFieldErrors } from '@/lib/validation';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
-import T from '@/constants/Theme';
+import { useAppTheme } from '@/lib/ThemeContext';
 
 export default function LoginScreen() {
+  const { colors, space, radius, fontSize } = useAppTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -51,40 +52,40 @@ export default function LoginScreen() {
   const isLoading = loading || socialLoading !== null;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <YStack flex={1} justifyContent="center" paddingHorizontal={T.space.xl}>
+        <YStack flex={1} justifyContent="center" paddingHorizontal={space.xl}>
 
           {/* Session expired banner */}
           {sessionExpired && (
             <YStack
-              backgroundColor={T.accentBg}
-              borderColor={T.accent}
+              backgroundColor={colors.accentBg}
+              borderColor={colors.accent}
               borderWidth={1}
-              borderRadius={T.radius.md}
-              padding={T.space.md}
-              marginBottom={T.space.lg}
+              borderRadius={radius.md}
+              padding={space.md}
+              marginBottom={space.lg}
               pressStyle={{ opacity: 0.8 }}
               onPress={clearSessionExpired}
               cursor="pointer"
             >
-              <Text color={T.accent} fontSize={T.fontSize.sm} textAlign="center">
+              <Text color={colors.accent} fontSize={fontSize.sm} textAlign="center">
                 Your session expired. Please log in again.
               </Text>
             </YStack>
           )}
 
           {/* Header */}
-          <YStack alignItems="center" marginBottom={T.space.xl}>
-            <Text fontSize={32} fontWeight="bold" marginBottom={T.space.xs} color={T.primary}>Lambda</Text>
-            <Text fontSize={T.fontSize.lg} color={T.muted}>Sign in</Text>
+          <YStack alignItems="center" marginBottom={space.xl}>
+            <Text fontSize={32} fontWeight="bold" marginBottom={space.xs} color={colors.primary}>Lambda</Text>
+            <Text fontSize={fontSize.lg} color={colors.muted}>Sign in</Text>
           </YStack>
 
           {/* Form */}
-          <YStack gap={T.space.md}>
+          <YStack gap={space.md}>
             <Input
               label="Email"
               value={email}
@@ -108,10 +109,10 @@ export default function LoginScreen() {
 
             <XStack justifyContent="space-between" alignItems="center">
               <Link href="/(auth)/forgot-password">
-                <Text color={T.accent} fontSize={T.fontSize.sm}>Forgot password?</Text>
+                <Text color={colors.accent} fontSize={fontSize.sm}>Forgot password?</Text>
               </Link>
               <Link href="/(auth)/signup">
-                <Text color={T.accent} fontSize={T.fontSize.sm} fontWeight="600">Sign up</Text>
+                <Text color={colors.accent} fontSize={fontSize.sm} fontWeight="600">Sign up</Text>
               </Link>
             </XStack>
 
@@ -122,32 +123,32 @@ export default function LoginScreen() {
               loading={loading}
             />
 
-            <XStack alignItems="center" gap={T.space.sm} marginVertical={T.space.md}>
-              <Separator flex={1} borderColor={T.border} />
-              <Text fontSize={T.fontSize.sm} color={T.muted}>or</Text>
-              <Separator flex={1} borderColor={T.border} />
+            <XStack alignItems="center" gap={space.sm} marginVertical={space.md}>
+              <Separator flex={1} borderColor={colors.border} />
+              <Text fontSize={fontSize.sm} color={colors.muted}>or</Text>
+              <Separator flex={1} borderColor={colors.border} />
             </XStack>
 
             {/* Social sign-in icon buttons */}
-            <XStack justifyContent="center" gap={T.space.lg}>
+            <XStack justifyContent="center" gap={space.lg}>
               {/* Google */}
               <XStack
                 width={56}
                 height={56}
-                borderRadius={T.radius.md}
+                borderRadius={radius.md}
                 borderWidth={1}
-                borderColor={T.border}
+                borderColor={colors.border}
                 alignItems="center"
                 justifyContent="center"
-                backgroundColor={T.surface}
+                backgroundColor={colors.surface}
                 opacity={socialLoading === 'google' ? 0.5 : 1}
                 pressStyle={{ opacity: 0.6 }}
                 onPress={isLoading ? undefined : handleGoogle}
                 cursor="pointer"
               >
                 {socialLoading === 'google'
-                  ? <Spinner size="small" color={T.primary} />
-                  : <FontAwesome name="google" size={24} color={T.primary} />
+                  ? <Spinner size="small" color={colors.primary} />
+                  : <FontAwesome name="google" size={24} color={colors.primary} />
                 }
               </XStack>
 
@@ -156,20 +157,20 @@ export default function LoginScreen() {
                 <XStack
                   width={56}
                   height={56}
-                  borderRadius={T.radius.md}
+                  borderRadius={radius.md}
                   borderWidth={1}
-                  borderColor={T.border}
+                  borderColor={colors.border}
                   alignItems="center"
                   justifyContent="center"
-                  backgroundColor={T.surface}
+                  backgroundColor={colors.surface}
                   opacity={socialLoading === 'apple' ? 0.5 : 1}
                   pressStyle={{ opacity: 0.6 }}
                   onPress={isLoading ? undefined : handleApple}
                   cursor="pointer"
                 >
                   {socialLoading === 'apple'
-                    ? <Spinner size="small" color={T.primary} />
-                    : <FontAwesome name="apple" size={26} color={T.primary} />
+                    ? <Spinner size="small" color={colors.primary} />
+                    : <FontAwesome name="apple" size={26} color={colors.primary} />
                   }
                 </XStack>
               )}

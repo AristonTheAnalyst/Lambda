@@ -1,5 +1,6 @@
 import { ActivityIndicator, Platform, Text as RNText, TouchableOpacity, View } from 'react-native';
-import T from '@/constants/Theme';
+import { useAppTheme } from '@/lib/ThemeContext';
+import type { ThemeColors } from '@/lib/ThemeContext';
 
 const isGlassSupported = Platform.OS === 'ios' && Number(Platform.Version) >= 26;
 
@@ -12,8 +13,6 @@ if (isGlassSupported) {
   }
 }
 
-// ─── Props ────────────────────────────────────────────────────────────────────
-
 interface ButtonProps {
   label: string;
   onPress: () => void;
@@ -23,20 +22,21 @@ interface ButtonProps {
   fullWidth?: boolean;
 }
 
-function variantStyles(variant: 'primary' | 'ghost' | 'danger' | 'danger-ghost') {
+function variantStyles(
+  variant: 'primary' | 'ghost' | 'danger' | 'danger-ghost',
+  colors: ThemeColors,
+) {
   if (variant === 'ghost') {
-    return { backgroundColor: 'transparent' as const, borderWidth: 1, borderColor: T.accent };
+    return { backgroundColor: 'transparent' as const, borderWidth: 1, borderColor: colors.accent };
   }
   if (variant === 'danger') {
-    return { backgroundColor: T.danger, borderWidth: 0 };
+    return { backgroundColor: colors.danger, borderWidth: 0 };
   }
   if (variant === 'danger-ghost') {
-    return { backgroundColor: 'transparent' as const, borderWidth: 1, borderColor: T.danger };
+    return { backgroundColor: 'transparent' as const, borderWidth: 1, borderColor: colors.danger };
   }
-  return { backgroundColor: T.accent, borderWidth: 0 };
+  return { backgroundColor: colors.accent, borderWidth: 0 };
 }
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Button({
   label,
@@ -46,32 +46,32 @@ export default function Button({
   loading = false,
   fullWidth = false,
 }: ButtonProps) {
+  const { colors, space, fontSize } = useAppTheme();
   const isDisabled = disabled || loading;
-  const effective  = variant === 'glass' ? 'primary' : (variant ?? 'primary');
-  const self       = fullWidth ? ('stretch' as const) : ('center' as const);
+  const effective = variant === 'glass' ? 'primary' : (variant ?? 'primary');
+  const self = fullWidth ? ('stretch' as const) : ('center' as const);
 
-  // Glass variant on iOS 26+
   if (variant === 'glass' && isGlassSupported && GlassView) {
     return (
       <View style={{ alignSelf: self, borderRadius: 999, overflow: 'hidden', opacity: isDisabled ? 0.45 : 1 }}>
         <GlassView
           glassEffectStyle="systemMaterial"
-          tintColor={T.accent}
+          tintColor={colors.accent}
           onTouchEnd={isDisabled ? undefined : onPress}
-          style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: T.space.md, paddingHorizontal: T.space.lg }}
+          style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: space.md, paddingHorizontal: space.lg }}
         >
           {loading
-            ? <ActivityIndicator size="small" color={T.accentText} />
-            : <RNText style={{ color: T.accentText, fontSize: T.fontSize.md, fontWeight: '600' }}>{label}</RNText>
+            ? <ActivityIndicator size="small" color={colors.accentText} />
+            : <RNText style={{ color: colors.accentText, fontSize: fontSize.md, fontWeight: '600' }}>{label}</RNText>
           }
         </GlassView>
       </View>
     );
   }
 
-  const spinnerColor = effective === 'ghost' ? T.accent : effective === 'danger-ghost' ? T.danger : T.accentText;
-  const labelColor   = effective === 'ghost' ? T.accent : effective === 'danger-ghost' ? T.danger : T.accentText;
-  const vs = variantStyles(effective);
+  const spinnerColor = effective === 'ghost' ? colors.accent : effective === 'danger-ghost' ? colors.danger : colors.accentText;
+  const labelColor = effective === 'ghost' ? colors.accent : effective === 'danger-ghost' ? colors.danger : colors.accentText;
+  const vs = variantStyles(effective, colors);
 
   return (
     <TouchableOpacity
@@ -81,8 +81,8 @@ export default function Button({
       style={{
         alignSelf: self,
         borderRadius: 999,
-        paddingVertical: T.space.md,
-        paddingHorizontal: T.space.lg,
+        paddingVertical: space.md,
+        paddingHorizontal: space.lg,
         alignItems: 'center',
         justifyContent: 'center',
         opacity: isDisabled ? 0.45 : 1,
@@ -91,7 +91,7 @@ export default function Button({
     >
       {loading
         ? <ActivityIndicator size="small" color={spinnerColor} />
-        : <RNText style={{ color: labelColor, fontSize: T.fontSize.md, fontWeight: '600' }}>{label}</RNText>
+        : <RNText style={{ color: labelColor, fontSize: fontSize.md, fontWeight: '600' }}>{label}</RNText>
       }
     </TouchableOpacity>
   );

@@ -1,11 +1,12 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
-import { ThemeProvider as AppThemeProvider, useTheme } from '@/lib/ThemeContext';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
+import { ThemeProvider as AppThemeProvider, useAppTheme } from '@/lib/ThemeContext';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useRef } from 'react';
-import { View } from 'react-native';
+import { useEffect, useMemo, useRef } from 'react';
+import { Platform, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { TamaguiProvider } from 'tamagui';
@@ -16,7 +17,7 @@ import { AuthProvider, useAuthContext } from '@/lib/AuthContext';
 import { DATABASE_NAME } from '@/lib/db/schema';
 import { initializeDatabase } from '@/lib/db/database';
 import LoadingScreen from '@/components/LoadingScreen';
-import T from '@/constants/Theme';
+import { useStatusBarForAppTheme } from '@/hooks/useStatusBarForAppTheme';
 
 async function clearLocalUserData(db: SQLiteDatabase) {
   await db.runAsync('DELETE FROM fact_workout_set');
@@ -47,14 +48,36 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-// Subscribes to theme changes so the root background + status bar update seamlessly.
+// Root background + Tamagui theme + status bar (see useStatusBarForAppTheme).
 function ThemedRoot({ children }: { children: React.ReactNode }) {
-  const { themeName } = useTheme();
+  const { themeName, colors } = useAppTheme();
   const isDark = themeName === 'dark';
+  const insets = useSafeAreaInsets();
+  useStatusBarForAppTheme(themeName, colors.bg);
+
   return (
-    <View style={{ flex: 1, backgroundColor: T.bg }}>
-      <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={T.bg} />
-      {children}
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <TamaguiProvider config={config} defaultTheme={themeName}>
+        {children}
+      </TamaguiProvider>
+      {/* iOS: status bar is transparent — paint the top safe-area band (see useStatusBarForAppTheme). */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: insets.top,
+          backgroundColor: colors.bg,
+          zIndex: 1000,
+        }}
+      />
+      <StatusBar
+        key={themeName}
+        style={isDark ? 'light' : 'dark'}
+        backgroundColor={Platform.OS === 'android' ? colors.bg : undefined}
+      />
     </View>
   );
 }
@@ -69,12 +92,12 @@ export default function RootLayout() {
     if (error) throw error;
   }, [error]);
 
-  if (!loaded) return <LoadingScreen />;
-
   return (
     <AppThemeProvider>
-      <ThemedRoot>
-        <TamaguiProvider config={config} defaultTheme="dark">
+      {!loaded ? (
+        <LoadingScreen />
+      ) : (
+        <ThemedRoot>
           <QueryClientProvider client={queryClient}>
             <SQLiteProvider databaseName={DATABASE_NAME} onInit={initializeDatabase}>
               <AuthProvider>
@@ -82,16 +105,15 @@ export default function RootLayout() {
               </AuthProvider>
             </SQLiteProvider>
           </QueryClientProvider>
-        </TamaguiProvider>
-      </ThemedRoot>
+        </ThemedRoot>
+      )}
     </AppThemeProvider>
   );
-
 }
 
 function RootLayoutNav() {
   const { session, loading, onboarded, isPasswordRecovery, initialUrlChecked } = useAuthContext();
-  useTheme(); // re-render on theme change so Stack contentStyle updates
+  const { themeName, colors } = useAppTheme();
   const router = useRouter();
   const db = useSQLiteContext();
   const hasNavigated = useRef(false);
@@ -142,14 +164,38 @@ function RootLayoutNav() {
     }
   }, [session, loading, onboarded, isPasswordRecovery, initialUrlChecked]);
 
+  const navigationTheme = useMemo(() => {
+    const isDark = themeName === 'dark';
+    const base = isDark ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      dark: isDark,
+      colors: {
+        ...base.colors,
+        background: colors.bg,
+        card: colors.surface,
+        border: colors.border,
+        text: colors.primary,
+        primary: colors.accent,
+        notification: colors.accent,
+      },
+    };
+  }, [themeName, colors]);
+
   // Show logo while auth state is resolving (after native splash has hidden)
   if (loading || (session && onboarded === null)) {
     return <LoadingScreen />;
   }
 
+  // Do not set Stack statusBarStyle here: avoids Info.plist YES/NO fights; ThemedRoot owns the bar.
+
   return (
-    <NavThemeProvider value={DarkTheme}>
-      <Stack screenOptions={{ contentStyle: { backgroundColor: T.bg } }}>
+    <NavThemeProvider value={navigationTheme}>
+      <Stack
+        screenOptions={{
+          contentStyle: { backgroundColor: colors.bg },
+        }}
+      >
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

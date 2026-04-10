@@ -1,10 +1,11 @@
 import { View, StyleSheet } from 'react-native';
 import LambdaLogo from './LambdaLogo';
-import T from '@/constants/Theme';
+import { useAppTheme } from '@/lib/ThemeContext';
 
 export default function LoadingScreen() {
+  const { colors } = useAppTheme();
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <LambdaLogo size={96} />
     </View>
   );
@@ -13,7 +14,6 @@ export default function LoadingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: T.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -8,9 +8,10 @@ import { useAsyncGuard } from '@/lib/asyncGuard';
 import { useAuthContext } from '@/lib/AuthContext';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
-import T from '@/constants/Theme';
+import { useAppTheme } from '@/lib/ThemeContext';
 
 export default function ResetPasswordScreen() {
+  const { colors, space, radius, fontSize } = useAppTheme();
   const router = useRouter();
   const guard = useAsyncGuard();
   const { clearPasswordRecovery } = useAuthContext();
@@ -72,15 +73,15 @@ export default function ResetPasswordScreen() {
   });
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <YStack flex={1} justifyContent="center" paddingHorizontal={T.space.xl} gap={T.space.lg}>
+        <YStack flex={1} justifyContent="center" paddingHorizontal={space.xl} gap={space.lg}>
 
-          <YStack alignItems="center" marginBottom={T.space.xl}>
-            <Text fontSize={T.fontSize.xxl} fontWeight="bold" color={T.primary} marginBottom={T.space.sm}>
+          <YStack alignItems="center" marginBottom={space.xl}>
+            <Text fontSize={fontSize.xxl} fontWeight="bold" color={colors.primary} marginBottom={space.sm}>
               New Password
             </Text>
-            <Text fontSize={T.fontSize.md} color={T.muted} textAlign="center">
+            <Text fontSize={fontSize.md} color={colors.muted} textAlign="center">
               {done
                 ? 'Your password has been updated.'
                 : 'Choose a new password for your account.'}
@@ -88,7 +89,7 @@ export default function ResetPasswordScreen() {
           </YStack>
 
           {!done && ready && (
-            <YStack gap={T.space.md}>
+            <YStack gap={space.md}>
               <Input
                 label="New Password"
                 value={password}
@@ -111,7 +112,7 @@ export default function ResetPasswordScreen() {
           )}
 
           {!done && !ready && (
-            <Text color={T.muted} fontSize={T.fontSize.sm} textAlign="center">
+            <Text color={colors.muted} fontSize={fontSize.sm} textAlign="center">
               Opening reset link…
             </Text>
           )}

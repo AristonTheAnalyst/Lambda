@@ -9,7 +9,7 @@ import { useAuthContext } from '@/lib/AuthContext';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
 import { useNetwork } from '@/hooks/useNetwork';
 import { loadWorkoutsWithSets, seedWorkoutsFromSupabase, WorkoutWithSets } from '@/lib/offline/workoutStore';
-import T from '@/constants/Theme';
+import { useAppTheme } from '@/lib/ThemeContext';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -43,6 +43,7 @@ function getUniqueCombos(
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function TrainingLogsScreen() {
+  const { colors, space, radius, fontSize } = useAppTheme();
   const db = useSQLiteContext();
   const router = useRouter();
   const { user } = useAuthContext();
@@ -86,24 +87,24 @@ export default function TrainingLogsScreen() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <YStack flex={1} backgroundColor={T.bg}>
+    <YStack flex={1} backgroundColor={colors.bg}>
       <PageHeader title="Training Logs" right={<SyncStatusIcon />} />
       {loading ? (
         <YStack flex={1} alignItems="center" justifyContent="center">
-          <Spinner size="large" color={T.accent} />
+          <Spinner size="large" color={colors.accent} />
         </YStack>
       ) : (
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: T.space.lg, paddingBottom: T.space.xxl }}
+          contentContainerStyle={{ padding: space.lg, paddingBottom: space.xxl }}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={T.accent} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />}
         >
           {workouts.length === 0 ? (
-            <YStack flex={1} alignItems="center" justifyContent="center" paddingTop={T.space.xxl} gap={T.space.md}>
-              <Text fontSize={T.fontSize.xxl}>🏋️</Text>
-              <Text color={T.primary} fontSize={T.fontSize.lg} fontWeight="600">No workouts yet</Text>
-              <Text color={T.muted} fontSize={T.fontSize.sm} textAlign="center">
+            <YStack flex={1} alignItems="center" justifyContent="center" paddingTop={space.xxl} gap={space.md}>
+              <Text fontSize={fontSize.xxl}>🏋️</Text>
+              <Text color={colors.primary} fontSize={fontSize.lg} fontWeight="600">No workouts yet</Text>
+              <Text color={colors.muted} fontSize={fontSize.sm} textAlign="center">
                 Head to the Session tab to log your first workout.
               </Text>
             </YStack>
@@ -114,43 +115,43 @@ export default function TrainingLogsScreen() {
               return (
                 <YStack
                   key={w.user_workout_id}
-                  backgroundColor={T.surface}
-                  borderRadius={T.radius.md}
-                  padding={T.space.lg}
-                  marginBottom={T.space.md}
+                  backgroundColor={colors.surface}
+                  borderRadius={radius.md}
+                  padding={space.lg}
+                  marginBottom={space.md}
                   pressStyle={{ opacity: 0.75 }}
                   onPress={() => router.push(`/four/${w.user_workout_id}`)}
                   cursor="pointer"
                 >
                   {/* Date + set count */}
-                  <XStack alignItems="center" justifyContent="space-between" marginBottom={T.space.xs}>
-                    <Text fontSize={T.fontSize.sm} fontWeight="700" color={T.accent}>
+                  <XStack alignItems="center" justifyContent="space-between" marginBottom={space.xs}>
+                    <Text fontSize={fontSize.sm} fontWeight="700" color={colors.accent}>
                       {formatDate(w.user_workout_created_date)}
                     </Text>
-                    <Text fontSize={T.fontSize.xs} color={T.muted}>
+                    <Text fontSize={fontSize.xs} color={colors.muted}>
                       {setCount} {setCount === 1 ? 'set' : 'sets'}
                     </Text>
                   </XStack>
 
                   {/* Workout notes */}
                   {w.user_post_workout_notes ? (
-                    <Text fontSize={T.fontSize.sm} color={T.muted} marginBottom={T.space.sm} fontStyle="italic">
+                    <Text fontSize={fontSize.sm} color={colors.muted} marginBottom={space.sm} fontStyle="italic">
                       "{w.user_post_workout_notes}"
                     </Text>
                   ) : null}
 
                   {/* Exercise + variation combos */}
                   {combos.length > 0 ? (
-                    <YStack gap={T.space.xs}>
+                    <YStack gap={space.xs}>
                       {combos.map((combo, i) => (
-                        <XStack key={i} alignItems="center" gap={T.space.xs}>
-                          <YStack width={4} height={4} borderRadius={2} backgroundColor={T.muted} />
-                          <Text fontSize={T.fontSize.sm} color={T.primary}>{combo}</Text>
+                        <XStack key={i} alignItems="center" gap={space.xs}>
+                          <YStack width={4} height={4} borderRadius={2} backgroundColor={colors.muted} />
+                          <Text fontSize={fontSize.sm} color={colors.primary}>{combo}</Text>
                         </XStack>
                       ))}
                     </YStack>
                   ) : (
-                    <Text fontSize={T.fontSize.sm} color={T.muted}>No sets recorded.</Text>
+                    <Text fontSize={fontSize.sm} color={colors.muted}>No sets recorded.</Text>
                   )}
                 </YStack>
               );
