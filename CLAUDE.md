@@ -18,14 +18,14 @@ This file is read at the start of every conversation. It documents the current s
 | Animations | React Native Reanimated 4, `@tamagui/animations-reanimated` |
 | Auth | Supabase Auth (email/password, Google OAuth, Apple Sign-In) |
 | Database | Supabase (PostgreSQL with RLS) + expo-sqlite (local-first cache) |
-| State | React Context API (no Redux/Zustand) |
+| State | React Context API; **Zustand** + **TanStack React Query** used only for sync status + cache invalidation (see `lib/sync/useSyncEngine.ts`, root `QueryClientProvider`) |
 | Validation | Zod v4 |
 | Icons | @expo/vector-icons (FontAwesome) |
 | Fonts | SpaceMono (loaded via expo-font) |
 | Storage | expo-secure-store (native), AsyncStorage (fallback) |
 | Build/Deploy | EAS Build + EAS Update |
 
-**Not in use (despite what you might assume):** NativeWind, Gluestack UI, Zustand, React Query, Redux. Do not introduce these.
+**Not in use (despite what you might assume):** NativeWind, Gluestack UI, Redux. Do not add Redux or duplicate global state libraries beyond the existing sync Zustand slice + React Query client.
 
 ### Project Structure
 

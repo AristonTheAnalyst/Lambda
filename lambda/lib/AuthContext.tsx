@@ -14,6 +14,8 @@ import { DimUser, AuthUser } from '@/types/database';
 // AsyncStorage in Expo Go. Keyed by user ID so multi-account devices work.
 
 const profileCacheKey = (userId: string) => `lambda_profile_${userId}`;
+/** Tiny fallback when the full profile JSON is missing (e.g. storage prune) but we still know onboarding state. */
+const onboardedCacheKey = (userId: string) => `lambda_onboarded_${userId}`;
 
 async function loadCachedProfile(userId: string): Promise<DimUser | null> {
   try {
@@ -24,15 +26,28 @@ async function loadCachedProfile(userId: string): Promise<DimUser | null> {
   }
 }
 
+async function loadCachedOnboardedOnly(userId: string): Promise<boolean | null> {
+  try {
+    const raw = await getSecureStorage().getItem(onboardedCacheKey(userId));
+    if (raw === 'true') return true;
+    if (raw === 'false') return false;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function saveProfileCache(userId: string, profile: DimUser): Promise<void> {
   try {
     await getSecureStorage().setItem(profileCacheKey(userId), JSON.stringify(profile));
+    await getSecureStorage().setItem(onboardedCacheKey(userId), profile.onboarded ? 'true' : 'false');
   } catch {}
 }
 
 async function clearProfileCache(userId: string): Promise<void> {
   try {
     await getSecureStorage().removeItem(profileCacheKey(userId));
+    await getSecureStorage().removeItem(onboardedCacheKey(userId));
   } catch {}
 }
 
@@ -114,6 +129,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (cached) {
       setProfile(cached);
       setOnboarded(cached.onboarded);
+    } else {
+      const ob = await loadCachedOnboardedOnly(userId);
+      if (ob !== null) setOnboarded(ob);
     }
 
     // 2. Fetch fresh data from Supabase in the background
@@ -136,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // 3. Persist fresh data and update state
+    // 3. Persist fresh data and update state (full profile + onboarded flag)
     await saveProfileCache(userId, data as DimUser);
     setProfile(data as DimUser);
     setOnboarded(data.onboarded);

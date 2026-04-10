@@ -1,0 +1,15 @@
+---
+description: Lambda React Native app — core constraints for AI agents
+alwaysApply: true
+---
+
+# Lambda (Expo / React Native)
+
+- **Source of truth for colors/spacing:** `lambda/constants/Theme.ts` (`T.*`). No hardcoded hex in components; no Tamagui `$token` strings.
+- **Layout:** Tamagui `XStack` / `YStack` / `Text`; avoid `StyleSheet.create` in new UI.
+- **Data:** Local-first **SQLite** (`expo-sqlite`); writes go through **`lib/offline/*` stores** and **`queueMutation`** — do not write workout/exercise user data directly to Supabase from screens.
+- **Auth:** `lib/AuthContext.tsx`; session + profile cache in SecureStore (see `lambda_onboarded_{userId}` + `lambda_profile_{userId}` keys).
+- **Sync:** `lib/sync/useSyncEngine.ts` (mounted in `app/(tabs)/_layout.tsx`); Zustand + React Query used **only** for sync UX / invalidation, not app-wide global state.
+- **Sheets / modals:** `SlideUpModal` and `DropdownSelect` must stay **always mounted**; toggle `visible` only (see `CLAUDE.md` “SlideUpModal always-mounted rule”).
+- **Tamagui + `T.*`:** Known TS inference noise; do not “fix” by removing `T.*`.
+- **Details, routing map, component API:** read `CLAUDE.md` at repo root.

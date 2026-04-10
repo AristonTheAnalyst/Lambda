@@ -176,21 +176,31 @@ export async function cancelWorkout(
   );
   const alreadySynced = (syncedRow?.n ?? 0) > 0;
 
+  const rowBeforeDelete = await db.getFirstAsync<{
+    user_id: string;
+    user_pre_workout_notes: string | null;
+    user_workout_created_date: string;
+    user_post_workout_notes: string | null;
+  }>(
+    `SELECT user_id, user_pre_workout_notes, user_workout_created_date, user_post_workout_notes
+     FROM fact_user_workout WHERE user_workout_id = ?`,
+    [workoutId]
+  );
+
   // Hard-delete sets + workout locally
   await db.runAsync(`DELETE FROM fact_workout_set WHERE user_workout_id = ?`, [workoutId]);
   await db.runAsync(`DELETE FROM fact_user_workout WHERE user_workout_id = ?`, [workoutId]);
 
-  if (alreadySynced) {
-    const row = await db.getFirstAsync<{ user_id: string }>(
-      `SELECT user_id FROM fact_user_workout WHERE user_workout_id = ?`,
-      [workoutId]
-    );
-    // Soft-delete on Supabase via UPDATE (deleted_at or is_active=false)
-    // Use a direct Supabase call here — no local row to queue from
-    await supabase
-      .from('fact_user_workout')
-      .update({ is_active: false })
-      .eq('user_workout_id', workoutId);
+  if (alreadySynced && rowBeforeDelete) {
+    await queueMutation(db, 'fact_user_workout', 'UPDATE', workoutId, {
+      user_workout_id: workoutId,
+      user_id: rowBeforeDelete.user_id,
+      user_pre_workout_notes: rowBeforeDelete.user_pre_workout_notes,
+      user_workout_created_date: rowBeforeDelete.user_workout_created_date,
+      user_post_workout_notes: rowBeforeDelete.user_post_workout_notes,
+      is_active: false,
+    });
+    useSyncStore.getState().requestSync();
   }
 }
 
