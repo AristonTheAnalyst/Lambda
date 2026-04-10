@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Text, YStack } from 'tamagui';
 import supabase from '@/lib/supabase';
-import * as Linking from 'expo-linking';
 import { useAsyncGuard } from '@/lib/asyncGuard';
 import { useAuthContext } from '@/lib/AuthContext';
 import Button from '@/components/Button';
@@ -15,11 +14,6 @@ export default function ResetPasswordScreen() {
   const router = useRouter();
   const guard = useAsyncGuard();
   const { clearPasswordRecovery } = useAuthContext();
-  const url = Linking.useURL();
-
-  useEffect(() => {
-    console.log('[ResetPassword] incoming URL:', url);
-  }, [url]);
 
   const [ready, setReady] = useState(false);
   const [password, setPassword] = useState('');
@@ -29,12 +23,10 @@ export default function ResetPasswordScreen() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('[ResetPassword] getSession on mount:', session ? 'session exists' : 'no session');
       if (session) setReady(true);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[ResetPassword] auth event:', event, 'session:', session ? 'yes' : 'no');
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') setReady(true);
     });
 

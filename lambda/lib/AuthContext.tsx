@@ -78,14 +78,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function processUrl(url: string | null) {
       if (!url) { setInitialUrlChecked(true); return; }
-      console.log('[Auth] Processing initial URL:', url);
       const hash = url.includes('#') ? url.split('#')[1] : '';
       const params = new URLSearchParams(hash);
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');
       const type = params.get('type');
       if (accessToken && refreshToken) {
-        console.log('[Auth] Found tokens in URL, type:', type);
         if (type === 'recovery') {
           // Set the flag BEFORE calling setSession so nav effect sees it
           setIsPasswordRecovery(true);
@@ -94,15 +92,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           access_token: accessToken,
           refresh_token: refreshToken,
         });
-        if (error) console.warn('[Auth] setSession error:', error.message);
+        if (error) console.warn('[Auth] setSession error:', error.message); // keep this one
       }
       setInitialUrlChecked(true);
     }
 
     Linking.getInitialURL().then(processUrl);
 
-    // Also handle URLs when app is already open (e.g. link tapped while app is running)
-    const sub = Linking.addEventListener('url', ({ url }) => processUrl(url));
+    // Handle URLs when app is already open (link tapped while app is foregrounded)
+    const sub = Linking.addEventListener('url', ({ url }) => {
+      // Reset initialUrlChecked so the nav effect re-evaluates after processing
+      setInitialUrlChecked(false);
+      processUrl(url);
+    });
     return () => sub.remove();
   }, []);
 
@@ -159,7 +161,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (event === 'PASSWORD_RECOVERY') {
-        console.log('[Auth] PASSWORD_RECOVERY event received');
         setIsPasswordRecovery(true);
         // Fall through so setSession/setUser are called normally.
       }
