@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { route: '/three',   icon: 'play-circle'   as const, label: 'Session'    },
   { route: '/two',     icon: 'barbell'       as const, label: 'Exercises'  },
   { route: '/one',     icon: 'person'        as const, label: 'Profile'    },
+  { route: '/six',     icon: 'code'          as const, label: 'Dev'        },
 ];
 
 function BottomNav() {
@@ -65,6 +66,7 @@ export default function TabLayout() {
           <Tabs.Screen name="four"    options={{ headerShown: false }} />
           <Tabs.Screen name="five"    options={{ headerShown: false }} />
           <Tabs.Screen name="ui-kit"  options={{ headerShown: false }} />
+          <Tabs.Screen name="six"     options={{ headerShown: false }} />
         </Tabs>
         <BottomNav />
       </View>

@@ -7,19 +7,25 @@ import T from '@/constants/Theme';
 
 const SECTIONS = [
   {
-    route: '/one/profile',
-    label: 'User Profile',
-    description: 'View and edit your personal details',
-    icon: 'user' as const,
+    route: '/ui-kit',
+    label: 'UI Kit',
+    description: 'Component and style reference',
+    icon: 'paint-brush' as const,
+  },
+  {
+    route: '/six/experimental',
+    label: 'Experimental Features',
+    description: 'Work in progress and unreleased features',
+    icon: 'flask' as const,
   },
 ];
 
-export default function ProfileHub() {
+export default function DevHub() {
   const router = useRouter();
 
   return (
     <YStack flex={1} backgroundColor={T.bg}>
-      <PageHeader title="Profile" />
+      <PageHeader title="Dev" />
       <YStack flex={1} padding={T.space.xl} gap={T.space.md}>
         {SECTIONS.map((s) => (
           <TouchableOpacity
@@ -43,7 +49,7 @@ export default function ProfileHub() {
                   alignItems="center"
                   justifyContent="center"
                 >
-                  <FontAwesome name={s.icon} size={22} color={T.accent} />
+                  <FontAwesome name={s.icon} size={20} color={T.accent} />
                 </XStack>
                 <YStack flex={1}>
                   <Text fontSize={T.fontSize.lg} fontWeight="600" color={T.primary} marginBottom={T.space.xs}>{s.label}</Text>
