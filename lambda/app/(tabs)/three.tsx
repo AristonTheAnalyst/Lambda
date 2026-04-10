@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Alert, Keyboard, ScrollView, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SlidePages from '@/components/SlidePages';
 import { useSlidePages } from '@/hooks/useSlidePages';
 import { Separator, Text, XStack, YStack } from 'tamagui';
@@ -10,7 +11,6 @@ import PageHeader from '@/components/PageHeader';
 import SyncStatusIcon from '@/components/SyncStatusIcon';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
-import NotesField from '@/components/NotesField';
 import { DropdownSelect, SegmentedControl, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
 import { createExercise, findExerciseByName, reactivateExercise } from '@/lib/offline/exerciseStore';
@@ -29,6 +29,7 @@ import { parseValues } from '@/lib/workoutSetFormat';
 
 export default function WorkoutLogScreen() {
   const { colors, space, radius, fontSize } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const db = useSQLiteContext();
   const guard = useAsyncGuard();
   const { height: windowHeight } = useWindowDimensions();
@@ -39,10 +40,14 @@ export default function WorkoutLogScreen() {
   const [currentWorkoutId, setCurrentWorkoutId] = useState<string | null>(null);
   const [sets, setSets]               = useState<WorkoutSet[]>([]);
   const [setsLoading, setSetsLoading] = useState(false);
-  const [startNotes, setStartNotes]   = useState('');
   const [endNotes, setEndNotes]             = useState('');
   const [endWorkoutModalVisible, setEndWorkoutModalVisible] = useState(false);
+  const [startNotes, setStartNotes]         = useState('');
   const [startLoading, setStartLoading]     = useState(false);
+  /** Placeholder until workout templates exist */
+  const [plannedWorkoutId, setPlannedWorkoutId] = useState('default');
+  /** Placeholder until persisted with session metadata */
+  const [sessionFeeling, setSessionFeeling] = useState<number | null>(null);
   const [endLoading, setEndLoading]         = useState(false);
 
   const slidePages = useSlidePages();
@@ -108,6 +113,11 @@ export default function WorkoutLogScreen() {
     { label: 'None', value: null as string | null },
     ...(editEx?.assigned_variations ?? []).map((v) => ({ label: v.variation_name, value: v.custom_variation_id as string | null })),
   ], [editEx]);
+
+  const plannedWorkoutOptions = useMemo(
+    () => [{ label: 'Session (no template)', value: 'default' }],
+    []
+  );
 
   // ── Workout state helper ───────────────────────────────────────────────────
 
@@ -244,15 +254,18 @@ export default function WorkoutLogScreen() {
 
   // ── Start workout ──────────────────────────────────────────────────────────
 
-  function startWorkout(notesOverride?: string) { return guard(async () => {
+  function startWorkout() { return guard(async () => {
     if (!user) return;
     setStartLoading(true);
-    const localId = await createWorkout(db, user.id, notesOverride ?? startNotes);
-    setStartLoading(false);
-    setCurrentWorkoutId(localId);
-    setStartNotes('');
-    setSets([]);
-    slidePages.slideIn();
+    try {
+      const localId = await createWorkout(db, user.id, startNotes.trim());
+      setCurrentWorkoutId(localId);
+      setSets([]);
+      setStartNotes('');
+      slidePages.slideIn();
+    } finally {
+      setStartLoading(false);
+    }
   }); }
 
   // ── End / cancel workout ───────────────────────────────────────────────────
@@ -358,7 +371,7 @@ export default function WorkoutLogScreen() {
   return (
     <YStack flex={1} backgroundColor={colors.bg}>
       <PageHeader
-        title="Training Session"
+        title={currentWorkoutId === null ? 'Mental Prep and Planning' : 'Training Session'}
         left={currentWorkoutId !== null ? (
           <XStack
             borderRadius={999}
@@ -393,42 +406,97 @@ export default function WorkoutLogScreen() {
 
       <SlidePages controller={slidePages}>
         {/* ── Page 0: Start ── */}
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ padding: space.lg, paddingBottom: space.xxl }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          automaticallyAdjustKeyboardInsets={true}
-        >
-          <YStack gap={space.md}>
-            <Text fontSize={fontSize.xl} fontWeight="700" color={colors.primary}>Start a Workout</Text>
-            {exercises.length === 0 ? (
-              <YStack
-                backgroundColor={colors.surface}
-                borderRadius={radius.md}
-                padding={space.lg}
-                gap={space.sm}
-                alignItems="center"
-              >
-                <Text fontSize={fontSize.md} color={colors.primary} fontWeight="600" textAlign="center">No exercises set up yet</Text>
-                <Text fontSize={fontSize.sm} color={colors.muted} textAlign="center">
-                  Go to Exercises → Library to create your first exercise before logging a workout.
-                </Text>
-              </YStack>
-            ) : (
-              <>
-                <NotesField
-                  label="Pre-workout notes (optional)"
-                  value={startNotes}
-                  onChange={setStartNotes}
-                  confirmLabel="Start Workout"
-                  onConfirm={(notes) => startWorkout(notes)}
-                />
-                <Button label="Start Workout" onPress={() => startWorkout()} loading={startLoading} />
-              </>
-            )}
-          </YStack>
-        </ScrollView>
+        <YStack flex={1}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: space.lg, paddingBottom: space.md }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets={true}
+          >
+            <YStack gap={space.lg}>
+              {exercises.length === 0 ? (
+                <YStack
+                  backgroundColor={colors.surface}
+                  borderRadius={radius.md}
+                  padding={space.lg}
+                  gap={space.sm}
+                  alignItems="center"
+                >
+                  <Text fontSize={fontSize.md} color={colors.primary} fontWeight="600" textAlign="center">No exercises set up yet</Text>
+                  <Text fontSize={fontSize.sm} color={colors.muted} textAlign="center">
+                    Go to Exercises → Library to create your first exercise before logging a workout.
+                  </Text>
+                </YStack>
+              ) : (
+                <>
+                  <YStack gap={space.sm}>
+                    <Text fontSize={fontSize.sm} fontWeight="600" color={colors.primary}>Workout Template</Text>
+                    <DropdownSelect
+                      options={plannedWorkoutOptions}
+                      value={plannedWorkoutId}
+                      onChange={setPlannedWorkoutId}
+                      placeholder="Choose workout…"
+                    />
+                  </YStack>
+
+                  <YStack gap={space.sm}>
+                    <Text fontSize={fontSize.sm} fontWeight="600" color={colors.primary}>How do you expect to perform?</Text>
+                    <XStack gap={space.xs} justifyContent="center" flexWrap="wrap">
+                      {([1, 2, 3, 4, 5] as const).map((n) => {
+                        const selected = sessionFeeling === n;
+                        return (
+                          <YStack
+                            key={n}
+                            width={52}
+                            height={52}
+                            borderRadius={radius.md}
+                            borderWidth={1}
+                            borderColor={selected ? colors.accent : colors.border}
+                            backgroundColor={selected ? colors.accent : colors.surface}
+                            alignItems="center"
+                            justifyContent="center"
+                            pressStyle={{ opacity: 0.85 }}
+                            onPress={() => setSessionFeeling((prev) => (prev === n ? null : n))}
+                            cursor="pointer"
+                          >
+                            <Text color={selected ? colors.accentText : colors.primary} fontSize={fontSize.lg} fontWeight="700">
+                              {n}
+                            </Text>
+                          </YStack>
+                        );
+                      })}
+                    </XStack>
+                  </YStack>
+
+                  <Input
+                    label="Pre-workout notes (optional)"
+                    placeholder={"Sleep and eat well?\nHydrated?\nGoals today?"}
+                    value={startNotes}
+                    onChangeText={setStartNotes}
+                    multiline
+                    minHeight={100}
+                  />
+                </>
+              )}
+            </YStack>
+          </ScrollView>
+
+          {exercises.length > 0 ? (
+            <YStack
+              paddingHorizontal={space.lg}
+              paddingTop={space.lg}
+              paddingBottom={insets.bottom + space.xxl + space.lg}
+              borderTopWidth={0.5}
+              borderTopColor={colors.border}
+              backgroundColor={colors.bg}
+              justifyContent="center"
+              gap={space.sm}
+            >
+              <Button label="Start Workout" onPress={startWorkout} loading={startLoading} />
+            </YStack>
+          ) : null}
+        </YStack>
 
         {/* ── Page 1: Active workout ── */}
         <YStack flex={1}>
@@ -477,7 +545,14 @@ export default function WorkoutLogScreen() {
       <SlideUpModal visible={endWorkoutModalVisible} onClose={() => setEndWorkoutModalVisible(false)} fitContent keyboardAware>
         <YStack padding={space.xl} gap={space.md}>
           <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>End Workout</Text>
-          <NotesField label="Post-workout notes (optional)" value={endNotes} onChange={setEndNotes} />
+          <Input
+            label="Post-workout notes (optional)"
+            placeholder="Notes…"
+            value={endNotes}
+            onChangeText={setEndNotes}
+            multiline
+            minHeight={120}
+          />
           <XStack gap={space.sm} justifyContent="center">
             <Button label="Cancel" onPress={() => setEndWorkoutModalVisible(false)} variant="danger-ghost" />
             <Button label="End Workout" onPress={doEndWorkout} loading={endLoading} />

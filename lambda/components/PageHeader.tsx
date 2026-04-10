@@ -32,6 +32,9 @@ export default function PageHeader({ title, left, right }: Props) {
           flex={1}
           textAlign="center"
           pointerEvents="none"
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.65}
         >
           {title}
         </Text>
