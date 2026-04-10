@@ -90,7 +90,7 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const { session, loading, onboarded } = useAuthContext();
+  const { session, loading, onboarded, isPasswordRecovery, initialUrlChecked } = useAuthContext();
   useTheme(); // re-render on theme change so Stack contentStyle updates
   const router = useRouter();
   const db = useSQLiteContext();
@@ -114,11 +114,15 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (loading) return;
+    // Wait for initial URL to be processed so PASSWORD_RECOVERY is detected before we navigate
+    if (!initialUrlChecked) return;
     // Still waiting for profile cache / network fetch to resolve onboarded state
     if (session && onboarded === null) return;
 
     let target: string;
-    if (!session) {
+    if (isPasswordRecovery) {
+      target = '/(auth)/reset-password';
+    } else if (!session) {
       target = '/(auth)/login';
     } else if (onboarded === false) {
       target = '/(onboarding)';
@@ -136,7 +140,7 @@ function RootLayoutNav() {
       hasNavigated.current = true;
       requestAnimationFrame(() => SplashScreen.hideAsync().catch(() => {}));
     }
-  }, [session, loading, onboarded]);
+  }, [session, loading, onboarded, isPasswordRecovery, initialUrlChecked]);
 
   // Show logo while auth state is resolving (after native splash has hidden)
   if (loading || (session && onboarded === null)) {

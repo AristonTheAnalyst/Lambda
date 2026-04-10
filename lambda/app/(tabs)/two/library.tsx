@@ -374,7 +374,10 @@ export default function LibraryScreen() {
           </XStack>
 
           {exercises.length === 0 ? (
-            <Text color={T.muted} padding={T.space.xs}>No exercises yet.</Text>
+            <YStack alignItems="center" paddingTop={T.space.xxl} gap={T.space.sm}>
+              <Text color={T.primary} fontSize={T.fontSize.md} fontWeight="600">No exercises yet</Text>
+              <Text color={T.muted} fontSize={T.fontSize.sm} textAlign="center">Tap + to create your first exercise.</Text>
+            </YStack>
           ) : filteredEx.length === 0 ? (
             <Text color={T.muted} padding={T.space.xs}>No results.</Text>
           ) : filteredEx.map((ex) => (
@@ -411,7 +414,10 @@ export default function LibraryScreen() {
           </XStack>
 
           {variations.length === 0 ? (
-            <Text color={T.muted} padding={T.space.xs}>No variations yet.</Text>
+            <YStack alignItems="center" paddingTop={T.space.xxl} gap={T.space.sm}>
+              <Text color={T.primary} fontSize={T.fontSize.md} fontWeight="600">No variations yet</Text>
+              <Text color={T.muted} fontSize={T.fontSize.sm} textAlign="center">Tap + to create your first variation.</Text>
+            </YStack>
           ) : filteredVar.length === 0 ? (
             <Text color={T.muted} padding={T.space.xs}>No results.</Text>
           ) : filteredVar.map((v) => (

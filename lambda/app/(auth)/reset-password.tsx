@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import * as Linking from 'expo-linking';
 import { Text, YStack } from 'tamagui';
 import supabase from '@/lib/supabase';
+import * as Linking from 'expo-linking';
 import { useAsyncGuard } from '@/lib/asyncGuard';
+import { useAuthContext } from '@/lib/AuthContext';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import T from '@/constants/Theme';
@@ -13,7 +14,12 @@ import T from '@/constants/Theme';
 export default function ResetPasswordScreen() {
   const router = useRouter();
   const guard = useAsyncGuard();
+  const { clearPasswordRecovery } = useAuthContext();
   const url = Linking.useURL();
+
+  useEffect(() => {
+    console.log('[ResetPassword] incoming URL:', url);
+  }, [url]);
 
   const [ready, setReady] = useState(false);
   const [password, setPassword] = useState('');
@@ -21,23 +27,19 @@ export default function ResetPasswordScreen() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
-  // Extract tokens from the deep link URL and set the session
   useEffect(() => {
-    if (!url) return;
-    const { queryParams } = Linking.parse(url);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('[ResetPassword] getSession on mount:', session ? 'session exists' : 'no session');
+      if (session) setReady(true);
+    });
 
-    // Supabase sends tokens in the URL fragment — expo-linking exposes them as queryParams
-    const accessToken = queryParams?.access_token as string | undefined;
-    const refreshToken = queryParams?.refresh_token as string | undefined;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[ResetPassword] auth event:', event, 'session:', session ? 'yes' : 'no');
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') setReady(true);
+    });
 
-    if (accessToken && refreshToken) {
-      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
-        .then(({ error }) => {
-          if (error) Alert.alert('Link expired', 'This reset link has expired. Please request a new one.');
-          else setReady(true);
-        });
-    }
-  }, [url]);
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleReset = () => guard(async () => {
     if (password.length < 6) { Alert.alert('Password must be at least 6 characters'); return; }
@@ -46,6 +48,7 @@ export default function ResetPasswordScreen() {
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) { Alert.alert('Error', error.message); return; }
+      clearPasswordRecovery();
       setDone(true);
     } finally {
       setLoading(false);

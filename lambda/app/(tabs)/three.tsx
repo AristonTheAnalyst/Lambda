@@ -518,14 +518,31 @@ export default function WorkoutLogScreen() {
         >
           <YStack gap={T.space.md}>
             <Text fontSize={T.fontSize.xl} fontWeight="700" color={T.primary}>Start a Workout</Text>
-            <NotesField
-              label="Pre-workout notes (optional)"
-              value={startNotes}
-              onChange={setStartNotes}
-              confirmLabel="Start Workout"
-              onConfirm={(notes) => startWorkout(notes)}
-            />
-            <Button label="Start Workout" onPress={() => startWorkout()} loading={startLoading} />
+            {exercises.length === 0 ? (
+              <YStack
+                backgroundColor={T.surface}
+                borderRadius={T.radius.md}
+                padding={T.space.lg}
+                gap={T.space.sm}
+                alignItems="center"
+              >
+                <Text fontSize={T.fontSize.md} color={T.primary} fontWeight="600" textAlign="center">No exercises set up yet</Text>
+                <Text fontSize={T.fontSize.sm} color={T.muted} textAlign="center">
+                  Go to Exercises → Library to create your first exercise before logging a workout.
+                </Text>
+              </YStack>
+            ) : (
+              <>
+                <NotesField
+                  label="Pre-workout notes (optional)"
+                  value={startNotes}
+                  onChange={setStartNotes}
+                  confirmLabel="Start Workout"
+                  onConfirm={(notes) => startWorkout(notes)}
+                />
+                <Button label="Start Workout" onPress={() => startWorkout()} loading={startLoading} />
+              </>
+            )}
           </YStack>
         </ScrollView>
 
@@ -557,7 +574,7 @@ export default function WorkoutLogScreen() {
             {setsLoading ? (
               <Spinner size="large" color={T.accent} marginTop={T.space.md} />
             ) : sets.length === 0 ? (
-              <Text color={T.muted}>No sets logged yet.</Text>
+              <Text color={T.muted} fontSize={T.fontSize.sm}>Log your first set below.</Text>
             ) : viewMode === 'grouped' ? groupedSets.map(({ exId, sets: groupSets, startIdx }, groupIdx) => {
               const exName = exerciseDetailMap[exId]?.exercise_name ?? `#${exId}`;
               return (

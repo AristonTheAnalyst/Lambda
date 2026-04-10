@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView, RefreshControl } from 'react-native';
 import { Spinner, Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -51,6 +51,7 @@ export default function TrainingLogsScreen() {
 
   const [workouts, setWorkouts] = useState<WorkoutWithSets[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadFromSQLite = useCallback(async () => {
     if (!user) return;
@@ -68,8 +69,19 @@ export default function TrainingLogsScreen() {
     if (!user || !isConnected) return;
     seedWorkoutsFromSupabase(db, user.id)
       .then(() => loadFromSQLite())
-      .catch(() => {}); // Silently fail — SQLite data is the source of truth
+      .catch(() => {});
   }, [user?.id, isConnected]);
+
+  const handleRefresh = useCallback(async () => {
+    if (!user) return;
+    setRefreshing(true);
+    try {
+      if (isConnected) await seedWorkoutsFromSupabase(db, user.id);
+      await loadFromSQLite();
+    } catch {} finally {
+      setRefreshing(false);
+    }
+  }, [db, user, isConnected, loadFromSQLite]);
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -85,11 +97,16 @@ export default function TrainingLogsScreen() {
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: T.space.lg, paddingBottom: T.space.xxl }}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={T.accent} />}
         >
           {workouts.length === 0 ? (
-            <Text color={T.muted} fontSize={T.fontSize.md} marginTop={T.space.md}>
-              No workouts logged yet.
-            </Text>
+            <YStack flex={1} alignItems="center" justifyContent="center" paddingTop={T.space.xxl} gap={T.space.md}>
+              <Text fontSize={T.fontSize.xxl}>🏋️</Text>
+              <Text color={T.primary} fontSize={T.fontSize.lg} fontWeight="600">No workouts yet</Text>
+              <Text color={T.muted} fontSize={T.fontSize.sm} textAlign="center">
+                Head to the Session tab to log your first workout.
+              </Text>
+            </YStack>
           ) : (
             workouts.map((w) => {
               const combos = getUniqueCombos(w.sets, exerciseDetailMap);

@@ -45,6 +45,8 @@ interface AuthContextValue {
   onboarded: boolean | null;
   profile: DimUser | null;
   sessionExpired: boolean;
+  isPasswordRecovery: boolean;
+  initialUrlChecked: boolean;
   clearSessionExpired: () => void;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -52,6 +54,7 @@ interface AuthContextValue {
   signInWithApple: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<{ error: Error | null }>;
   refreshProfile: () => Promise<void>;
+  clearPasswordRecovery: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -63,9 +66,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   const [profile, setProfile] = useState<DimUser | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+  const [initialUrlChecked, setInitialUrlChecked] = useState(false);
   const explicitSignOut = useRef(false);
+  const clearPasswordRecovery = useCallback(() => setIsPasswordRecovery(false), []);
 
   const clearSessionExpired = useCallback(() => setSessionExpired(false), []);
+
+  // Feed deep link URLs into Supabase so it can fire PASSWORD_RECOVERY.
+  // React Native's Supabase client does NOT auto-parse URLs — must be done manually.
+  useEffect(() => {
+    async function processUrl(url: string | null) {
+      if (!url) { setInitialUrlChecked(true); return; }
+      console.log('[Auth] Processing initial URL:', url);
+      const hash = url.includes('#') ? url.split('#')[1] : '';
+      const params = new URLSearchParams(hash);
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const type = params.get('type');
+      if (accessToken && refreshToken) {
+        console.log('[Auth] Found tokens in URL, type:', type);
+        if (type === 'recovery') {
+          // Set the flag BEFORE calling setSession so nav effect sees it
+          setIsPasswordRecovery(true);
+        }
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (error) console.warn('[Auth] setSession error:', error.message);
+      }
+      setInitialUrlChecked(true);
+    }
+
+    Linking.getInitialURL().then(processUrl);
+
+    // Also handle URLs when app is already open (e.g. link tapped while app is running)
+    const sub = Linking.addEventListener('url', ({ url }) => processUrl(url));
+    return () => sub.remove();
+  }, []);
 
   const fetchUserProfile = useCallback(async (userId: string) => {
     // 1. Load from cache first — unblocks navigation immediately when offline
@@ -120,9 +159,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (event === 'PASSWORD_RECOVERY') {
-        // Deep link from reset email — let reset-password screen handle the token via useURL()
-        setLoading(false);
-        return;
+        console.log('[Auth] PASSWORD_RECOVERY event received');
+        setIsPasswordRecovery(true);
+        // Fall through so setSession/setUser are called normally.
       }
       setSession(currentSession);
       if (currentSession?.user) {
@@ -246,7 +285,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, onboarded, profile, sessionExpired, clearSessionExpired, signUp, signIn, signInWithGoogle, signInWithApple, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, session, loading, onboarded, profile, sessionExpired, isPasswordRecovery, initialUrlChecked, clearSessionExpired, clearPasswordRecovery, signUp, signIn, signInWithGoogle, signInWithApple, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
