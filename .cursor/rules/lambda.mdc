@@ -12,4 +12,5 @@ alwaysApply: true
 - **Sync:** `lib/sync/useSyncEngine.ts` (mounted in `app/(tabs)/_layout.tsx`); Zustand + React Query used **only** for sync UX / invalidation, not app-wide global state.
 - **Sheets / modals:** `SlideUpModal` and `DropdownSelect` must stay **always mounted**; toggle `visible` only (see `CLAUDE.md` “SlideUpModal always-mounted rule”).
 - **Tamagui + `T.*`:** Known TS inference noise; do not “fix” by removing `T.*`.
+- **Tabs:** Custom bottom bar is the `Tabs` `tabBar` in `app/(tabs)/_layout.tsx`. Switch tabs with the tab navigator’s `navigation.navigate('four' | 'three' | …)` — do not use `router.navigate('/four')` for tab switches (collapses nested Logs stack).
 - **Details, routing map, component API:** read `CLAUDE.md` at repo root.

@@ -95,7 +95,7 @@ export interface WorkoutSetsListProps {
   viewMode: 'grouped' | 'chrono';
   onToggleViewMode: () => void;
   onEditSet: (s: WorkoutSet) => void;
-  /** Title row above the list (e.g. “Sets this workout” + mode hint). */
+  /** Title row above the list (e.g. “Sets” + grouped/full hint). */
   title: ReactNode;
   allowViewModeToggle: boolean;
   interactive: boolean;
@@ -103,7 +103,7 @@ export interface WorkoutSetsListProps {
 }
 
 /**
- * Sets list for Training Session (active workout) and Edit Workout — grouped / chrono + loading / empty.
+ * Sets list for Training Session (live session) and past-session detail — grouped / chrono + loading / empty.
  */
 export default function WorkoutSetsList({
   sets,

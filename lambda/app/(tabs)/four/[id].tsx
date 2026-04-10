@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Alert, Keyboard, ScrollView, useWindowDimensions } from 'react-native';
 import { Spinner, Text, XStack, YStack } from 'tamagui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -111,7 +111,12 @@ export default function WorkoutDetailScreen() {
     setSets(setsData);
   }, [db, workoutId]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  const dataLoadedKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (dataLoadedKeyRef.current === workoutId) return;
+    dataLoadedKeyRef.current = workoutId;
+    loadData();
+  }, [workoutId, loadData]);
 
   function startEditing() {
     setPreNotes(workout?.user_pre_workout_notes ?? '');
@@ -318,7 +323,7 @@ export default function WorkoutDetailScreen() {
 
   const setsTitle = (
     <Text fontSize={fontSize.xl} fontWeight="700" color={colors.primary} flex={1}>
-      Sets this workout{' '}
+      Sets{' '}
       <Text fontSize={fontSize.sm} fontWeight="400" color={colors.muted}>
         ({viewMode === 'grouped' ? 'grouped' : 'full'})
       </Text>
@@ -340,7 +345,7 @@ export default function WorkoutDetailScreen() {
           )}
         </XStack>
         <Text flex={1} textAlign="center" color={colors.primary} fontSize={fontSize.xl} fontWeight="600">
-          {editing ? 'Edit workout' : 'Workout'}
+          {editing ? 'Edit Session' : 'Past Session'}
         </Text>
         <XStack minWidth={80} justifyContent="flex-end">
           {editing ? (

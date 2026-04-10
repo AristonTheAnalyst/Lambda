@@ -20,7 +20,7 @@ This file is read at the start of every conversation. It documents the current s
 | Database | Supabase (PostgreSQL with RLS) + expo-sqlite (local-first cache) |
 | State | React Context API; **Zustand** + **TanStack React Query** used only for sync status + cache invalidation (see `lib/sync/useSyncEngine.ts`, root `QueryClientProvider`) |
 | Validation | Zod v4 |
-| Icons | @expo/vector-icons (FontAwesome) |
+| Icons | @expo/vector-icons (Ionicons for bottom tab bar; FontAwesome loaded via expo-font) |
 | Fonts | SpaceMono (loaded via expo-font) |
 | Storage | expo-secure-store (native), AsyncStorage (fallback) |
 | Build/Deploy | EAS Build + EAS Update |
@@ -36,6 +36,10 @@ lambda/                        ← main app code lives here
 │   ├── (auth)/                ← login.tsx, signup.tsx
 │   ├── (onboarding)/          ← index.tsx (profile setup)
 │   └── (tabs)/                ← main app tabs + sub-routes
+│       ├── index.tsx          ← redirects to `/three` (Session)
+│       ├── three.tsx          ← live training session (log sets)
+│       ├── five/              ← Statistics (placeholder)
+│       ├── six/               ← Dev tools
 │       ├── two/               ← exercise config sub-routes
 │       └── four/              ← training logs sub-routes
 ├── components/                ← reusable UI components
@@ -57,18 +61,22 @@ lambda/                        ← main app code lives here
 /(auth)/login                  → email/password + social login
 /(auth)/signup                 → registration
 /(onboarding)/                 → first-time profile setup (name, DOB, gender, height)
-/(tabs)/                       → main app
-  index                        → Tab 1: User Profile
-  /two                         → Tab 2: Exercise Configuration hub (2 entries: Library + User Guide)
+/(tabs)/                       → main app (bottom tab bar)
+  index                        → redirects to /three
+  /one                         → Profile
+  /two                         → Exercise Configuration hub (Library + User Guide)
   /two/library                 → Combined Exercises & Variations CRUD + variation assignment
-  /three                       → Tab 3: Workout Log (log sets live)
-  /four                        → Tab 4: Training Logs — list of past workout cards
-  /four/[id]                   → Full workout detail (read-only view + edit/delete sets)
+  /three                       → Training Session — live session (start/end, log sets)
+  /four                        → Training Logs — list of past session cards
+  /four/[id]                   → Past session detail — view/edit sets, notes (“Past Session” / “Edit Session”)
+  /five                        → Statistics (placeholder)
+  /six                         → Dev
+  /ui-kit                      → UI Kit (dev)
 ```
 
-The tab bar is hidden (`tabBarStyle: { display: 'none' }`). Navigation uses a custom hamburger drawer instead.
+**Bottom tab bar:** Implemented as the `Tabs` **`tabBar`** in [`app/(tabs)/_layout.tsx`](lambda/app/(tabs)/_layout.tsx) (not a sibling `router.navigate` strip). Items use React Navigation **`navigation.navigate(tabName)`** so each tab keeps its **nested stack** when switching away and back. **Logs:** if you are already on the Logs tab and drilled into `/four/[id]`, tapping **Logs** again navigates to the nested **`index`** (training list). Do not switch tabs via `router.navigate('/four')` from custom UI — that can collapse the stack to the list URL.
 
-**Sub-screen headers:** Drill-down screens inside Stack navigators (`/two/*`, `/four/[id]`) use a manual header layout (safe area inset + `GlassButton` back button + centered title) instead of `PageHeader`, since `PageHeader` is designed for top-level tab screens with the hamburger.
+**Sub-screen headers:** Stack drill-downs (`/two/library`, `/two/guide`, `/four/[id]`) use a manual header (safe area + `GlassButton` back + centered title) instead of `PageHeader`. Tab root screens use `PageHeader` with optional `left` / `right` slots only (no drawer).
 
 ### Auth Flow
 
@@ -86,7 +94,7 @@ Session storage: SecureStore on native (chunked at 1900 bytes), AsyncStorage in 
 - **AuthContext** (`lib/AuthContext.tsx`) — session, user profile, sign in/out methods. Hook: `useAuthContext()`
 - **ExerciseDataContext** (`lib/ExerciseDataContext.tsx`) — reads from SQLite instantly on mount; background-seeds from Supabase on first install. Builds `exerciseDetailMap` (exercise ID → assigned variations). Hook: `useExerciseData()`
 - **SyncContext** (`lib/sync/syncContext.tsx`) — processes sync queue on reconnect, app foreground, and mount. Hook: `useSyncContext()` → `{ isSyncing, pendingCount, lastSyncAt, triggerSync }`
-- **DrawerContext** (`lib/DrawerContext.tsx`) — single `openDrawer()` function for the hamburger button. Hook: `useDrawer()`
+- **DrawerContext** (`lib/DrawerContext.tsx`) — exists for `HamburgerButton`, but **no drawer is mounted** in the current tab layout; primary navigation is the bottom bar.
 - Local screen state for all form fields (no global form state)
 - Active workout tracked via `is_active = 1` in SQLite `fact_user_workout` (replaces AsyncStorage)
 
@@ -144,7 +152,7 @@ const Theme = {
 }
 ```
 
-The app is **dark-only**. `Colors.ts` maps light and dark identically to this palette.
+**Default** look matches the table above. **Selectable themes** (dark, light, mono variants) live in [`constants/themes.ts`](lambda/constants/themes.ts); switching is available in the **UI Kit** dev screen and persists as `lambda_theme` in AsyncStorage. Most screens read **`useAppTheme()`** from `lib/ThemeContext.tsx` (`colors` from presets, `fontSize` / `space` / `radius` from `themeLayout` in [`constants/Theme.ts`](lambda/constants/Theme.ts)). Older examples that import `T` / `Theme` from `@/constants/Theme` remain valid for layout tokens.
 
 ### Tamagui Usage Pattern
 
@@ -254,18 +262,18 @@ Variants: `default`, `glass` (iOS 26+ only). Automatically pressable when `onPre
 ### `PageHeader` — `components/PageHeader.tsx`
 
 ```typescript
-// Use on every main tab screen
+// Use on main tab root screens
 <PageHeader title="Exercise Configuration" />
-<PageHeader title="Profile" right={<Text onPress={startEditing} color={T.accent}>Edit</Text>} />
+<PageHeader title="Training Session" left={...} right={...} />
 ```
 
-Includes hamburger (left), title (center), optional right slot. Handles safe area top inset automatically. All tab screens should use this.
+Title (center), optional **`left`** and **`right`** slots (e.g. cancel / end session pills on `/three`). Handles safe area top inset automatically.
 
 ---
 
 ### `HamburgerButton` — `components/HamburgerButton.tsx`
 
-Already included inside `PageHeader`. Only use standalone if needed. Calls `useDrawer().openDrawer()` — requires `DrawerContext` in tree.
+Calls `useDrawer().openDrawer()`. **Not wired** in the current `(tabs)` layout; kept for potential reuse.
 
 ---
 
@@ -351,7 +359,7 @@ Animated overlay + bottom sheet slide-up (Tamagui `Sheet`). Overlay tap closes i
 - Default export only (no named component exports from component files)
 - Props interface defined at the top of the file
 - No `StyleSheet.create()` — use Tamagui props and `T.*` values
-- Contexts consumed via their own hooks (`useAuthContext()`, `useDrawer()`, `useExerciseData()`)
+- Contexts consumed via their own hooks (`useAuthContext()`, `useExerciseData()`, etc.)
 
 ---
 
@@ -427,15 +435,11 @@ export default function MyScreen() {
 
 ---
 
-## Hamburger Drawer
+## Bottom tab navigation
 
-The drawer lives in `app/(tabs)/_layout.tsx`. It uses Reanimated 4 for animation:
-- Panel slides in from the left (`translateX`)
-- Overlay fades in/out independently
-- Open: 280ms `Easing.out(Easing.cubic)`
-- Close: 220ms `Easing.in(Easing.cubic)`, implemented as a `Modal` with `animationType="none"`
-
-Navigation fires simultaneously with the close animation start — the drawer slides out over the incoming screen transition. Active route items close the drawer without navigating. No `withGuard` on navigation — it should always be instant.
+- **Implementation:** [`app/(tabs)/_layout.tsx`](lambda/app/(tabs)/_layout.tsx) — `<Tabs tabBar={(props) => <BottomNav {...props} />} />` so `BottomNav` receives [`BottomTabBarProps`](https://reactnavigation.org/docs/bottom-tab-navigator/#tabbar) (`navigation`, `state`).
+- **Switch tab:** `navigation.navigate('four' | 'three' | …)` — preserves each tab’s nested navigator state (e.g. stay on `/four/[id]` after visiting Session).
+- **Logs shortcut:** From another tab, **Logs** only focuses the `four` tab. On Logs with a detail screen open, tapping **Logs** again runs `navigation.navigate('four', { screen: 'index' })` to return to the training list.
 
 ---
 
@@ -511,7 +515,7 @@ Exercises and variations use `is_active = false` for deletion — **never hard d
 - **Volume type:** `reps` or `duration` per exercise (set at exercise definition)
 - **Intensity type:** `weight` or `distance` per exercise (set at exercise definition)
 - **Variations:** multiple variations can be assigned to one exercise, grouped by variation type. Only one variation per type per set.
-- **Current workout persistence:** in-progress workout ID stored in AsyncStorage — always restore this on app boot
+- **Current workout persistence:** in-progress session tracked in SQLite (`fact_user_workout.is_active`); restored on app boot via `getActiveWorkoutId`
 
 ---
 
@@ -586,11 +590,13 @@ The user also does video/audio production for a YouTube channel. These notes app
 |---|---|
 | Auth (login, signup, Google, Apple) | Done |
 | Onboarding (name, DOB, gender, height) | Done |
-| User Profile (`/index`) | Done — displays and edits `dim_user` profile |
+| Profile hub (`/one`) + User Profile (`/one/profile`) | Done — hub card → full profile; edits `dim_user` |
 | Exercises & Variations (`/two/library`) | Done — combined CRUD screen with segmented control; edit modals include variation/exercise assignment inline |
-| Workout Log (`/three`) | Done — start/end workout, log sets with weight/reps/variation/notes, edit/delete sets, weight persists per exercise |
-| Training Logs (`/four`) | Done — scrollable list of past workout cards with date, notes, unique exercise+variation combos |
-| Workout Detail (`/four/[id]`) | Done — full set list, edit/delete sets, same display as Workout Log |
+| Training Session (`/three`) | Done — PageHeader title “Training Session”; start/end workout, log sets; sets list title **“Sets”** (with grouped/full hint) |
+| Training Logs (`/four`) | Done — scrollable list of past sessions; bottom-tab navigation preserves stack when switching tabs |
+| Past session (`/four/[id]`) | Done — header **“Past Session”** / **“Edit Session”**; full set list + notes; same sets list chrome as live session; redundant SQLite reload guarded when `workoutId` unchanged |
+| Statistics (`/five`) | Placeholder screen |
+| Dev (`/six`) | Dev entry + **UI Kit** (theme preset switcher, component demos) |
 | Local-first / Offline sync | Done — all screens use SQLite; sync queue auto-replays to Supabase on reconnect; OfflineBanner + SyncStatusIcon |
 
 ---

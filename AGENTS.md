@@ -14,6 +14,10 @@ Open [`CLAUDE.md`](./CLAUDE.md).
 
 [`.cursor/rules/lambda.mdc`](./.cursor/rules/lambda.mdc) repeats **short** must-follow constraints so Cursor applies them even when workspace rule wiring changes. It intentionally stays small; details live in `CLAUDE.md`.
 
+## Primary navigation (tabs)
+
+Main app uses a **bottom tab bar** (`Tabs` `tabBar` in [`lambda/app/(tabs)/_layout.tsx`](lambda/app/(tabs)/_layout.tsx)). Tab switches use React Navigation **`navigate(tabName)`** so nested routes stay put (e.g. open a **Past session** under Logs, switch to Session, tap **Logs** again → same detail). Tapping **Logs** while already on Logs **and** on a detail screen returns to the training list. See **Bottom tab navigation** in `CLAUDE.md`.
+
 ## Offline QA checklist (preview / device)
 
 Use **airplane mode** or disable **both** Wi‑Fi and cellular so `NetInfo` reports disconnected.
@@ -22,6 +26,7 @@ Use **airplane mode** or disable **both** Wi‑Fi and cellular so `NetInfo` repo
 2. **Start workout, add sets, end or cancel** offline → data visible in UI; go online → `SyncStatusIcon` clears pending / sync runs.
 3. **Cancel in-progress workout that already synced** offline → after reconnect, server workout should reflect `is_active: false` (queued mutation path).
 4. **Fresh install, offline**: expect login to fail until network; first-time onboarding still needs server.
+5. **Logs stack preservation (online):** open a past session (`/four/[id]`), switch to another tab, return via **Logs** → same screen without losing in-screen state; from detail, tap **Logs** again → training list.
 
 ## When things are “ready to test”
 

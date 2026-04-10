@@ -450,7 +450,7 @@ export default function WorkoutLogScreen() {
               interactive
               title={(
                 <Text fontSize={fontSize.xl} fontWeight="700" color={colors.primary} flex={1}>
-                  Sets this workout{' '}
+                  Sets{' '}
                   <Text fontSize={fontSize.sm} fontWeight="400" color={colors.muted}>
                     ({viewMode === 'grouped' ? 'grouped' : 'full'})
                   </Text>
