@@ -1,6 +1,7 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { ThemeProvider as AppThemeProvider, useAppTheme } from '@/lib/ThemeContext';
+import { isDarkAppearance } from '@/constants/themes';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -51,7 +52,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 // Root background + Tamagui theme + status bar (see useStatusBarForAppTheme).
 function ThemedRoot({ children }: { children: React.ReactNode }) {
   const { themeName, colors } = useAppTheme();
-  const isDark = themeName === 'dark';
+  const isDark = isDarkAppearance(themeName);
   const insets = useSafeAreaInsets();
   useStatusBarForAppTheme(themeName, colors.bg);
 
@@ -165,7 +166,7 @@ function RootLayoutNav() {
   }, [session, loading, onboarded, isPasswordRecovery, initialUrlChecked]);
 
   const navigationTheme = useMemo(() => {
-    const isDark = themeName === 'dark';
+    const isDark = isDarkAppearance(themeName);
     const base = isDark ? DarkTheme : DefaultTheme;
     return {
       ...base,

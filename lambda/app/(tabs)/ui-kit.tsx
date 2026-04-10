@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { ScrollView, useWindowDimensions } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Text, XStack, YStack } from 'tamagui';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PageHeader from '@/components/PageHeader';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
@@ -10,11 +9,12 @@ import Input from '@/components/Input';
 import NotesField from '@/components/NotesField';
 import { SegmentedControl, DropdownSelect, SlideUpModal } from '@/components/FormControls';
 import GlassButton from '@/components/GlassButton';
-import { useAppTheme } from '@/lib/ThemeContext';
+import { useAppTheme, THEME_PRESETS, THEME_ORDER } from '@/lib/ThemeContext';
 
 // ─── Section header ───────────────────────────────────────────────────────────
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const { colors, space, fontSize } = useAppTheme();
   return (
     <YStack gap={space.sm}>
       <Text color={colors.muted} fontSize={fontSize.xs} fontWeight="700" letterSpacing={1}>
@@ -28,6 +28,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 // ─── Color swatch ─────────────────────────────────────────────────────────────
 
 function Swatch({ name, color, textColor }: { name: string; color: string; textColor?: string }) {
+  const { colors, space, radius, fontSize } = useAppTheme();
   return (
     <YStack
       backgroundColor={color}
@@ -50,8 +51,7 @@ function Swatch({ name, color, textColor }: { name: string; color: string; textC
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function UIKitScreen() {
-  const { colors, space, radius, fontSize } = useAppTheme();
-  const insets = useSafeAreaInsets();
+  const { themeName, setTheme, colors, space, radius, fontSize } = useAppTheme();
   const { height: windowHeight } = useWindowDimensions();
   const modalBottomSpacer = windowHeight * 0.15;
 
@@ -83,6 +83,51 @@ export default function UIKitScreen() {
 
       <ScrollView contentContainerStyle={{ padding: space.lg, gap: space.xl }} showsVerticalScrollIndicator={false}>
         <YStack gap={space.xl}>
+
+          {/* ── Theme (app appearance) ── */}
+          <Section title="Theme">
+            <Text color={colors.muted} fontSize={fontSize.xs}>
+              In-app palette (not system light/dark). Persists across launches.
+            </Text>
+            <YStack gap={space.sm}>
+              {THEME_ORDER.map((name) => {
+                const preset = THEME_PRESETS[name];
+                const isActive = themeName === name;
+                return (
+                  <XStack
+                    key={name}
+                    backgroundColor={isActive ? colors.accentBg : colors.surface}
+                    borderWidth={1}
+                    borderColor={isActive ? colors.accent : colors.border}
+                    borderRadius={radius.md}
+                    padding={space.md}
+                    alignItems="center"
+                    pressStyle={{ opacity: 0.7 }}
+                    onPress={() => setTheme(name)}
+                    cursor="pointer"
+                  >
+                    <XStack gap={space.xs} marginRight={space.md}>
+                      {(['bg', 'surface', 'accent', 'primary'] as const).map((key) => (
+                        <YStack
+                          key={key}
+                          width={16}
+                          height={16}
+                          borderRadius={radius.sm}
+                          backgroundColor={preset.colors[key]}
+                          borderWidth={0.5}
+                          borderColor={colors.border}
+                        />
+                      ))}
+                    </XStack>
+                    <Text flex={1} fontSize={fontSize.md} fontWeight="600" color={isActive ? colors.accent : colors.primary}>
+                      {preset.label}
+                    </Text>
+                    {isActive && <FontAwesome name="check" size={14} color={colors.accent} />}
+                  </XStack>
+                );
+              })}
+            </YStack>
+          </Section>
 
           {/* ── GlassButton ── */}
           <Section title="GlassButton">
@@ -398,13 +443,13 @@ export default function UIKitScreen() {
                   ['md — 8', radius.md],
                   ['lg — 12', radius.lg],
                 ] as [string, number][]
-              ).map(([label, radius]) => (
+              ).map(([label, r]) => (
                 <YStack key={label} flex={1} alignItems="center" gap={space.xs}>
                   <YStack
                     width={56}
                     height={56}
                     backgroundColor={colors.surface}
-                    borderRadius={radius}
+                    borderRadius={r}
                     borderWidth={1}
                     borderColor={colors.accent}
                   />

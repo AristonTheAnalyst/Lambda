@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Platform, StatusBar as RNStatusBar } from 'react-native';
 import { setStatusBarStyle } from 'expo-status-bar';
 import { setBackgroundColorAsync } from 'expo-system-ui';
-import type { ThemeName } from '@/constants/themes';
+import { isDarkAppearance, type ThemeName } from '@/constants/themes';
 
 /**
  * Syncs system status bar with Lambda’s in-app theme (not device useColorScheme).
@@ -14,7 +14,7 @@ import type { ThemeName } from '@/constants/themes';
  * - **RN `setBarStyle`:** extra nudge so RCT updates icon contrast under expo-router / dev client.
  */
 export function useStatusBarForAppTheme(themeName: ThemeName, backgroundColor: string) {
-  const isDark = themeName === 'dark';
+  const isDark = isDarkAppearance(themeName);
 
   useEffect(() => {
     const expoStyle = isDark ? 'light' : 'dark';

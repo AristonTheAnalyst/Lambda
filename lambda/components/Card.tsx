@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { YStack } from 'tamagui';
+import { isDarkAppearance } from '@/constants/themes';
 import { useAppTheme } from '@/lib/ThemeContext';
 
 const isGlassSupported = Platform.OS === 'ios' && Number(Platform.Version) >= 26;
@@ -22,8 +23,9 @@ interface CardProps {
 }
 
 export default function Card({ children, onPress, onPressIn, flex, variant = 'default' }: CardProps) {
-  const { colors, space, radius } = useAppTheme();
+  const { colors, space, radius, themeName } = useAppTheme();
   const pressable = !!(onPress || onPressIn);
+  const lightLift = !isDarkAppearance(themeName);
 
   if (variant === 'glass' && isGlassSupported && GlassView) {
     return (
@@ -54,6 +56,15 @@ export default function Card({ children, onPress, onPressIn, flex, variant = 'de
       onPress={onPress}
       onPressIn={onPressIn}
       cursor={pressable ? 'pointer' : undefined}
+      {...(lightLift
+        ? {
+            shadowColor: '#000000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.06,
+            shadowRadius: 4,
+            elevation: 2,
+          }
+        : {})}
     >
       {children}
     </YStack>

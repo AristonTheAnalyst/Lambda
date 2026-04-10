@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Alert, ScrollView, useWindowDimensions } from 'react-native';
+import { Alert, Keyboard, ScrollView, useWindowDimensions } from 'react-native';
 import { Spinner, Text, XStack, YStack } from 'tamagui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,30 +9,21 @@ import { SlideUpModal, DropdownSelect } from '@/components/FormControls';
 import Input from '@/components/Input';
 import Button from '@/components/Button';
 import GlassButton from '@/components/GlassButton';
+import WorkoutLogStickyFooter from '@/components/workout/WorkoutLogStickyFooter';
+import WorkoutSetsList from '@/components/workout/WorkoutSetsList';
+import { SessionAccentPill, SessionCancelPill } from '@/components/workout/WorkoutSessionHeaderPills';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
 import { useAsyncGuard } from '@/lib/asyncGuard';
+import { getExerciseDefault, saveExerciseDefault } from '@/lib/offline/exerciseDefaultsStore';
 import { loadWorkout, updateWorkoutNotes, WorkoutRow } from '@/lib/offline/workoutStore';
 import { loadSetsForWorkout, insertSet, updateSet, deleteSet, WorkoutSet } from '@/lib/offline/setStore';
-import NotesField from '@/components/NotesField';
+import { parseValues } from '@/lib/workoutSetFormat';
 import { useAppTheme } from '@/lib/ThemeContext';
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatValues(arr: number[] | null): string {
-  if (!arr || arr.length === 0) return '—';
-  return arr.join(', ');
-}
-
-function parseValues(str: string): number[] {
-  return str.split(',').map((v) => parseInt(v.trim(), 10)).filter((n) => !isNaN(n));
-}
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
-
-// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function WorkoutDetailScreen() {
   const { colors, space, radius, fontSize } = useAppTheme();
@@ -49,13 +40,15 @@ export default function WorkoutDetailScreen() {
   const [sets, setSets] = useState<WorkoutSet[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ── Edit mode ──────────────────────────────────────────────────────────────
   const [editing, setEditing] = useState(false);
+  const [viewMode, setViewMode] = useState<'grouped' | 'chrono'>('grouped');
   const [preNotes, setPreNotes] = useState('');
   const [postNotes, setPostNotes] = useState('');
   const [notesLoading, setNotesLoading] = useState(false);
+  const [workoutNotesModalVisible, setWorkoutNotesModalVisible] = useState(false);
+  const [draftPre, setDraftPre] = useState('');
+  const [draftPost, setDraftPost] = useState('');
 
-  // ── Log Set modal ──────────────────────────────────────────────────────────
   const [logSetModalVisible, setLogSetModalVisible] = useState(false);
   const [selectedExId, setSelectedExId] = useState<string | null>(null);
   const selectedEx = selectedExId ? (exerciseDetailMap[selectedExId] ?? null) : null;
@@ -65,7 +58,6 @@ export default function WorkoutDetailScreen() {
   const [selectedVarId, setSelectedVarId] = useState<string | null>(null);
   const [logLoading, setLogLoading] = useState(false);
 
-  // ── Edit Set modal ─────────────────────────────────────────────────────────
   const [editingSet, setEditingSet] = useState<WorkoutSet | null>(null);
   const [editExId, setEditExId] = useState<string | null>(null);
   const editEx = editExId ? (exerciseDetailMap[editExId] ?? null) : null;
@@ -94,57 +86,84 @@ export default function WorkoutDetailScreen() {
     setEditing(true);
   }
 
+  function openWorkoutNotesModal() {
+    setDraftPre(preNotes);
+    setDraftPost(postNotes);
+    setWorkoutNotesModalVisible(true);
+  }
+
+  function applyWorkoutNotesFromModal() {
+    setPreNotes(draftPre);
+    setPostNotes(draftPost);
+    setWorkoutNotesModalVisible(false);
+  }
+
   function cancelEditing() {
+    setPreNotes(workout?.user_pre_workout_notes ?? '');
+    setPostNotes(workout?.user_post_workout_notes ?? '');
     setEditing(false);
   }
 
-  function saveNotes() { return guard(async () => {
-    setNotesLoading(true);
-    await updateWorkoutNotes(db, workoutId, preNotes, postNotes);
-    setNotesLoading(false);
-    await loadData();
-    setEditing(false);
-  }); }
+  function saveNotes() {
+    return guard(async () => {
+      setNotesLoading(true);
+      await updateWorkoutNotes(db, workoutId, preNotes, postNotes);
+      setNotesLoading(false);
+      await loadData();
+      setEditing(false);
+    });
+  }
 
-  // ── Log Set ────────────────────────────────────────────────────────────────
-
-  function onSelectExercise(exId: string | null) {
+  const onSelectExercise = useCallback(async (exId: string | null) => {
     setSelectedExId(exId);
     setSelectedVarId(null);
-  }
-
-  function logSet() { return guard(async () => {
-    if (!selectedExId || !selectedEx) return Alert.alert('Select an exercise first');
-    const hint = selectedEx.exercise_volume_type === 'reps' ? 'Enter reps (e.g. 10,8,6)' : 'Enter duration in seconds (e.g. 60,45)';
-    if (!repsOrDuration.trim()) return Alert.alert(hint);
-    const values = parseValues(repsOrDuration);
-    if (values.length === 0) return Alert.alert(hint);
-    const isReps = selectedEx.exercise_volume_type === 'reps';
-    const nextSetNum = sets.length > 0 ? Math.max(...sets.map((s) => s.workout_set_number)) + 1 : 1;
-    setLogLoading(true);
-    await insertSet(db, {
-      user_workout_id: workoutId,
-      custom_exercise_id: selectedExId,
-      custom_variation_id: selectedVarId,
-      workout_set_number: nextSetNum,
-      workout_set_weight: weight ? parseFloat(weight) : null,
-      workout_set_reps: isReps ? values : [],
-      workout_set_duration_seconds: !isReps ? values : [],
-      workout_set_notes: setNotes.trim() || null,
-    });
-    setLogLoading(false);
-    setLogSetModalVisible(false);
-    setSelectedExId(null);
-    setWeight('');
     setRepsOrDuration('');
     setSetNotes('');
-    setSelectedVarId(null);
-    loadData();
-  }); }
+    if (exId !== null) {
+      const defaults = await getExerciseDefault(db, exId);
+      if (defaults) {
+        setWeight(defaults.last_weight_kg != null ? String(defaults.last_weight_kg) : '');
+        setSelectedVarId(defaults.last_variation_id);
+      } else {
+        setWeight('');
+      }
+    }
+  }, [db]);
 
-  // ── Edit Set ───────────────────────────────────────────────────────────────
+  function logSet() {
+    return guard(async () => {
+      if (!selectedExId || !selectedEx) return Alert.alert('Select an exercise first');
+      const hint = selectedEx.exercise_volume_type === 'reps' ? 'Enter reps (e.g. 10,8,6)' : 'Enter duration in seconds (e.g. 60,45)';
+      if (!repsOrDuration.trim()) return Alert.alert(hint);
+      const values = parseValues(repsOrDuration);
+      if (values.length === 0) return Alert.alert(hint);
+      const isReps = selectedEx.exercise_volume_type === 'reps';
+      const nextSetNum = sets.length > 0 ? Math.max(...sets.map((s) => s.workout_set_number)) + 1 : 1;
+      setLogLoading(true);
+      await insertSet(db, {
+        user_workout_id: workoutId,
+        custom_exercise_id: selectedExId,
+        custom_variation_id: selectedVarId,
+        workout_set_number: nextSetNum,
+        workout_set_weight: weight ? parseFloat(weight) : null,
+        workout_set_reps: isReps ? values : [],
+        workout_set_duration_seconds: !isReps ? values : [],
+        workout_set_notes: setNotes.trim() || null,
+      });
+      await saveExerciseDefault(db, selectedExId, weight ? parseFloat(weight) : null, selectedVarId);
+      setLogLoading(false);
+      setLogSetModalVisible(false);
+      setSelectedExId(null);
+      setWeight('');
+      setRepsOrDuration('');
+      setSetNotes('');
+      setSelectedVarId(null);
+      loadData();
+    });
+  }
 
   function openEditSet(s: WorkoutSet) {
+    Keyboard.dismiss();
     setEditingSet(s);
     setEditExId(s.custom_exercise_id);
     setEditWeight(s.workout_set_weight != null ? String(s.workout_set_weight) : '');
@@ -154,56 +173,60 @@ export default function WorkoutDetailScreen() {
     setEditVarId(s.custom_variation_id);
   }
 
-  function saveEditSet() { return guard(async () => {
-    if (!editingSet || !editEx || !editExId) return;
-    const values = parseValues(editRepsOrDuration);
-    if (values.length === 0) return Alert.alert(editEx.exercise_volume_type === 'reps' ? 'Enter reps (e.g. 10,8,6)' : 'Enter duration in seconds (e.g. 60,45)');
-    const isReps = editEx.exercise_volume_type === 'reps';
-    setEditLoading(true);
-    await updateSet(db, editingSet.workout_set_id, {
-      custom_exercise_id: editExId,
-      workout_set_weight: editWeight ? parseFloat(editWeight) : null,
-      workout_set_reps: isReps ? values : [],
-      workout_set_duration_seconds: !isReps ? values : [],
-      workout_set_notes: editNotes.trim() || null,
-      custom_variation_id: editVarId,
+  function saveEditSet() {
+    return guard(async () => {
+      if (!editingSet || !editEx || !editExId) return;
+      const values = parseValues(editRepsOrDuration);
+      if (values.length === 0) return Alert.alert(editEx.exercise_volume_type === 'reps' ? 'Enter reps (e.g. 10,8,6)' : 'Enter duration in seconds (e.g. 60,45)');
+      const isReps = editEx.exercise_volume_type === 'reps';
+      setEditLoading(true);
+      await updateSet(db, editingSet.workout_set_id, {
+        custom_exercise_id: editExId,
+        workout_set_weight: editWeight ? parseFloat(editWeight) : null,
+        workout_set_reps: isReps ? values : [],
+        workout_set_duration_seconds: !isReps ? values : [],
+        workout_set_notes: editNotes.trim() || null,
+        custom_variation_id: editVarId,
+      });
+      setEditLoading(false);
+      setEditingSet(null);
+      loadData();
     });
-    setEditLoading(false);
-    setEditingSet(null);
-    loadData();
-  }); }
-
-  function handleDeleteSet(setId: string) {
-    Alert.alert('Delete Set', 'Remove this set?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
-        await deleteSet(db, setId);
-        loadData();
-      })},
-    ]);
   }
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
+  const setsTitle = (
+    <Text fontSize={fontSize.xl} fontWeight="700" color={colors.primary} flex={1}>
+      Sets this workout{' '}
+      <Text fontSize={fontSize.sm} fontWeight="400" color={colors.muted}>
+        ({viewMode === 'grouped' ? 'grouped' : 'full'})
+      </Text>
+    </Text>
+  );
 
   return (
     <YStack flex={1} backgroundColor={colors.bg}>
-      {/* Header */}
       <XStack
         style={{ height: insets.top + 52, paddingTop: insets.top }}
         paddingHorizontal={space.md}
         alignItems="center"
       >
-        <XStack minWidth={80}>
-          <GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} />
+        <XStack minWidth={80} justifyContent="flex-start">
+          {editing ? (
+            <SessionCancelPill onPress={cancelEditing} />
+          ) : (
+            <GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} />
+          )}
         </XStack>
         <Text flex={1} textAlign="center" color={colors.primary} fontSize={fontSize.xl} fontWeight="600">
-          Workout
+          {editing ? 'Edit workout' : 'Workout'}
         </Text>
-        <XStack width={80} justifyContent="flex-end">
+        <XStack minWidth={80} justifyContent="flex-end">
           {editing ? (
-            <GlassButton icon="check" label="Save" onPress={saveNotes} />
+            <SessionAccentPill label="Save" onPress={() => saveNotes()} loading={notesLoading} disabled={notesLoading} />
           ) : (
-            <Text color={colors.accent} fontSize={fontSize.md} fontWeight="600" onPress={startEditing} cursor="pointer">Edit</Text>
+            <Text color={colors.accent} fontSize={fontSize.md} fontWeight="600" onPress={startEditing} cursor="pointer">
+              Edit
+            </Text>
           )}
         </XStack>
       </XStack>
@@ -213,6 +236,39 @@ export default function WorkoutDetailScreen() {
         <YStack flex={1} alignItems="center" justifyContent="center">
           <Spinner size="large" color={colors.accent} />
         </YStack>
+      ) : editing ? (
+        <YStack flex={1}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: space.lg, paddingBottom: space.md }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets={true}
+          >
+            {workout && (
+              <XStack alignItems="center" marginBottom={space.sm} gap={space.sm}>
+                <Text flex={1} fontSize={fontSize.sm} fontWeight="700" color={colors.muted}>
+                  {formatDate(workout.user_workout_created_date)}
+                </Text>
+                <GlassButton icon="pencil" label="Notes" onPress={openWorkoutNotesModal} />
+              </XStack>
+            )}
+            <WorkoutSetsList
+              sets={sets}
+              exerciseDetailMap={exerciseDetailMap}
+              setsLoading={false}
+              viewMode={viewMode}
+              onToggleViewMode={() => setViewMode((v) => (v === 'grouped' ? 'chrono' : 'grouped'))}
+              onEditSet={openEditSet}
+              allowViewModeToggle
+              interactive
+              emptyHint="Log your first set below."
+              title={setsTitle}
+            />
+          </ScrollView>
+
+          <WorkoutLogStickyFooter onLogSet={() => setLogSetModalVisible(true)} />
+        </YStack>
       ) : (
         <ScrollView
           style={{ flex: 1 }}
@@ -221,123 +277,80 @@ export default function WorkoutDetailScreen() {
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets={true}
         >
-          {/* Date */}
           {workout && (
-            <Text fontSize={fontSize.sm} fontWeight="700" color={colors.accent} marginBottom={space.sm}>
+            <Text fontSize={fontSize.sm} fontWeight="700" color={colors.muted} marginBottom={space.sm}>
               {formatDate(workout.user_workout_created_date)}
             </Text>
           )}
 
-          {/* Pre-workout notes */}
-          {editing ? (
-            <NotesField
-              label="Pre-workout notes (optional)"
-              value={preNotes}
-              onChange={setPreNotes}
-            />
-          ) : (
-            <YStack marginBottom={space.md}>
-              <Text fontSize={fontSize.xs} color={colors.muted} marginBottom={space.xs}>Pre-workout notes</Text>
-              {workout?.user_pre_workout_notes ? (
-                <Text fontSize={fontSize.sm} color={colors.primary} fontStyle="italic">"{workout.user_pre_workout_notes}"</Text>
-              ) : (
-                <Text fontSize={fontSize.sm} color={colors.muted}>None</Text>
-              )}
-            </YStack>
-          )}
-
-          {/* Sets header */}
-          <XStack alignItems="center" marginBottom={space.sm} marginTop={space.sm}>
-            <Text fontSize={fontSize.xl} fontWeight="700" color={colors.primary} flex={1}>
-              {editing ? 'Sets this workout' : 'Sets'}
-            </Text>
-            {editing && (
-              <GlassButton icon="plus" label="Log Set" onPress={() => setLogSetModalVisible(true)} />
-            )}
-          </XStack>
-
-          {sets.length === 0 ? (
-            <Text color={colors.muted}>No sets recorded.</Text>
-          ) : (
-            sets.map((s) => {
-              const exName = exerciseDetailMap[s.custom_exercise_id]?.exercise_name ?? `Exercise ${s.custom_exercise_id}`;
-              const varName = s.custom_variation_id
-                ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations.find(
-                    (v) => v.custom_variation_id === s.custom_variation_id
-                  )?.variation_name
-                : null;
-              const repsStr = s.workout_set_reps?.length
-                ? `${formatValues(s.workout_set_reps)} reps`
-                : s.workout_set_duration_seconds?.length
-                ? `${formatValues(s.workout_set_duration_seconds)}s`
-                : '—';
-              return (
-                <XStack
-                  key={s.workout_set_id}
-                  borderBottomWidth={0.5}
-                  borderBottomColor={colors.border}
-                  paddingVertical={space.sm}
-                  alignItems="center"
-                  gap={space.sm}
-                >
-                  <Text fontWeight="700" fontSize={15} color={colors.accent}>#{s.workout_set_number}</Text>
-                  <YStack flex={1}>
-                    <XStack alignItems="flex-end" gap={space.sm}>
-                      <Text fontSize={15} fontWeight="500" color={colors.primary}>{exName}</Text>
-                      {varName && <Text fontSize={fontSize.sm} color={colors.muted}>{varName}</Text>}
-                    </XStack>
-                    <Text fontSize={fontSize.xs} marginTop={space.xs} color={colors.muted}>
-                      {s.workout_set_weight != null ? `${s.workout_set_weight}kg · ` : ''}{repsStr}
-                      {s.workout_set_notes ? (
-                        <Text fontSize={fontSize.xs} color={colors.muted} fontStyle="italic">
-                          {` · "${s.workout_set_notes}"`}
-                        </Text>
-                      ) : ''}
-                    </Text>
-                  </YStack>
-                  {editing && (
-                    <XStack gap={space.sm}>
-                      <GlassButton icon="pencil" iconSize={14} onPress={() => openEditSet(s)} />
-                      <GlassButton icon="trash" iconSize={14} color={colors.danger} onPress={() => handleDeleteSet(s.workout_set_id)} />
-                    </XStack>
-                  )}
-                </XStack>
-              );
-            })
-          )}
-
-          {/* Post-workout notes */}
-          <YStack marginTop={space.xl} gap={space.md}>
-            {editing ? (
-              <>
-                <NotesField
-                  label="Post-workout notes (optional)"
-                  value={postNotes}
-                  onChange={setPostNotes}
-                />
-                <XStack justifyContent="center">
-                  <XStack gap={space.sm}>
-                    <Button label="Cancel" onPress={cancelEditing} variant="danger-ghost" disabled={notesLoading} />
-                    <Button label="Save" onPress={saveNotes} loading={notesLoading} disabled={notesLoading} />
-                  </XStack>
-                </XStack>
-              </>
+          <YStack marginBottom={space.md}>
+            <Text fontSize={fontSize.xs} color={colors.muted} marginBottom={space.xs}>Pre-workout notes</Text>
+            {workout?.user_pre_workout_notes ? (
+              <Text fontSize={fontSize.sm} color={colors.primary} fontStyle="italic">"{workout.user_pre_workout_notes}"</Text>
             ) : (
-              <YStack>
-                <Text fontSize={fontSize.xs} color={colors.muted} marginBottom={space.xs}>Post-workout notes</Text>
-                {workout?.user_post_workout_notes ? (
-                  <Text fontSize={fontSize.sm} color={colors.primary} fontStyle="italic">"{workout.user_post_workout_notes}"</Text>
-                ) : (
-                  <Text fontSize={fontSize.sm} color={colors.muted}>None</Text>
-                )}
-              </YStack>
+              <Text fontSize={fontSize.sm} color={colors.muted}>No pre-workout notes</Text>
+            )}
+          </YStack>
+
+          <Separator borderColor={colors.border} marginBottom={space.sm} />
+
+          <WorkoutSetsList
+            sets={sets}
+            exerciseDetailMap={exerciseDetailMap}
+            setsLoading={false}
+            viewMode={viewMode}
+            onToggleViewMode={() => setViewMode((v) => (v === 'grouped' ? 'chrono' : 'grouped'))}
+            onEditSet={openEditSet}
+            allowViewModeToggle
+            interactive={false}
+            emptyHint="No sets recorded."
+            title={setsTitle}
+          />
+
+          <Separator borderColor={colors.border} marginTop={space.sm} />
+
+          <YStack marginTop={space.lg}>
+            <Text fontSize={fontSize.xs} color={colors.muted} marginBottom={space.xs}>Post-workout notes</Text>
+            {workout?.user_post_workout_notes ? (
+              <Text fontSize={fontSize.sm} color={colors.primary} fontStyle="italic">"{workout.user_post_workout_notes}"</Text>
+            ) : (
+              <Text fontSize={fontSize.sm} color={colors.muted}>No post-workout notes</Text>
             )}
           </YStack>
         </ScrollView>
       )}
 
-      {/* ── Log Set Modal ── */}
-      <SlideUpModal visible={logSetModalVisible} onClose={() => setLogSetModalVisible(false)} fitContent>
+      <SlideUpModal
+        visible={workoutNotesModalVisible}
+        onClose={() => setWorkoutNotesModalVisible(false)}
+        fitContent
+        keyboardAware
+      >
+        <YStack padding={space.xl} gap={space.md}>
+          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>Workout notes</Text>
+          <Input
+            label="Pre-workout notes (optional)"
+            value={draftPre}
+            onChangeText={setDraftPre}
+            placeholder="Pre-workout notes…"
+            multiline
+          />
+          <Input
+            label="Post-workout notes (optional)"
+            value={draftPost}
+            onChangeText={setDraftPost}
+            placeholder="Post-workout notes…"
+            multiline
+          />
+          <XStack gap={space.sm} justifyContent="center">
+            <Button label="Cancel" onPress={() => setWorkoutNotesModalVisible(false)} variant="danger-ghost" />
+            <Button label="Save" onPress={applyWorkoutNotesFromModal} />
+          </XStack>
+          <YStack height={windowHeight * 0.12} />
+        </YStack>
+      </SlideUpModal>
+
+      <SlideUpModal visible={logSetModalVisible} onClose={() => setLogSetModalVisible(false)} fitContent keyboardAware>
         <YStack padding={space.xl} gap={space.md}>
           <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>Log Set</Text>
           <XStack gap={space.sm} alignItems="flex-end">
@@ -348,6 +361,7 @@ export default function WorkoutDetailScreen() {
                 value={selectedExId}
                 onChange={onSelectExercise}
                 placeholder="Select exercise…"
+                searchable
               />
             </YStack>
             {selectedEx && (
@@ -401,10 +415,32 @@ export default function WorkoutDetailScreen() {
         </YStack>
       </SlideUpModal>
 
-      {/* ── Edit Set Modal ── */}
-      <SlideUpModal visible={!!editingSet} onClose={() => setEditingSet(null)} fitContent>
+      <SlideUpModal visible={!!editingSet} onClose={() => setEditingSet(null)} fitContent keyboardAware>
         <YStack padding={space.xl} gap={space.md}>
-          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>Edit Set</Text>
+          <XStack alignItems="center">
+            <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary} flex={1}>Edit Set</Text>
+            <GlassButton
+              icon="trash"
+              iconSize={14}
+              color={colors.danger}
+              onPress={() => {
+                if (!editingSet) return;
+                const sid = editingSet.workout_set_id;
+                Alert.alert('Delete Set', 'Remove this set?', [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => guard(async () => {
+                      setEditingSet(null);
+                      await deleteSet(db, sid);
+                      loadData();
+                    }),
+                  },
+                ]);
+              }}
+            />
+          </XStack>
           <XStack gap={space.sm} alignItems="flex-end">
             <YStack flex={3}>
               <Text fontSize={fontSize.sm} fontWeight="500" marginBottom={space.xs} color={colors.primary}>Exercise</Text>
@@ -413,6 +449,7 @@ export default function WorkoutDetailScreen() {
                 value={editExId}
                 onChange={(exId) => { setEditExId(exId); setEditVarId(null); }}
                 placeholder="Select exercise…"
+                searchable
               />
             </YStack>
             {editEx && (

@@ -10,6 +10,17 @@ if (isGlassSupported) {
   try { GlassView = require('expo-glass-effect').GlassView; } catch { GlassView = null; }
 }
 
+/** #RRGGBB or #RGB → rgba(..., alpha) for translucent fills */
+function hexToRgba(hex: string, alpha: number): string {
+  const raw = hex.replace('#', '');
+  const v = raw.length === 3 ? raw.split('').map((c) => c + c).join('') : raw;
+  if (v.length !== 6) return `rgba(128,128,128,${alpha})`;
+  const r = parseInt(v.slice(0, 2), 16);
+  const g = parseInt(v.slice(2, 4), 16);
+  const b = parseInt(v.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 interface GlassButtonProps {
   onPress: () => void;
   icon?: string;
@@ -44,7 +55,11 @@ export default function GlassButton({
   if (isGlassSupported && GlassView) {
     return (
       <XStack borderRadius={999} overflow="hidden" onPress={onPress} cursor="pointer">
-        <GlassView glassEffectStyle="systemThinMaterial" tintColor={color} style={{ borderRadius: 999 }}>
+        <GlassView
+          glassEffectStyle="systemThinMaterial"
+          tintColor={colors.surface}
+          style={{ borderRadius: 999 }}
+        >
           {inner}
         </GlassView>
       </XStack>
@@ -54,9 +69,9 @@ export default function GlassButton({
   return (
     <XStack
       borderRadius={999}
-      backgroundColor="rgba(46,46,46,0.88)"
+      backgroundColor={hexToRgba(colors.surface, 0.92)}
       borderWidth={1}
-      borderColor="rgba(173,144,115,0.18)"
+      borderColor={hexToRgba(colors.border, 0.9)}
       onPress={onPress}
       cursor="pointer"
     >

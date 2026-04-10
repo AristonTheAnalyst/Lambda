@@ -102,7 +102,6 @@ export default function TrainingLogsScreen() {
         >
           {workouts.length === 0 ? (
             <YStack flex={1} alignItems="center" justifyContent="center" paddingTop={space.xxl} gap={space.md}>
-              <Text fontSize={fontSize.xxl}>🏋️</Text>
               <Text color={colors.primary} fontSize={fontSize.lg} fontWeight="600">No workouts yet</Text>
               <Text color={colors.muted} fontSize={fontSize.sm} textAlign="center">
                 Head to the Session tab to log your first workout.

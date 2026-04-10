@@ -71,25 +71,25 @@ function addLabel(count: number, singular: string, plural: string) {
 const ExRow = React.memo(function ExRow({
   ex,
   onEdit,
-  onDelete,
 }: {
   ex: Exercise;
   onEdit: (ex: Exercise) => void;
-  onDelete: (id: string) => void;
 }) {
   const { colors, space, fontSize } = useAppTheme();
   return (
-    <XStack alignItems="center" paddingVertical={space.md} borderBottomWidth={0.5} borderBottomColor={colors.border}>
+    <XStack
+      alignItems="center"
+      paddingVertical={space.md}
+      borderBottomWidth={0.5}
+      borderBottomColor={colors.border}
+      pressStyle={{ opacity: 0.6 }}
+      onPress={() => onEdit(ex)}
+      cursor="pointer"
+    >
       <YStack flex={1}>
         <Text fontSize={15} color={colors.primary}>{ex.exercise_name}</Text>
         <Text fontSize={fontSize.xs} color={colors.muted} marginTop={space.xs}>{ex.exercise_volume_type}</Text>
       </YStack>
-      <XStack marginLeft={space.sm}>
-        <GlassButton icon="pencil" iconSize={14} onPress={() => onEdit(ex)} />
-      </XStack>
-      <XStack marginLeft={space.sm}>
-        <GlassButton icon="trash" iconSize={14} color={colors.danger} onPress={() => onDelete(ex.custom_exercise_id)} />
-      </XStack>
     </XStack>
   );
 });
@@ -97,22 +97,22 @@ const ExRow = React.memo(function ExRow({
 const VarRow = React.memo(function VarRow({
   v,
   onEdit,
-  onDelete,
 }: {
   v: Variation;
   onEdit: (v: Variation) => void;
-  onDelete: (id: string) => void;
 }) {
   const { colors, space } = useAppTheme();
   return (
-    <XStack alignItems="center" paddingVertical={space.md} borderBottomWidth={0.5} borderBottomColor={colors.border}>
+    <XStack
+      alignItems="center"
+      paddingVertical={space.md}
+      borderBottomWidth={0.5}
+      borderBottomColor={colors.border}
+      pressStyle={{ opacity: 0.6 }}
+      onPress={() => onEdit(v)}
+      cursor="pointer"
+    >
       <Text flex={1} fontSize={15} color={colors.primary}>{v.variation_name}</Text>
-      <XStack marginLeft={space.sm}>
-        <GlassButton icon="pencil" iconSize={14} onPress={() => onEdit(v)} />
-      </XStack>
-      <XStack marginLeft={space.sm}>
-        <GlassButton icon="trash" iconSize={14} color={colors.danger} onPress={() => onDelete(v.custom_variation_id)} />
-      </XStack>
     </XStack>
   );
 });
@@ -258,16 +258,6 @@ export default function LibraryScreen() {
     await Promise.all(tasks);
   }); }
 
-  const confirmDeleteEx = useCallback((id: string) => {
-    Alert.alert('Delete Exercise', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
-        await softDeleteExercise(db, id);
-        refreshExercises();
-      })},
-    ]);
-  }, [guard, db, refreshExercises]);
-
   const handleEditEx = useCallback((ex: Exercise) => {
     openEdit(() => setEditEx({ ...ex }));
   }, [openEdit]);
@@ -305,16 +295,6 @@ export default function LibraryScreen() {
     if (toAdd.length > 0 || toRemove.length > 0) tasks.push(refreshExerciseDetails());
     await Promise.all(tasks);
   }); }
-
-  const confirmDeleteVar = useCallback((id: string) => {
-    Alert.alert('Delete Variation', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => guard(async () => {
-        await softDeleteVariation(db, id);
-        await Promise.all([refreshVariations(), refreshExerciseDetails()]);
-      })},
-    ]);
-  }, [guard, db, refreshVariations, refreshExerciseDetails]);
 
   const handleEditVar = useCallback((v: Variation) => {
     openEdit(() => setEditVar({ ...v, is_active: true }));
@@ -395,7 +375,7 @@ export default function LibraryScreen() {
           ) : filteredEx.length === 0 ? (
             <Text color={colors.muted} padding={space.xs}>No results.</Text>
           ) : filteredEx.map((ex) => (
-            <ExRow key={ex.custom_exercise_id} ex={ex} onEdit={handleEditEx} onDelete={confirmDeleteEx} />
+            <ExRow key={ex.custom_exercise_id} ex={ex} onEdit={handleEditEx} />
           ))}
           <YStack height={space.xxl} />
         </ScrollView>
@@ -435,7 +415,7 @@ export default function LibraryScreen() {
           ) : filteredVar.length === 0 ? (
             <Text color={colors.muted} padding={space.xs}>No results.</Text>
           ) : filteredVar.map((v) => (
-            <VarRow key={v.custom_variation_id} v={v} onEdit={handleEditVar} onDelete={confirmDeleteVar} />
+            <VarRow key={v.custom_variation_id} v={v} onEdit={handleEditVar} />
           ))}
           <YStack height={space.xxl} />
         </ScrollView>
@@ -462,7 +442,30 @@ export default function LibraryScreen() {
       {/* ── Edit Exercise ── */}
       <SlideUpModal visible={!!editEx} onClose={() => setEditEx(null)} fitContent>
         <YStack padding={space.xl} gap={space.md}>
-          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>Edit Exercise</Text>
+          <XStack alignItems="center">
+            <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary} flex={1}>Edit Exercise</Text>
+            <GlassButton
+              icon="trash"
+              iconSize={14}
+              color={colors.danger}
+              onPress={() => {
+                if (!editEx) return;
+                const id = editEx.custom_exercise_id;
+                Alert.alert('Delete Exercise', 'Are you sure?', [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => guard(async () => {
+                      setEditEx(null);
+                      await softDeleteExercise(db, id);
+                      refreshExercises();
+                    }),
+                  },
+                ]);
+              }}
+            />
+          </XStack>
           <Input
             value={editEx?.exercise_name ?? ''}
             onChangeText={(t) => setEditEx((e) => e ? { ...e, exercise_name: t } : e)}
@@ -543,7 +546,30 @@ export default function LibraryScreen() {
       {/* ── Edit Variation ── */}
       <SlideUpModal visible={!!editVar} onClose={() => setEditVar(null)} fitContent>
         <YStack padding={space.xl} gap={space.md}>
-          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>Edit Variation</Text>
+          <XStack alignItems="center">
+            <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary} flex={1}>Edit Variation</Text>
+            <GlassButton
+              icon="trash"
+              iconSize={14}
+              color={colors.danger}
+              onPress={() => {
+                if (!editVar) return;
+                const id = editVar.custom_variation_id;
+                Alert.alert('Delete Variation', 'Are you sure?', [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => guard(async () => {
+                      setEditVar(null);
+                      await softDeleteVariation(db, id);
+                      await Promise.all([refreshVariations(), refreshExerciseDetails()]);
+                    }),
+                  },
+                ]);
+              }}
+            />
+          </XStack>
           <Input
             value={editVar?.variation_name ?? ''}
             onChangeText={(t) => setEditVar((v) => v ? { ...v, variation_name: t } : v)}
