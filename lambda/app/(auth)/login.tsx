@@ -56,7 +56,7 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <YStack flex={1} justifyContent="center" paddingHorizontal={T.space.xl} gap={T.space.lg}>
+        <YStack flex={1} justifyContent="center" paddingHorizontal={T.space.xl}>
 
           {/* Session expired banner */}
           {sessionExpired && (
@@ -66,6 +66,7 @@ export default function LoginScreen() {
               borderWidth={1}
               borderRadius={T.radius.md}
               padding={T.space.md}
+              marginBottom={T.space.lg}
               pressStyle={{ opacity: 0.8 }}
               onPress={clearSessionExpired}
               cursor="pointer"
@@ -77,13 +78,13 @@ export default function LoginScreen() {
           )}
 
           {/* Header */}
-          <YStack alignItems="center" marginBottom={T.space.xxl}>
-            <Text fontSize={32} fontWeight="bold" marginBottom={T.space.sm} color={T.primary}>Lambda</Text>
-            <Text fontSize={T.fontSize.lg} color={T.muted}>Login</Text>
+          <YStack alignItems="center" marginBottom={T.space.xl}>
+            <Text fontSize={32} fontWeight="bold" marginBottom={T.space.xs} color={T.primary}>Lambda</Text>
+            <Text fontSize={T.fontSize.lg} color={T.muted}>Sign in</Text>
           </YStack>
 
           {/* Form */}
-          <YStack gap={T.space.lg}>
+          <YStack gap={T.space.md}>
             <Input
               label="Email"
               value={email}
@@ -105,7 +106,7 @@ export default function LoginScreen() {
               secureTextEntry
             />
 
-            <XStack justifyContent="space-between" alignItems="center" marginTop={-T.space.sm}>
+            <XStack justifyContent="space-between" alignItems="center">
               <Link href="/(auth)/forgot-password">
                 <Text color={T.accent} fontSize={T.fontSize.sm}>Forgot password?</Text>
               </Link>
@@ -121,7 +122,7 @@ export default function LoginScreen() {
               loading={loading}
             />
 
-            <XStack alignItems="center" gap={T.space.sm} marginVertical={T.space.xs}>
+            <XStack alignItems="center" gap={T.space.sm} marginVertical={T.space.md}>
               <Separator flex={1} borderColor={T.border} />
               <Text fontSize={T.fontSize.sm} color={T.muted}>or</Text>
               <Separator flex={1} borderColor={T.border} />
