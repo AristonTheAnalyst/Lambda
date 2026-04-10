@@ -3,6 +3,9 @@
     "allow": [
       "mcp__context7__query-docs",
       "Bash(find /d/Repositories/Lambda/lambda -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) -exec grep -l \"SlideUpModal\" {} \\\\;)"
+    ],
+    "additionalDirectories": [
+      "d:\\Repositories\\Lambda\\lambda\\assets\\images"
     ]
   }
 }
