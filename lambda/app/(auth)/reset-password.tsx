@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Text, YStack } from 'tamagui';
@@ -21,6 +21,12 @@ export default function ResetPasswordScreen() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
+  // Block hardware back button (Android)
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => sub.remove();
+  }, []);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setReady(true);
@@ -32,6 +38,24 @@ export default function ResetPasswordScreen() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const handleCancel = () => guard(async () => {
+    Alert.alert(
+      'Cancel reset?',
+      'You will be signed out. Your password will remain unchanged.',
+      [
+        { text: 'Stay', style: 'cancel' },
+        {
+          text: 'Sign out',
+          style: 'destructive',
+          onPress: async () => {
+            clearPasswordRecovery();
+            await supabase.auth.signOut();
+          },
+        },
+      ]
+    );
+  });
 
   const handleReset = () => guard(async () => {
     if (password.length < 6) { Alert.alert('Password must be at least 6 characters'); return; }
@@ -64,7 +88,7 @@ export default function ResetPasswordScreen() {
           </YStack>
 
           {!done && ready && (
-            <YStack gap={T.space.lg}>
+            <YStack gap={T.space.md}>
               <Input
                 label="New Password"
                 value={password}
@@ -82,6 +106,7 @@ export default function ResetPasswordScreen() {
                 secureTextEntry
               />
               <Button label="Update Password" onPress={handleReset} loading={loading} disabled={loading} />
+              <Button label="Cancel" onPress={handleCancel} variant="danger-ghost" disabled={loading} />
             </YStack>
           )}
 
@@ -92,7 +117,7 @@ export default function ResetPasswordScreen() {
           )}
 
           {done && (
-            <Button label="Back to Login" onPress={() => router.replace('/(auth)/login')} />
+            <Button label="Continue" onPress={() => router.replace('/(tabs)/')} />
           )}
 
         </YStack>

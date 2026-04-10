@@ -29,6 +29,7 @@ export default function AuthLayout() {
         options={{
           headerShown: false,
           gestureEnabled: false,
+          gestureDirection: 'horizontal',
         }}
       />
     </Stack>
