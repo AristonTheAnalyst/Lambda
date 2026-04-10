@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Alert, Keyboard, ScrollView, useWindowDimensions } from 'react-native';
 import { Spinner, Text, XStack, YStack } from 'tamagui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Separator } from 'tamagui';
 import { useSQLiteContext } from 'expo-sqlite';
-import { SlideUpModal, DropdownSelect } from '@/components/FormControls';
+import { SlideUpModal, DropdownSelect, SegmentedControl } from '@/components/FormControls';
 import Input from '@/components/Input';
 import Button from '@/components/Button';
 import GlassButton from '@/components/GlassButton';
@@ -13,7 +13,11 @@ import WorkoutLogStickyFooter from '@/components/workout/WorkoutLogStickyFooter'
 import WorkoutSetsList from '@/components/workout/WorkoutSetsList';
 import { SessionAccentPill, SessionCancelPill } from '@/components/workout/WorkoutSessionHeaderPills';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
+import { useAuthContext } from '@/lib/AuthContext';
 import { useAsyncGuard } from '@/lib/asyncGuard';
+import { createExercise, findExerciseByName, reactivateExercise } from '@/lib/offline/exerciseStore';
+import { createVariation, findVariationByName, reactivateVariation } from '@/lib/offline/variationStore';
+import { addBridgeRow } from '@/lib/offline/bridgeStore';
 import { getExerciseDefault, saveExerciseDefault } from '@/lib/offline/exerciseDefaultsStore';
 import { loadWorkout, updateWorkoutNotes, WorkoutRow } from '@/lib/offline/workoutStore';
 import { loadSetsForWorkout, insertSet, updateSet, deleteSet, WorkoutSet } from '@/lib/offline/setStore';
@@ -34,7 +38,8 @@ export default function WorkoutDetailScreen() {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const guard = useAsyncGuard();
-  const { exercises, exerciseDetailMap } = useExerciseData();
+  const { user } = useAuthContext();
+  const { exercises, variations, exerciseDetailMap, refreshExercises, refreshVariations, refreshExerciseDetails } = useExerciseData();
 
   const [workout, setWorkout] = useState<WorkoutRow | null>(null);
   const [sets, setSets] = useState<WorkoutSet[]>([]);
@@ -66,6 +71,34 @@ export default function WorkoutDetailScreen() {
   const [editNotes, setEditNotes] = useState('');
   const [editVarId, setEditVarId] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
+
+  const [newExVisible, setNewExVisible] = useState(false);
+  const [newExForEdit, setNewExForEdit] = useState(false);
+  const [newExName, setNewExName] = useState('');
+  const [newExVolume, setNewExVolume] = useState<'reps' | 'duration'>('reps');
+  const [newExCreating, setNewExCreating] = useState(false);
+
+  const [assignVarVisible, setAssignVarVisible] = useState(false);
+  const [assignVarForEdit, setAssignVarForEdit] = useState(false);
+  const [newVarVisible, setNewVarVisible] = useState(false);
+  const [newVarForEdit, setNewVarForEdit] = useState(false);
+  const [newVarName, setNewVarName] = useState('');
+  const [newVarCreating, setNewVarCreating] = useState(false);
+
+  const exerciseOptions = useMemo(
+    () => exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id })),
+    [exercises]
+  );
+
+  const logVarOptions = useMemo(() => [
+    { label: 'None', value: null as string | null },
+    ...(selectedEx?.assigned_variations ?? []).map((v) => ({ label: v.variation_name, value: v.custom_variation_id as string | null })),
+  ], [selectedEx]);
+
+  const editVarOptions = useMemo(() => [
+    { label: 'None', value: null as string | null },
+    ...(editEx?.assigned_variations ?? []).map((v) => ({ label: v.variation_name, value: v.custom_variation_id as string | null })),
+  ], [editEx]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -129,6 +162,95 @@ export default function WorkoutDetailScreen() {
       }
     }
   }, [db]);
+
+  function openAssignVar(forEdit: boolean) {
+    setAssignVarForEdit(forEdit);
+    setAssignVarVisible(true);
+  }
+
+  async function pickUnassignedVar(varId: string) {
+    const exId = assignVarForEdit ? editExId : selectedExId;
+    if (exId !== null && user) {
+      await addBridgeRow(db, user.id, exId, varId);
+      await refreshExerciseDetails();
+    }
+    setAssignVarVisible(false);
+    if (assignVarForEdit) setEditVarId(varId);
+    else setSelectedVarId(varId);
+  }
+
+  function openNewVariation(forEdit: boolean) {
+    setAssignVarVisible(false);
+    setNewVarName('');
+    setNewVarForEdit(forEdit);
+    setNewVarVisible(true);
+  }
+
+  function createNewVariation() {
+    return guard(async () => {
+      if (!user) return;
+      const name = newVarName.trim();
+      if (!name) return Alert.alert('Enter a name');
+      setNewVarCreating(true);
+      const existing = await findVariationByName(db, name);
+      let localId: string;
+      if (existing) {
+        if (existing.is_active) { setNewVarCreating(false); return Alert.alert('Already exists', `"${name}" already exists.`); }
+        await reactivateVariation(db, existing.custom_variation_id);
+        localId = existing.custom_variation_id;
+      } else {
+        localId = await createVariation(db, user.id, name);
+      }
+      const exId = newVarForEdit ? editExId : selectedExId;
+      if (exId !== null) await addBridgeRow(db, user.id, exId, localId);
+      await refreshVariations();
+      await refreshExerciseDetails();
+      setNewVarCreating(false);
+      setNewVarVisible(false);
+      if (newVarForEdit) setEditVarId(localId);
+      else setSelectedVarId(localId);
+    });
+  }
+
+  function openNewExercise(forEdit = false) {
+    setNewExForEdit(forEdit);
+    setNewExName('');
+    setNewExVolume('reps');
+    setNewExVisible(true);
+  }
+
+  function createNewExercise() {
+    return guard(async () => {
+      if (!user) return;
+      const name = newExName.trim();
+      if (!name) return Alert.alert('Enter a name');
+      setNewExCreating(true);
+      const existing = await findExerciseByName(db, name);
+      let localId: string;
+      if (existing) {
+        if (existing.is_active) { setNewExCreating(false); return Alert.alert('Already exists', `"${name}" already exists.`); }
+        await reactivateExercise(db, existing.custom_exercise_id, newExVolume);
+        localId = existing.custom_exercise_id;
+      } else {
+        localId = await createExercise(db, user.id, name, newExVolume);
+      }
+      await refreshExercises();
+      await refreshExerciseDetails();
+      setNewExCreating(false);
+      setNewExVisible(false);
+      if (newExForEdit) {
+        setEditExId(localId);
+        setEditVarId(null);
+      } else {
+        onSelectExercise(localId);
+      }
+    });
+  }
+
+  function onEditExerciseChange(exId: string | null) {
+    setEditExId(exId);
+    setEditVarId(null);
+  }
 
   function logSet() {
     return guard(async () => {
@@ -357,40 +479,26 @@ export default function WorkoutDetailScreen() {
             <YStack flex={3}>
               <Text fontSize={fontSize.sm} fontWeight="500" marginBottom={space.xs} color={colors.primary}>Exercise</Text>
               <DropdownSelect
-                options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
+                options={exerciseOptions}
                 value={selectedExId}
                 onChange={onSelectExercise}
                 placeholder="Select exercise…"
                 searchable
+                onCreateNew={() => openNewExercise(false)}
+                createNewLabel="New Exercise"
               />
             </YStack>
             {selectedEx && (
               <YStack flex={2}>
                 <Text fontSize={fontSize.sm} fontWeight="500" marginBottom={space.xs} color={colors.primary}>Variation</Text>
-                {selectedEx.assigned_variations.length > 0 ? (
-                  <DropdownSelect
-                    options={[
-                      { label: 'None', value: null },
-                      ...selectedEx.assigned_variations.map((v) => ({ label: v.variation_name, value: v.custom_variation_id })),
-                    ]}
-                    value={selectedVarId}
-                    onChange={setSelectedVarId}
-                    placeholder="None"
-                  />
-                ) : (
-                  <XStack
-                    alignItems="center"
-                    borderWidth={1}
-                    borderColor={colors.border}
-                    borderRadius={radius.md}
-                    paddingHorizontal={space.md}
-                    height={48}
-                    backgroundColor={colors.surface}
-                    opacity={0.5}
-                  >
-                    <Text fontSize={fontSize.md} color={colors.muted} flex={1} numberOfLines={1}>Zero Assigned</Text>
-                  </XStack>
-                )}
+                <DropdownSelect
+                  options={logVarOptions}
+                  value={selectedVarId}
+                  onChange={setSelectedVarId}
+                  placeholder="None"
+                  onCreateNew={() => openAssignVar(false)}
+                  createNewLabel="Assign New Variations"
+                />
               </YStack>
             )}
           </XStack>
@@ -445,40 +553,26 @@ export default function WorkoutDetailScreen() {
             <YStack flex={3}>
               <Text fontSize={fontSize.sm} fontWeight="500" marginBottom={space.xs} color={colors.primary}>Exercise</Text>
               <DropdownSelect
-                options={exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
+                options={exerciseOptions}
                 value={editExId}
-                onChange={(exId) => { setEditExId(exId); setEditVarId(null); }}
+                onChange={onEditExerciseChange}
                 placeholder="Select exercise…"
                 searchable
+                onCreateNew={() => openNewExercise(true)}
+                createNewLabel="New Exercise"
               />
             </YStack>
             {editEx && (
               <YStack flex={2}>
                 <Text fontSize={fontSize.sm} fontWeight="500" marginBottom={space.xs} color={colors.primary}>Variation</Text>
-                {editEx.assigned_variations.length > 0 ? (
-                  <DropdownSelect
-                    options={[
-                      { label: 'None', value: null },
-                      ...editEx.assigned_variations.map((v) => ({ label: v.variation_name, value: v.custom_variation_id })),
-                    ]}
-                    value={editVarId}
-                    onChange={setEditVarId}
-                    placeholder="None"
-                  />
-                ) : (
-                  <XStack
-                    alignItems="center"
-                    borderWidth={1}
-                    borderColor={colors.border}
-                    borderRadius={radius.md}
-                    paddingHorizontal={space.md}
-                    height={48}
-                    backgroundColor={colors.surface}
-                    opacity={0.5}
-                  >
-                    <Text fontSize={fontSize.md} color={colors.muted} flex={1} numberOfLines={1}>Zero Assigned</Text>
-                  </XStack>
-                )}
+                <DropdownSelect
+                  options={editVarOptions}
+                  value={editVarId}
+                  onChange={setEditVarId}
+                  placeholder="None"
+                  onCreateNew={() => openAssignVar(true)}
+                  createNewLabel="Assign New Variations"
+                />
               </YStack>
             )}
           </XStack>
@@ -498,6 +592,79 @@ export default function WorkoutDetailScreen() {
           <XStack gap={space.sm} justifyContent="center">
             <Button label="Cancel" onPress={() => setEditingSet(null)} variant="danger-ghost" />
             <Button label="Save" onPress={saveEditSet} loading={editLoading} />
+          </XStack>
+          <YStack height={windowHeight * 0.15} />
+        </YStack>
+      </SlideUpModal>
+
+      <SlideUpModal visible={newExVisible} onClose={() => setNewExVisible(false)} zIndex={200_000} fitContent keyboardAware>
+        <YStack padding={space.xl} gap={space.md}>
+          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>New Exercise</Text>
+          <Input placeholder="Exercise name" value={newExName} onChangeText={setNewExName} autoCapitalize="words" />
+          <YStack gap={space.xs}>
+            <Text fontSize={fontSize.sm} fontWeight="500" color={colors.primary}>Volume type</Text>
+            <SegmentedControl
+              options={[{ label: 'Reps', value: 'reps' }, { label: 'Duration', value: 'duration' }]}
+              value={newExVolume}
+              onChange={setNewExVolume}
+            />
+          </YStack>
+          <XStack gap={space.sm} justifyContent="center">
+            <Button label="Cancel" onPress={() => setNewExVisible(false)} variant="danger-ghost" />
+            <Button label="Create" onPress={createNewExercise} loading={newExCreating} />
+          </XStack>
+          <YStack height={windowHeight * 0.15} />
+        </YStack>
+      </SlideUpModal>
+
+      <SlideUpModal visible={assignVarVisible} onClose={() => setAssignVarVisible(false)} zIndex={200_000} fitContent>
+        <YStack padding={space.xl} gap={space.md}>
+          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>Assign New Variations</Text>
+          <XStack
+            pressStyle={{ opacity: 0.7 }}
+            onPress={() => openNewVariation(assignVarForEdit)}
+            cursor="pointer"
+          >
+            <Text fontSize={fontSize.md} color={colors.accent} fontWeight="500">+ New Variation</Text>
+          </XStack>
+          <Separator borderColor={colors.border} />
+          {(() => {
+            const exId = assignVarForEdit ? editExId : selectedExId;
+            const detail = exId != null ? exerciseDetailMap[exId] : undefined;
+            const assignedIds = new Set(detail?.assigned_variations?.map((v) => v.custom_variation_id) ?? []);
+            const unassigned = variations.filter((v) => !assignedIds.has(v.custom_variation_id));
+            if (unassigned.length === 0) {
+              return (
+                <Text color={colors.muted} fontSize={fontSize.sm}>
+                  No existing variations to assign.
+                </Text>
+              );
+            }
+            return unassigned.map((v) => (
+              <XStack
+                key={v.custom_variation_id}
+                paddingVertical={space.sm}
+                pressStyle={{ opacity: 0.7 }}
+                onPress={() => pickUnassignedVar(v.custom_variation_id)}
+                cursor="pointer"
+                borderTopWidth={0.5}
+                borderTopColor={colors.border}
+              >
+                <Text fontSize={fontSize.md} color={colors.primary}>{v.variation_name}</Text>
+              </XStack>
+            ));
+          })()}
+          <YStack height={windowHeight * 0.15} />
+        </YStack>
+      </SlideUpModal>
+
+      <SlideUpModal visible={newVarVisible} onClose={() => setNewVarVisible(false)} zIndex={200_000} fitContent>
+        <YStack padding={space.xl} gap={space.md}>
+          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>New Variation</Text>
+          <Input placeholder="Variation name" value={newVarName} onChangeText={setNewVarName} autoCapitalize="words" />
+          <XStack gap={space.sm} justifyContent="center">
+            <Button label="Cancel" onPress={() => setNewVarVisible(false)} variant="danger-ghost" />
+            <Button label="Create" onPress={createNewVariation} loading={newVarCreating} />
           </XStack>
           <YStack height={windowHeight * 0.15} />
         </YStack>
