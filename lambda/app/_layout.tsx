@@ -1,16 +1,17 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
+import { ThemeProvider as AppThemeProvider, useTheme } from '@/lib/ThemeContext';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { TamaguiProvider } from 'tamagui';
 import { SQLiteProvider, useSQLiteContext, type SQLiteDatabase } from 'expo-sqlite';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import config from '../tamagui.config';
-import { useColorScheme } from '@/hooks';
 import { AuthProvider, useAuthContext } from '@/lib/AuthContext';
 import { DATABASE_NAME } from '@/lib/db/schema';
 import { initializeDatabase } from '@/lib/db/database';
@@ -46,9 +47,17 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-const rootStyles = StyleSheet.create({
-  root: { flex: 1, tintColor: T.primary } as any,
-});
+// Subscribes to theme changes so the root background + status bar update seamlessly.
+function ThemedRoot({ children }: { children: React.ReactNode }) {
+  const { themeName } = useTheme();
+  const isDark = themeName === 'dark';
+  return (
+    <View style={{ flex: 1, backgroundColor: T.bg }}>
+      <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={T.bg} />
+      {children}
+    </View>
+  );
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -63,22 +72,26 @@ export default function RootLayout() {
   if (!loaded) return <LoadingScreen />;
 
   return (
-    <View style={rootStyles.root}>
-      <TamaguiProvider config={config} defaultTheme="dark">
-        <QueryClientProvider client={queryClient}>
-          <SQLiteProvider databaseName={DATABASE_NAME} onInit={initializeDatabase}>
-            <AuthProvider>
-              <RootLayoutNav />
-            </AuthProvider>
-          </SQLiteProvider>
-        </QueryClientProvider>
-      </TamaguiProvider>
-    </View>
+    <AppThemeProvider>
+      <ThemedRoot>
+        <TamaguiProvider config={config} defaultTheme="dark">
+          <QueryClientProvider client={queryClient}>
+            <SQLiteProvider databaseName={DATABASE_NAME} onInit={initializeDatabase}>
+              <AuthProvider>
+                <RootLayoutNav />
+              </AuthProvider>
+            </SQLiteProvider>
+          </QueryClientProvider>
+        </TamaguiProvider>
+      </ThemedRoot>
+    </AppThemeProvider>
   );
+
 }
 
 function RootLayoutNav() {
   const { session, loading, onboarded } = useAuthContext();
+  useTheme(); // re-render on theme change so Stack contentStyle updates
   const router = useRouter();
   const db = useSQLiteContext();
   const hasNavigated = useRef(false);
@@ -131,12 +144,12 @@ function RootLayoutNav() {
   }
 
   return (
-    <ThemeProvider value={DarkTheme}>
-      <Stack screenOptions={{ contentStyle: { backgroundColor: '#262626' } }}>
+    <NavThemeProvider value={DarkTheme}>
+      <Stack screenOptions={{ contentStyle: { backgroundColor: T.bg } }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
-    </ThemeProvider>
+    </NavThemeProvider>
   );
 }

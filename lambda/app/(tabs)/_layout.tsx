@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import T from '@/constants/Theme';
 import { ExerciseDataProvider } from '@/lib/ExerciseDataContext';
 import { useSyncEngine } from '@/lib/sync/useSyncEngine';
+import { useTheme } from '@/lib/ThemeContext';
 import OfflineBanner from '@/components/OfflineBanner';
 
 /** Mounts the sync engine once for the entire tab session. */
@@ -27,6 +28,7 @@ function BottomNav() {
   const router   = useRouter();
   const pathname = usePathname();
   const insets   = useSafeAreaInsets();
+  useTheme(); // re-render when theme changes so colors update immediately
 
   return (
     <View style={[
