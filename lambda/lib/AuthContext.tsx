@@ -119,6 +119,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        // Deep link from reset email — let reset-password screen handle the token via useURL()
+        setLoading(false);
+        return;
+      }
       setSession(currentSession);
       if (currentSession?.user) {
         setUser({ id: currentSession.user.id, email: currentSession.user.email || '' });

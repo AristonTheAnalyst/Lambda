@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -8,6 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import { useAuthContext } from '@/lib/AuthContext';
 import { useAsyncGuard } from '@/lib/asyncGuard';
@@ -105,8 +105,17 @@ export default function LoginScreen() {
               secureTextEntry
             />
 
+            <XStack justifyContent="space-between" alignItems="center" marginTop={-T.space.sm}>
+              <Link href="/(auth)/forgot-password">
+                <Text color={T.accent} fontSize={T.fontSize.sm}>Forgot password?</Text>
+              </Link>
+              <Link href="/(auth)/signup">
+                <Text color={T.accent} fontSize={T.fontSize.sm} fontWeight="600">Sign up</Text>
+              </Link>
+            </XStack>
+
             <Button
-              label="Login"
+              label="Sign in"
               onPress={handleLogin}
               disabled={isLoading}
               loading={loading}
@@ -118,43 +127,53 @@ export default function LoginScreen() {
               <Separator flex={1} borderColor={T.border} />
             </XStack>
 
-            {/* Apple Sign-In (iOS only, uses native component) */}
-            {Platform.OS === 'ios' && (
-              <AppleAuthentication.AppleAuthenticationButton
-                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                cornerRadius={T.radius.md}
-                style={{ height: 48, borderRadius: T.radius.md, opacity: socialLoading === 'apple' ? 0.6 : 1 }}
-                onPress={handleApple}
-              />
-            )}
+            {/* Social sign-in icon buttons */}
+            <XStack justifyContent="center" gap={T.space.lg}>
+              {/* Google */}
+              <XStack
+                width={56}
+                height={56}
+                borderRadius={T.radius.md}
+                borderWidth={1}
+                borderColor={T.border}
+                alignItems="center"
+                justifyContent="center"
+                backgroundColor={T.surface}
+                opacity={socialLoading === 'google' ? 0.5 : 1}
+                pressStyle={{ opacity: 0.6 }}
+                onPress={isLoading ? undefined : handleGoogle}
+                cursor="pointer"
+              >
+                {socialLoading === 'google'
+                  ? <Spinner size="small" color={T.primary} />
+                  : <FontAwesome name="google" size={24} color={T.primary} />
+                }
+              </XStack>
 
-            {/* Google Sign-In */}
-            <XStack
-              height={48}
-              borderRadius={T.radius.md}
-              borderWidth={1}
-              borderColor={T.border}
-              alignItems="center"
-              justifyContent="center"
-              backgroundColor={T.surface}
-              opacity={socialLoading === 'google' ? 0.6 : 1}
-              pressStyle={{ opacity: 0.75 }}
-              onPress={isLoading ? undefined : handleGoogle}
-              cursor="pointer"
-            >
-              {socialLoading === 'google'
-                ? <Spinner size="small" color={T.primary} />
-                : <Text color={T.primary} fontSize={T.fontSize.md} fontWeight="600">Sign in with Google</Text>
-              }
+              {/* Apple (iOS only) */}
+              {Platform.OS === 'ios' && (
+                <XStack
+                  width={56}
+                  height={56}
+                  borderRadius={T.radius.md}
+                  borderWidth={1}
+                  borderColor={T.border}
+                  alignItems="center"
+                  justifyContent="center"
+                  backgroundColor={T.surface}
+                  opacity={socialLoading === 'apple' ? 0.5 : 1}
+                  pressStyle={{ opacity: 0.6 }}
+                  onPress={isLoading ? undefined : handleApple}
+                  cursor="pointer"
+                >
+                  {socialLoading === 'apple'
+                    ? <Spinner size="small" color={T.primary} />
+                    : <FontAwesome name="apple" size={26} color={T.primary} />
+                  }
+                </XStack>
+              )}
             </XStack>
 
-            <XStack justifyContent="center" marginTop={T.space.sm}>
-              <Text fontSize={T.fontSize.sm} color={T.muted}>Don't have an account? </Text>
-              <Link href="/(auth)/signup">
-                <Text color={T.accent} fontSize={T.fontSize.sm} fontWeight="600">Sign up</Text>
-              </Link>
-            </XStack>
           </YStack>
 
         </YStack>
