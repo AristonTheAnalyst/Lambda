@@ -53,6 +53,7 @@ export default function TrainingLogsScreen() {
   const [workouts, setWorkouts] = useState<WorkoutWithSets[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [logsCloudPullFailed, setLogsCloudPullFailed] = useState(false);
 
   const loadFromSQLite = useCallback(async () => {
     if (!user) return;
@@ -62,24 +63,46 @@ export default function TrainingLogsScreen() {
   }, [db, user]);
 
   useEffect(() => {
+    setLogsCloudPullFailed(false);
     loadFromSQLite();
   }, [loadFromSQLite]);
 
   // Background seed from Supabase on first install (non-blocking)
   useEffect(() => {
     if (!user || !isConnected) return;
+    let cancelled = false;
     seedWorkoutsFromSupabase(db, user.id)
-      .then(() => loadFromSQLite())
-      .catch(() => {});
-  }, [user?.id, isConnected]);
+      .then((outcome) => {
+        if (cancelled) return;
+        setLogsCloudPullFailed(outcome === 'error');
+        return loadFromSQLite();
+      })
+      .catch(() => {
+        if (!cancelled) setLogsCloudPullFailed(true);
+        return loadFromSQLite();
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [db, user, isConnected, loadFromSQLite]);
+
+  useEffect(() => {
+    if (!logsCloudPullFailed) return;
+    if (workouts.length > 0) setLogsCloudPullFailed(false);
+  }, [logsCloudPullFailed, workouts.length]);
 
   const handleRefresh = useCallback(async () => {
     if (!user) return;
     setRefreshing(true);
     try {
-      if (isConnected) await seedWorkoutsFromSupabase(db, user.id);
+      if (isConnected) {
+        const outcome = await seedWorkoutsFromSupabase(db, user.id);
+        setLogsCloudPullFailed(outcome === 'error');
+      }
       await loadFromSQLite();
-    } catch {} finally {
+    } catch {
+      setLogsCloudPullFailed(true);
+    } finally {
       setRefreshing(false);
     }
   }, [db, user, isConnected, loadFromSQLite]);
@@ -102,6 +125,11 @@ export default function TrainingLogsScreen() {
         >
           {workouts.length === 0 ? (
             <YStack flex={1} alignItems="center" justifyContent="center" paddingTop={space.xxl} gap={space.md}>
+              {logsCloudPullFailed ? (
+                <Text color={colors.danger} fontSize={fontSize.sm} textAlign="center" paddingHorizontal={space.md}>
+                  {"Couldn't load past workouts from the server. Check your connection and pull down to retry."}
+                </Text>
+              ) : null}
               <Text color={colors.primary} fontSize={fontSize.lg} fontWeight="600">No workouts yet</Text>
               <Text color={colors.muted} fontSize={fontSize.sm} textAlign="center">
                 Head to the Session tab to log your first workout.

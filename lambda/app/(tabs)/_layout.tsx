@@ -8,6 +8,7 @@ import { ExerciseDataProvider } from '@/lib/ExerciseDataContext';
 import { useSyncEngine } from '@/lib/sync/useSyncEngine';
 import { useAppTheme } from '@/lib/ThemeContext';
 import OfflineBanner from '@/components/OfflineBanner';
+import SyncErrorBanner from '@/components/SyncErrorBanner';
 
 /** Mounts the sync engine once for the entire tab session. */
 function SyncMount() {
@@ -81,6 +82,7 @@ export default function TabLayout() {
       <SyncMount />
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
         <OfflineBanner />
+        <SyncErrorBanner />
         <Tabs
           screenOptions={{ headerShown: false }}
           tabBar={(props) => <BottomNav {...props} />}

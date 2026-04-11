@@ -258,6 +258,12 @@ export async function loadWorkoutsWithSets(
 
 // ─── Seed from Supabase (first install) ──────────────────────────────────────
 
+export type SeedWorkoutsFromSupabaseResult =
+  | 'skipped_local'
+  | 'pulled'
+  | 'empty_remote'
+  | 'error';
+
 /**
  * Seeds workouts + sets from Supabase into SQLite on first install.
  * Uses INSERT OR IGNORE — safe to call multiple times.
@@ -266,14 +272,14 @@ export async function loadWorkoutsWithSets(
 export async function seedWorkoutsFromSupabase(
   db: SQLiteDatabase,
   userId: string
-): Promise<void> {
+): Promise<SeedWorkoutsFromSupabaseResult> {
   const existing = await db.getFirstAsync<{ count: number }>(
     `SELECT COUNT(*) as count FROM fact_user_workout WHERE user_id = ?`,
     [userId]
   );
-  if (existing && existing.count > 0) return;
+  if (existing && existing.count > 0) return 'skipped_local';
 
-  const { data: workouts } = await supabase
+  const { data: workouts, error: workoutsError } = await supabase
     .from('fact_user_workout')
     .select('user_workout_id, user_id, user_pre_workout_notes, user_post_workout_notes, user_workout_created_date')
     .eq('user_id', userId)
@@ -281,13 +287,16 @@ export async function seedWorkoutsFromSupabase(
     .order('user_workout_created_date', { ascending: false })
     .limit(100);
 
-  if (!workouts || workouts.length === 0) return;
+  if (workoutsError) return 'error';
+  if (!workouts || workouts.length === 0) return 'empty_remote';
 
   const workoutIds = workouts.map((w: any) => w.user_workout_id);
-  const { data: sets } = await supabase
+  const { data: sets, error: setsError } = await supabase
     .from('fact_workout_set')
     .select('*')
     .in('user_workout_id', workoutIds);
+
+  if (setsError) return 'error';
 
   for (const w of workouts) {
     await db.runAsync(
@@ -319,4 +328,6 @@ export async function seedWorkoutsFromSupabase(
       );
     }
   }
+
+  return 'pulled';
 }

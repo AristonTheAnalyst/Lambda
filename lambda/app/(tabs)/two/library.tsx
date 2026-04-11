@@ -128,7 +128,14 @@ export default function LibraryScreen() {
   const { height: windowHeight } = useWindowDimensions();
   const db       = useSQLiteContext();
   const { user } = useAuthContext();
-  const { exercises, variations, refreshExercises, refreshVariations, refreshExerciseDetails } = useExerciseData();
+  const {
+    exercises,
+    variations,
+    catalogCloudPullFailed,
+    refreshExercises,
+    refreshVariations,
+    refreshExerciseDetails,
+  } = useExerciseData();
 
   const [tab, setTab] = useState<'exercises' | 'variations'>('exercises');
 
@@ -369,6 +376,11 @@ export default function LibraryScreen() {
 
           {exercises.length === 0 ? (
             <YStack alignItems="center" paddingTop={space.xxl} gap={space.sm}>
+              {catalogCloudPullFailed ? (
+                <Text color={colors.danger} fontSize={fontSize.sm} textAlign="center" paddingHorizontal={space.md}>
+                  {"Couldn't load exercises from the server. Check your connection — we'll retry when it's stable, or tap + to add one manually."}
+                </Text>
+              ) : null}
               <Text color={colors.primary} fontSize={fontSize.md} fontWeight="600">No exercises yet</Text>
               <Text color={colors.muted} fontSize={fontSize.sm} textAlign="center">Tap + to create your first exercise.</Text>
             </YStack>
@@ -409,6 +421,11 @@ export default function LibraryScreen() {
 
           {variations.length === 0 ? (
             <YStack alignItems="center" paddingTop={space.xxl} gap={space.sm}>
+              {catalogCloudPullFailed ? (
+                <Text color={colors.danger} fontSize={fontSize.sm} textAlign="center" paddingHorizontal={space.md}>
+                  {"Couldn't load variations from the server. Check your connection — we'll retry when it's stable, or tap + to add one manually."}
+                </Text>
+              ) : null}
               <Text color={colors.primary} fontSize={fontSize.md} fontWeight="600">No variations yet</Text>
               <Text color={colors.muted} fontSize={fontSize.sm} textAlign="center">Tap + to create your first variation.</Text>
             </YStack>

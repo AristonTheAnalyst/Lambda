@@ -34,6 +34,8 @@ interface ExerciseDataContextValue {
   variations: Variation[];
   exerciseDetailMap: Record<string, ExerciseDetail>;
   loading: boolean;
+  /** True when first-install cloud seed failed while local catalog was still empty (e.g. server unreachable). */
+  catalogCloudPullFailed: boolean;
   refreshExercises: () => Promise<void>;
   refreshVariations: () => Promise<void>;
   refreshExerciseDetails: () => Promise<void>;
@@ -44,6 +46,7 @@ const ExerciseDataContext = createContext<ExerciseDataContextValue>({
   variations: [],
   exerciseDetailMap: {},
   loading: true,
+  catalogCloudPullFailed: false,
   refreshExercises: async () => {},
   refreshVariations: async () => {},
   refreshExerciseDetails: async () => {},
@@ -69,6 +72,7 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
   const [variations, setVariations] = useState<Variation[]>([]);
   const [rawBridge, setRawBridge] = useState<RawBridgeRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [catalogCloudPullFailed, setCatalogCloudPullFailed] = useState(false);
 
   const refreshExercises = useCallback(async () => {
     if (!user) return;
@@ -137,6 +141,7 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
   // Initial load from SQLite (instant, works offline)
   useEffect(() => {
     if (!user) return;
+    setCatalogCloudPullFailed(false);
     Promise.all([
       refreshExercises(),
       refreshVariations(),
@@ -147,12 +152,33 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
   // Background seed from Supabase on first install (non-blocking)
   useEffect(() => {
     if (!user || !isConnected) return;
+    let cancelled = false;
     seedFromSupabase(db, user.id)
-      .then((seeded) => {
-        if (seeded) return Promise.all([refreshExercises(), refreshVariations(), refreshExerciseDetails()]);
+      .then(async (result) => {
+        if (cancelled) return;
+        if (result === 'failed') {
+          setCatalogCloudPullFailed(true);
+          return;
+        }
+        setCatalogCloudPullFailed(false);
+        if (result === 'seeded' || result === 'empty_remote') {
+          await Promise.all([refreshExercises(), refreshVariations(), refreshExerciseDetails()]);
+        }
       })
-      .catch(() => {}); // Silently fail — SQLite is source of truth
-  }, [user?.id, isConnected]);
+      .catch(() => {
+        if (!cancelled) setCatalogCloudPullFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, isConnected, db, refreshExercises, refreshVariations, refreshExerciseDetails]);
+
+  useEffect(() => {
+    if (!catalogCloudPullFailed) return;
+    if (exercises.length > 0 || variations.length > 0) {
+      setCatalogCloudPullFailed(false);
+    }
+  }, [catalogCloudPullFailed, exercises.length, variations.length]);
 
   return (
     <ExerciseDataContext.Provider
@@ -161,6 +187,7 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
         variations,
         exerciseDetailMap,
         loading,
+        catalogCloudPullFailed,
         refreshExercises,
         refreshVariations,
         refreshExerciseDetails,
@@ -172,13 +199,15 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
 
 // ─── Supabase seed helper ─────────────────────────────────────────────────────
 
-async function seedFromSupabase(db: any, userId: string): Promise<boolean> {
+type SeedCatalogResult = 'skipped' | 'seeded' | 'empty_remote' | 'failed';
+
+async function seedFromSupabase(db: any, userId: string): Promise<SeedCatalogResult> {
   // Only seed if SQLite has no exercises for this user (i.e. first install)
   const existing = await db.getFirstAsync<{ n: number }>(
     `SELECT COUNT(*) AS n FROM user_custom_exercise WHERE user_id = ?`,
     [userId]
   );
-  if (existing && existing.n > 0) return false;
+  if (existing && existing.n > 0) return 'skipped';
 
   const [exRes, varRes, bridgeRes] = await Promise.all([
     supabase
@@ -194,6 +223,14 @@ async function seedFromSupabase(db: any, userId: string): Promise<boolean> {
       .select('custom_exercise_id, custom_variation_id, user_id')
       .eq('user_id', userId),
   ]);
+
+  if (exRes.error || varRes.error || bridgeRes.error) {
+    return 'failed';
+  }
+
+  const rowCount =
+    (exRes.data?.length ?? 0) + (varRes.data?.length ?? 0) + (bridgeRes.data?.length ?? 0);
+  const hadRemoteRows = rowCount > 0;
 
   for (const ex of exRes.data ?? []) {
     await db.runAsync(
@@ -219,5 +256,6 @@ async function seedFromSupabase(db: any, userId: string): Promise<boolean> {
       [b.custom_exercise_id, b.custom_variation_id, b.user_id]
     );
   }
-  return true;
+
+  return hadRemoteRows ? 'seeded' : 'empty_remote';
 }

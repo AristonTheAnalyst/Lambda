@@ -292,9 +292,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
       });
+      const idToken = credential.identityToken;
+      if (!idToken) {
+        return { error: new Error('Apple Sign-In did not return an identity token') };
+      }
       const { error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
-        token: credential.identityToken!,
+        token: idToken,
       });
       return { error: error ?? null };
     } catch (err: any) {

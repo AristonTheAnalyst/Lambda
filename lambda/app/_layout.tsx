@@ -154,7 +154,9 @@ function RootLayoutNav() {
     }
 
     if (lastTarget.current !== target) {
-      console.log('[Nav] Navigating to:', target, '(session:', !!session, 'onboarded:', onboarded, ')');
+      if (__DEV__) {
+        console.log('[Nav] Navigating to:', target, '(session:', !!session, 'onboarded:', onboarded, ')');
+      }
       lastTarget.current = target;
       router.replace(target as any);
     }

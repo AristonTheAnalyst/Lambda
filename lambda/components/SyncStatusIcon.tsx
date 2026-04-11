@@ -1,10 +1,13 @@
 import { Spinner, Text, XStack, YStack } from 'tamagui';
+import { useNetwork } from '@/hooks/useNetwork';
 import { useSyncStore } from '@/lib/sync/useSyncEngine';
 import { useAppTheme } from '@/lib/ThemeContext';
 
 export default function SyncStatusIcon() {
   const { colors, space, fontSize } = useAppTheme();
-  const { isSyncing, pendingCount } = useSyncStore();
+  const { isConnected } = useNetwork();
+  const { isSyncing, pendingCount, lastError } = useSyncStore();
+  const syncIssue = isConnected && pendingCount > 0 && !!lastError && !isSyncing;
 
   if (isSyncing) {
     return <Spinner size="small" color={colors.accent} />;
@@ -17,9 +20,9 @@ export default function SyncStatusIcon() {
           width={8}
           height={8}
           borderRadius={4}
-          backgroundColor={colors.accent}
+          backgroundColor={syncIssue ? colors.danger : colors.accent}
         />
-        <Text fontSize={fontSize.xs} color={colors.accent} fontWeight="600">
+        <Text fontSize={fontSize.xs} color={syncIssue ? colors.danger : colors.accent} fontWeight="600">
           {pendingCount}
         </Text>
       </XStack>
