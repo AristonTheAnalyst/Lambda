@@ -7,11 +7,9 @@ import { Separator } from 'tamagui';
 import { useSQLiteContext } from 'expo-sqlite';
 import { SlideUpModal, DropdownSelect, SegmentedControl } from '@/components/FormControls';
 import Input from '@/components/Input';
-import Button from '@/components/Button';
 import GlassButton from '@/components/GlassButton';
 import WorkoutLogStickyFooter from '@/components/workout/WorkoutLogStickyFooter';
 import WorkoutSetsList from '@/components/workout/WorkoutSetsList';
-import { SessionAccentPill, SessionCancelPill } from '@/components/workout/WorkoutSessionHeaderPills';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
 import { useAuthContext } from '@/lib/AuthContext';
 import { useAsyncGuard } from '@/lib/asyncGuard';
@@ -339,7 +337,7 @@ export default function WorkoutDetailScreen() {
       >
         <XStack minWidth={80} justifyContent="flex-start">
           {editing ? (
-            <SessionCancelPill onPress={cancelEditing} />
+            <GlassButton label="Cancel" color={colors.danger} onPress={cancelEditing} compact />
           ) : (
             <GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} />
           )}
@@ -349,11 +347,15 @@ export default function WorkoutDetailScreen() {
         </Text>
         <XStack minWidth={80} justifyContent="flex-end">
           {editing ? (
-            <SessionAccentPill label="Save" onPress={() => saveNotes()} loading={notesLoading} disabled={notesLoading} />
+            <GlassButton
+              label="Save"
+              onPress={() => saveNotes()}
+              loading={notesLoading}
+              disabled={notesLoading}
+              compact
+            />
           ) : (
-            <Text color={colors.accent} fontSize={fontSize.md} fontWeight="600" onPress={startEditing} cursor="pointer">
-              Edit
-            </Text>
+            <GlassButton label="Edit" onPress={startEditing} compact />
           )}
         </XStack>
       </XStack>
@@ -470,8 +472,8 @@ export default function WorkoutDetailScreen() {
             multiline
           />
           <XStack gap={space.sm} justifyContent="center">
-            <Button label="Cancel" onPress={() => setWorkoutNotesModalVisible(false)} variant="danger-ghost" />
-            <Button label="Save" onPress={applyWorkoutNotesFromModal} />
+            <GlassButton label="Cancel" color={colors.danger} onPress={() => setWorkoutNotesModalVisible(false)} compact />
+            <GlassButton label="Save" onPress={applyWorkoutNotesFromModal} compact />
           </XStack>
           <YStack height={windowHeight * 0.12} />
         </YStack>
@@ -521,8 +523,8 @@ export default function WorkoutDetailScreen() {
             </>
           )}
           <XStack gap={space.sm} justifyContent="center">
-            <Button label="Cancel" onPress={() => setLogSetModalVisible(false)} variant="danger-ghost" />
-            <Button label="Log Set" onPress={logSet} loading={logLoading} />
+            <GlassButton label="Cancel" color={colors.danger} onPress={() => setLogSetModalVisible(false)} compact />
+            <GlassButton label="Log Set" onPress={logSet} loading={logLoading} disabled={logLoading} compact />
           </XStack>
           <YStack height={windowHeight * 0.15} />
         </YStack>
@@ -595,8 +597,8 @@ export default function WorkoutDetailScreen() {
             </>
           )}
           <XStack gap={space.sm} justifyContent="center">
-            <Button label="Cancel" onPress={() => setEditingSet(null)} variant="danger-ghost" />
-            <Button label="Save" onPress={saveEditSet} loading={editLoading} />
+            <GlassButton label="Cancel" color={colors.danger} onPress={() => setEditingSet(null)} compact />
+            <GlassButton label="Save" onPress={saveEditSet} loading={editLoading} disabled={editLoading} compact />
           </XStack>
           <YStack height={windowHeight * 0.15} />
         </YStack>
@@ -615,8 +617,8 @@ export default function WorkoutDetailScreen() {
             />
           </YStack>
           <XStack gap={space.sm} justifyContent="center">
-            <Button label="Cancel" onPress={() => setNewExVisible(false)} variant="danger-ghost" />
-            <Button label="Create" onPress={createNewExercise} loading={newExCreating} />
+            <GlassButton label="Cancel" color={colors.danger} onPress={() => setNewExVisible(false)} compact />
+            <GlassButton label="Create" onPress={createNewExercise} loading={newExCreating} disabled={newExCreating} compact />
           </XStack>
           <YStack height={windowHeight * 0.15} />
         </YStack>
@@ -668,8 +670,8 @@ export default function WorkoutDetailScreen() {
           <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>New Variation</Text>
           <Input placeholder="Variation name" value={newVarName} onChangeText={setNewVarName} autoCapitalize="words" />
           <XStack gap={space.sm} justifyContent="center">
-            <Button label="Cancel" onPress={() => setNewVarVisible(false)} variant="danger-ghost" />
-            <Button label="Create" onPress={createNewVariation} loading={newVarCreating} />
+            <GlassButton label="Cancel" color={colors.danger} onPress={() => setNewVarVisible(false)} compact />
+            <GlassButton label="Create" onPress={createNewVariation} loading={newVarCreating} disabled={newVarCreating} compact />
           </XStack>
           <YStack height={windowHeight * 0.15} />
         </YStack>

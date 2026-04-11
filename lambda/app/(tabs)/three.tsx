@@ -373,34 +373,10 @@ export default function WorkoutLogScreen() {
       <PageHeader
         title={currentWorkoutId === null ? 'Mental Prep and Planning' : 'Training Session'}
         left={currentWorkoutId !== null ? (
-          <XStack
-            borderRadius={999}
-            paddingVertical={4}
-            paddingHorizontal={space.sm}
-            borderWidth={1}
-            borderColor={colors.danger}
-            pressStyle={{ opacity: 0.7 }}
-            onPress={confirmCancelWorkout}
-            cursor="pointer"
-            alignItems="center"
-          >
-            <Text color={colors.danger} fontSize={fontSize.sm} fontWeight="600" numberOfLines={1}>Cancel</Text>
-          </XStack>
+          <GlassButton label="Cancel" color={colors.danger} onPress={confirmCancelWorkout} compact />
         ) : undefined}
         right={currentWorkoutId !== null ? (
-          <XStack
-            borderRadius={999}
-            paddingVertical={4}
-            paddingHorizontal={space.md}
-            borderWidth={1}
-            borderColor={colors.accent}
-            pressStyle={{ opacity: 0.7 }}
-            onPress={() => setEndWorkoutModalVisible(true)}
-            cursor="pointer"
-            alignItems="center"
-          >
-            <Text color={colors.accent} fontSize={fontSize.sm} fontWeight="600" numberOfLines={1}>End</Text>
-          </XStack>
+          <GlassButton label="End" onPress={() => setEndWorkoutModalVisible(true)} compact />
         ) : undefined}
       />
 
@@ -554,8 +530,8 @@ export default function WorkoutLogScreen() {
             minHeight={120}
           />
           <XStack gap={space.sm} justifyContent="center">
-            <Button label="Cancel" onPress={() => setEndWorkoutModalVisible(false)} variant="danger-ghost" />
-            <Button label="End Workout" onPress={doEndWorkout} loading={endLoading} />
+            <GlassButton label="Cancel" color={colors.danger} onPress={() => setEndWorkoutModalVisible(false)} compact />
+            <GlassButton label="End Workout" onPress={doEndWorkout} loading={endLoading} disabled={endLoading} compact />
           </XStack>
           <YStack height={windowHeight * 0.15} />
         </YStack>
@@ -606,8 +582,8 @@ export default function WorkoutLogScreen() {
             </>
           )}
           <XStack gap={space.sm} justifyContent="center">
-            <Button label="Cancel" onPress={() => setLogSetModalVisible(false)} variant="danger-ghost" />
-            <Button label="Log Set" onPress={logSet} loading={logLoading} />
+            <GlassButton label="Cancel" color={colors.danger} onPress={() => setLogSetModalVisible(false)} compact />
+            <GlassButton label="Log Set" onPress={logSet} loading={logLoading} disabled={logLoading} compact />
           </XStack>
           <YStack height={windowHeight * 0.15} />
         </YStack>
@@ -672,8 +648,8 @@ export default function WorkoutLogScreen() {
             </>
           )}
           <XStack gap={space.sm} justifyContent="center">
-            <Button label="Cancel" onPress={() => setEditingSet(null)} variant="danger-ghost" />
-            <Button label="Save" onPress={saveEditSet} loading={editLoading} />
+            <GlassButton label="Cancel" color={colors.danger} onPress={() => setEditingSet(null)} compact />
+            <GlassButton label="Save" onPress={saveEditSet} loading={editLoading} disabled={editLoading} compact />
           </XStack>
           <YStack height={windowHeight * 0.15} />
         </YStack>
@@ -695,8 +671,8 @@ export default function WorkoutLogScreen() {
             />
           </YStack>
           <XStack gap={space.sm} justifyContent="center">
-            <Button label="Cancel" onPress={() => setNewExVisible(false)} variant="danger-ghost" />
-            <Button label="Create" onPress={createNewExercise} loading={newExCreating} />
+            <GlassButton label="Cancel" color={colors.danger} onPress={() => setNewExVisible(false)} compact />
+            <GlassButton label="Create" onPress={createNewExercise} loading={newExCreating} disabled={newExCreating} compact />
           </XStack>
           <YStack height={windowHeight * 0.15} />
         </YStack>
@@ -747,8 +723,8 @@ export default function WorkoutLogScreen() {
           <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>New Variation</Text>
           <Input placeholder="Variation name" value={newVarName} onChangeText={setNewVarName} autoCapitalize="words" />
           <XStack gap={space.sm} justifyContent="center">
-            <Button label="Cancel" onPress={() => setNewVarVisible(false)} variant="danger-ghost" />
-            <Button label="Create" onPress={createNewVariation} loading={newVarCreating} />
+            <GlassButton label="Cancel" color={colors.danger} onPress={() => setNewVarVisible(false)} compact />
+            <GlassButton label="Create" onPress={createNewVariation} loading={newVarCreating} disabled={newVarCreating} compact />
           </XStack>
           <YStack height={windowHeight * 0.15} />
         </YStack>
