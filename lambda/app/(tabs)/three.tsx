@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Alert, Keyboard, ScrollView, useWindowDimensions } from 'react-native';
+import { Alert, InteractionManager, Keyboard, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SlidePages from '@/components/SlidePages';
 import { useSlidePages } from '@/hooks/useSlidePages';
@@ -32,7 +32,6 @@ export default function WorkoutLogScreen() {
   const insets = useSafeAreaInsets();
   const db = useSQLiteContext();
   const guard = useAsyncGuard();
-  const { height: windowHeight } = useWindowDimensions();
   const { user } = useAuthContext();
   const { exercises, variations, exerciseDetailMap, refreshExercises, refreshVariations, refreshExerciseDetails } = useExerciseData();
   // ── Workout state ──────────────────────────────────────────────────────────
@@ -322,9 +321,14 @@ export default function WorkoutLogScreen() {
     });
     await saveExerciseDefault(db, selectedExId, weight ? parseFloat(weight) : null, selectedVarId);
     setLogLoading(false);
-    setLogSetModalVisible(false);
     setRepsOrDuration('');
     setSetNotes('');
+    Keyboard.dismiss();
+    // Defer hiding until keyboard/sheet layout settles — avoids Sheet stuck at
+    // keyboard offset (appears pinned to top) when reopened.
+    InteractionManager.runAfterInteractions(() => {
+      setLogSetModalVisible(false);
+    });
     loadSets(currentWorkoutId);
   }); }
 
@@ -533,12 +537,20 @@ export default function WorkoutLogScreen() {
             <GlassButton label="Cancel" color={colors.danger} onPress={() => setEndWorkoutModalVisible(false)} compact />
             <GlassButton label="End Workout" onPress={doEndWorkout} loading={endLoading} disabled={endLoading} compact />
           </XStack>
-          <YStack height={windowHeight * 0.15} />
+          <YStack height={space.xxl * 4} />
         </YStack>
       </SlideUpModal>
 
       {/* ── Log Set Modal ── */}
-      <SlideUpModal visible={logSetModalVisible} onClose={() => setLogSetModalVisible(false)} fitContent keyboardAware>
+      <SlideUpModal
+        visible={logSetModalVisible}
+        onClose={() => {
+          Keyboard.dismiss();
+          setLogSetModalVisible(false);
+        }}
+        fitContent
+        keyboardAware
+      >
         <YStack padding={space.xl} gap={space.md}>
           <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>Log Set</Text>
           <XStack gap={space.sm} alignItems="flex-end">
@@ -582,10 +594,18 @@ export default function WorkoutLogScreen() {
             </>
           )}
           <XStack gap={space.sm} justifyContent="center">
-            <GlassButton label="Cancel" color={colors.danger} onPress={() => setLogSetModalVisible(false)} compact />
+            <GlassButton
+              label="Cancel"
+              color={colors.danger}
+              onPress={() => {
+                Keyboard.dismiss();
+                setLogSetModalVisible(false);
+              }}
+              compact
+            />
             <GlassButton label="Log Set" onPress={logSet} loading={logLoading} disabled={logLoading} compact />
           </XStack>
-          <YStack height={windowHeight * 0.15} />
+          <YStack height={space.xxl * 4} />
         </YStack>
       </SlideUpModal>
 
@@ -651,7 +671,7 @@ export default function WorkoutLogScreen() {
             <GlassButton label="Cancel" color={colors.danger} onPress={() => setEditingSet(null)} compact />
             <GlassButton label="Save" onPress={saveEditSet} loading={editLoading} disabled={editLoading} compact />
           </XStack>
-          <YStack height={windowHeight * 0.15} />
+          <YStack height={space.xxl * 4} />
         </YStack>
       </SlideUpModal>
 
@@ -674,7 +694,7 @@ export default function WorkoutLogScreen() {
             <GlassButton label="Cancel" color={colors.danger} onPress={() => setNewExVisible(false)} compact />
             <GlassButton label="Create" onPress={createNewExercise} loading={newExCreating} disabled={newExCreating} compact />
           </XStack>
-          <YStack height={windowHeight * 0.15} />
+          <YStack height={space.xxl * 4} />
         </YStack>
       </SlideUpModal>
 
@@ -713,7 +733,7 @@ export default function WorkoutLogScreen() {
               </XStack>
             ));
           })()}
-          <YStack height={windowHeight * 0.15} />
+          <YStack height={space.xxl * 4} />
         </YStack>
       </SlideUpModal>
 
@@ -726,7 +746,7 @@ export default function WorkoutLogScreen() {
             <GlassButton label="Cancel" color={colors.danger} onPress={() => setNewVarVisible(false)} compact />
             <GlassButton label="Create" onPress={createNewVariation} loading={newVarCreating} disabled={newVarCreating} compact />
           </XStack>
-          <YStack height={windowHeight * 0.15} />
+          <YStack height={space.xxl * 4} />
         </YStack>
       </SlideUpModal>
     </YStack>
