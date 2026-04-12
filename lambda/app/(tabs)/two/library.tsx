@@ -3,6 +3,7 @@ import { Alert, ScrollView, TextInput } from 'react-native';
 import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LibraryNewExerciseCreateSheet, LibraryNewVariationCreateSheet } from '@/components/LibraryCreateSheets';
 import { DropdownSelect, SegmentedControl, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
 import { useAuthContext } from '@/lib/AuthContext';
@@ -10,20 +11,8 @@ import GlassButton from '@/components/GlassButton';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import { useSQLiteContext } from 'expo-sqlite';
-import {
-  findExerciseByName,
-  createExercise,
-  reactivateExercise,
-  updateExercise,
-  softDeleteExercise,
-} from '@/lib/offline/exerciseStore';
-import {
-  findVariationByName,
-  createVariation,
-  reactivateVariation,
-  updateVariation,
-  softDeleteVariation,
-} from '@/lib/offline/variationStore';
+import { updateExercise, softDeleteExercise } from '@/lib/offline/exerciseStore';
+import { updateVariation, softDeleteVariation } from '@/lib/offline/variationStore';
 import {
   getBridgeForExercises,
   getBridgeForVariations,
@@ -140,9 +129,6 @@ export default function LibraryScreen() {
 
   // ── Exercises state ──────────────────────────────────────────────────────
   const [exSearch, setExSearch]               = useState('');
-  const [exName, setExName]                   = useState('');
-  const [exVolume, setExVolume]               = useState('reps');
-  const [exCreating, setExCreating]           = useState(false);
   const [exCreateVisible, setExCreateVisible] = useState(false);
   const [editEx, setEditEx]                   = useState<Exercise | null>(null);
 
@@ -157,8 +143,6 @@ export default function LibraryScreen() {
 
   // ── Variations state ─────────────────────────────────────────────────────
   const [varSearch, setVarSearch]               = useState('');
-  const [varName, setVarName]                   = useState('');
-  const [varCreating, setVarCreating]           = useState(false);
   const [varCreateVisible, setVarCreateVisible] = useState(false);
   const [editVar, setEditVar]                   = useState<Variation | null>(null);
 
@@ -230,23 +214,10 @@ export default function LibraryScreen() {
     else { setVarOriginalExIds(new Set()); setVarDraftExIds(new Set()); setVarSelection([]); }
   }, [editVar?.custom_variation_id, loadVarExs]);
 
-  // ── Exercise handlers ────────────────────────────────────────────────────
+  const closeExCreate = useCallback(() => setExCreateVisible(false), []);
+  const closeVarCreate = useCallback(() => setVarCreateVisible(false), []);
 
-  function createEx() { return guard(async () => {
-    if (!exName.trim()) return Alert.alert('Name required');
-    if (!user) return;
-    setExCreating(true);
-    const existing = await findExerciseByName(db, exName.trim());
-    if (existing) {
-      if (existing.is_active) { setExCreating(false); return Alert.alert('Already exists', 'An exercise with this name already exists.'); }
-      await reactivateExercise(db, existing.custom_exercise_id, exVolume);
-      setExCreating(false); setExName(''); setExCreateVisible(false);
-      return refreshExercises();
-    }
-    await createExercise(db, user.id, exName.trim(), exVolume);
-    setExCreating(false); setExName(''); setExCreateVisible(false);
-    refreshExercises();
-  }); }
+  // ── Exercise handlers ────────────────────────────────────────────────────
 
   function saveEditEx() { return guard(async () => {
     if (!editEx?.exercise_name.trim() || !user) return;
@@ -269,22 +240,6 @@ export default function LibraryScreen() {
   }, [openEdit]);
 
   // ── Variation handlers ───────────────────────────────────────────────────
-
-  function createVar() { return guard(async () => {
-    if (!varName.trim()) return Alert.alert('Name required');
-    if (!user) return;
-    setVarCreating(true);
-    const existing = await findVariationByName(db, varName.trim());
-    if (existing) {
-      if (existing.is_active) { setVarCreating(false); return Alert.alert('Already exists', 'A variation with this name already exists.'); }
-      await reactivateVariation(db, existing.custom_variation_id);
-      setVarCreating(false); setVarName(''); setVarCreateVisible(false);
-      return refreshVariations();
-    }
-    await createVariation(db, user.id, varName.trim());
-    setVarCreating(false); setVarName(''); setVarCreateVisible(false);
-    refreshVariations();
-  }); }
 
   function saveEditVar() { return guard(async () => {
     if (!editVar?.variation_name.trim() || !user) return;
@@ -370,7 +325,7 @@ export default function LibraryScreen() {
                 />
               </XStack>
             )}
-            <GlassButton icon="plus" iconSize={14} onPress={() => { setExName(''); setExVolume('reps'); setExCreateVisible(true); }} />
+            <GlassButton icon="plus" iconSize={14} onPress={() => setExCreateVisible(true)} />
           </XStack>
 
           {exercises.length === 0 ? (
@@ -415,7 +370,7 @@ export default function LibraryScreen() {
                 />
               </XStack>
             )}
-            <GlassButton icon="plus" iconSize={14} onPress={() => { setVarName(''); setVarCreateVisible(true); }} />
+            <GlassButton icon="plus" iconSize={14} onPress={() => setVarCreateVisible(true)} />
           </XStack>
 
           {variations.length === 0 ? (
@@ -439,21 +394,12 @@ export default function LibraryScreen() {
 
       {/* ── Modals — always mounted so Tamagui Sheet state is never lost on tab switch ── */}
 
-      <SlideUpModal visible={exCreateVisible} onClose={() => setExCreateVisible(false)} fitContent keyboardAware>
-        <YStack padding={space.xl} gap={space.md}>
-          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>New Exercise</Text>
-          <Input placeholder="Exercise name" value={exName} onChangeText={setExName} />
-          <YStack gap={space.xs}>
-            <Text fontSize={fontSize.sm} fontWeight="500" color={colors.primary}>Volume type</Text>
-            <SegmentedControl options={VOLUME_OPTIONS} value={exVolume} onChange={setExVolume} />
-          </YStack>
-          <XStack gap={space.sm} justifyContent="center">
-            <Button label="Cancel" onPress={() => setExCreateVisible(false)} variant="danger-ghost" />
-            <Button label="Create" onPress={createEx} loading={exCreating} />
-          </XStack>
-          <YStack height={space.xxl * 4} />
-        </YStack>
-      </SlideUpModal>
+      <LibraryNewExerciseCreateSheet
+        visible={exCreateVisible}
+        onClose={closeExCreate}
+        userId={user?.id ?? null}
+        refreshExercises={refreshExercises}
+      />
 
       {/* ── Edit Exercise ── */}
       <SlideUpModal visible={!!editEx} onClose={() => setEditEx(null)} fitContent keyboardAware>
@@ -547,17 +493,12 @@ export default function LibraryScreen() {
         </YStack>
       </SlideUpModal>
 
-      <SlideUpModal visible={varCreateVisible} onClose={() => setVarCreateVisible(false)} fitContent keyboardAware>
-        <YStack padding={space.xl} gap={space.md}>
-          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>New Variation</Text>
-          <Input placeholder="Variation name" value={varName} onChangeText={setVarName} />
-          <XStack gap={space.sm} justifyContent="center">
-            <Button label="Cancel" onPress={() => setVarCreateVisible(false)} variant="danger-ghost" />
-            <Button label="Create" onPress={createVar} loading={varCreating} />
-          </XStack>
-          <YStack height={space.xxl * 4} />
-        </YStack>
-      </SlideUpModal>
+      <LibraryNewVariationCreateSheet
+        visible={varCreateVisible}
+        onClose={closeVarCreate}
+        userId={user?.id ?? null}
+        refreshVariations={refreshVariations}
+      />
 
       {/* ── Edit Variation ── */}
       <SlideUpModal visible={!!editVar} onClose={() => setEditVar(null)} fitContent keyboardAware>
