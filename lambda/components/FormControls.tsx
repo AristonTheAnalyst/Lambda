@@ -94,7 +94,7 @@ export function SlideUpModal({ visible, onClose, children, zIndex, snapPoints, f
       snapPointsMode={fitContent ? 'fit' : undefined}
       disableDrag
       zIndex={zIndex ?? 100_000}
-      moveOnKeyboardChange={keyboardAware}
+      moveOnKeyboardChange={!!visible && !!keyboardAware}
     >
       <Sheet.Overlay
         animation="medium"

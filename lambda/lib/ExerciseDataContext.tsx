@@ -67,6 +67,7 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
   const db = useSQLiteContext();
   const { user } = useAuthContext();
   const { isConnected } = useNetwork();
+  const userId = user?.id ?? null;
 
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [variations, setVariations] = useState<Variation[]>([]);
@@ -75,7 +76,7 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
   const [catalogCloudPullFailed, setCatalogCloudPullFailed] = useState(false);
 
   const refreshExercises = useCallback(async () => {
-    if (!user) return;
+    if (!userId) return;
     const rows = await db.getAllAsync<{
       custom_exercise_id: string;
       exercise_name: string;
@@ -86,25 +87,25 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
        FROM user_custom_exercise
        WHERE is_active = 1 AND user_id = ?
        ORDER BY exercise_name`,
-      [user.id]
+      [userId]
     );
     setExercises(rows.map((r) => ({ ...r, is_active: !!r.is_active })));
-  }, [db, user]);
+  }, [db, userId]);
 
   const refreshVariations = useCallback(async () => {
-    if (!user) return;
+    if (!userId) return;
     const rows = await db.getAllAsync<Variation>(
       `SELECT custom_variation_id, variation_name
        FROM user_custom_variation
        WHERE is_active = 1 AND user_id = ?
        ORDER BY variation_name`,
-      [user.id]
+      [userId]
     );
     setVariations(rows);
-  }, [db, user]);
+  }, [db, userId]);
 
   const refreshExerciseDetails = useCallback(async () => {
-    if (!user) return;
+    if (!userId) return;
     const rows = await db.getAllAsync<{
       custom_exercise_id: string;
       custom_variation_id: string;
@@ -114,7 +115,7 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
        FROM user_custom_exercise_variation_bridge b
        JOIN user_custom_variation v ON v.custom_variation_id = b.custom_variation_id
        WHERE b.user_id = ? AND b.deleted_locally = 0 AND v.is_active = 1`,
-      [user.id]
+      [userId]
     );
     setRawBridge(
       rows.map((r) => ({
@@ -125,7 +126,7 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
         },
       }))
     );
-  }, [db, user]);
+  }, [db, userId]);
 
   const exerciseDetailMap = useMemo(() => {
     const map: Record<string, ExerciseDetail> = {};
@@ -140,20 +141,20 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
 
   // Initial load from SQLite (instant, works offline)
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
     setCatalogCloudPullFailed(false);
     Promise.all([
       refreshExercises(),
       refreshVariations(),
       refreshExerciseDetails(),
     ]).finally(() => setLoading(false));
-  }, [user?.id]);
+  }, [userId, refreshExercises, refreshVariations, refreshExerciseDetails]);
 
   // Background seed from Supabase on first install (non-blocking)
   useEffect(() => {
-    if (!user || !isConnected) return;
+    if (!userId || !isConnected) return;
     let cancelled = false;
-    seedFromSupabase(db, user.id)
+    seedFromSupabase(db, userId)
       .then(async (result) => {
         if (cancelled) return;
         if (result === 'failed') {
@@ -171,7 +172,7 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
     return () => {
       cancelled = true;
     };
-  }, [user?.id, isConnected, db, refreshExercises, refreshVariations, refreshExerciseDetails]);
+  }, [userId, isConnected, db, refreshExercises, refreshVariations, refreshExerciseDetails]);
 
   useEffect(() => {
     if (!catalogCloudPullFailed) return;
@@ -180,18 +181,31 @@ export function ExerciseDataProvider({ children }: { children: React.ReactNode }
     }
   }, [catalogCloudPullFailed, exercises.length, variations.length]);
 
+  const contextValue = useMemo(
+    () => ({
+      exercises,
+      variations,
+      exerciseDetailMap,
+      loading,
+      catalogCloudPullFailed,
+      refreshExercises,
+      refreshVariations,
+      refreshExerciseDetails,
+    }),
+    [
+      exercises,
+      variations,
+      exerciseDetailMap,
+      loading,
+      catalogCloudPullFailed,
+      refreshExercises,
+      refreshVariations,
+      refreshExerciseDetails,
+    ],
+  );
+
   return (
-    <ExerciseDataContext.Provider
-      value={{
-        exercises,
-        variations,
-        exerciseDetailMap,
-        loading,
-        catalogCloudPullFailed,
-        refreshExercises,
-        refreshVariations,
-        refreshExerciseDetails,
-      }}>
+    <ExerciseDataContext.Provider value={contextValue}>
       {children}
     </ExerciseDataContext.Provider>
   );

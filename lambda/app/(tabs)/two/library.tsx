@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Alert, ScrollView, TextInput, useWindowDimensions } from 'react-native';
+import { Alert, ScrollView, TextInput } from 'react-native';
 import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -125,7 +125,6 @@ export default function LibraryScreen() {
   const openEdit = useUIGuard();
   const router   = useRouter();
   const insets   = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
   const db       = useSQLiteContext();
   const { user } = useAuthContext();
   const {
@@ -440,7 +439,7 @@ export default function LibraryScreen() {
 
       {/* ── Modals — always mounted so Tamagui Sheet state is never lost on tab switch ── */}
 
-      <SlideUpModal visible={exCreateVisible} onClose={() => setExCreateVisible(false)} fitContent>
+      <SlideUpModal visible={exCreateVisible} onClose={() => setExCreateVisible(false)} fitContent keyboardAware>
         <YStack padding={space.xl} gap={space.md}>
           <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>New Exercise</Text>
           <Input placeholder="Exercise name" value={exName} onChangeText={setExName} />
@@ -452,12 +451,12 @@ export default function LibraryScreen() {
             <Button label="Cancel" onPress={() => setExCreateVisible(false)} variant="danger-ghost" />
             <Button label="Create" onPress={createEx} loading={exCreating} />
           </XStack>
-          <YStack height={windowHeight * 0.15} />
+          <YStack height={space.xxl * 4} />
         </YStack>
       </SlideUpModal>
 
       {/* ── Edit Exercise ── */}
-      <SlideUpModal visible={!!editEx} onClose={() => setEditEx(null)} fitContent>
+      <SlideUpModal visible={!!editEx} onClose={() => setEditEx(null)} fitContent keyboardAware>
         <YStack padding={space.xl} gap={space.md}>
           <XStack alignItems="center">
             <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary} flex={1}>Edit Exercise</Text>
@@ -544,11 +543,11 @@ export default function LibraryScreen() {
             <Button label="Cancel" onPress={() => setEditEx(null)} variant="danger-ghost" />
             <Button label="Save" onPress={saveEditEx} />
           </XStack>
-          <YStack height={windowHeight * 0.15} />
+          <YStack height={space.xxl * 4} />
         </YStack>
       </SlideUpModal>
 
-      <SlideUpModal visible={varCreateVisible} onClose={() => setVarCreateVisible(false)} fitContent>
+      <SlideUpModal visible={varCreateVisible} onClose={() => setVarCreateVisible(false)} fitContent keyboardAware>
         <YStack padding={space.xl} gap={space.md}>
           <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>New Variation</Text>
           <Input placeholder="Variation name" value={varName} onChangeText={setVarName} />
@@ -556,12 +555,12 @@ export default function LibraryScreen() {
             <Button label="Cancel" onPress={() => setVarCreateVisible(false)} variant="danger-ghost" />
             <Button label="Create" onPress={createVar} loading={varCreating} />
           </XStack>
-          <YStack height={windowHeight * 0.15} />
+          <YStack height={space.xxl * 4} />
         </YStack>
       </SlideUpModal>
 
       {/* ── Edit Variation ── */}
-      <SlideUpModal visible={!!editVar} onClose={() => setEditVar(null)} fitContent>
+      <SlideUpModal visible={!!editVar} onClose={() => setEditVar(null)} fitContent keyboardAware>
         <YStack padding={space.xl} gap={space.md}>
           <XStack alignItems="center">
             <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary} flex={1}>Edit Variation</Text>
@@ -643,7 +642,7 @@ export default function LibraryScreen() {
             <Button label="Cancel" onPress={() => setEditVar(null)} variant="danger-ghost" />
             <Button label="Save" onPress={saveEditVar} />
           </XStack>
-          <YStack height={windowHeight * 0.15} />
+          <YStack height={space.xxl * 4} />
         </YStack>
       </SlideUpModal>
 
