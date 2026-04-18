@@ -18,7 +18,14 @@ import { createVariation, findVariationByName, reactivateVariation } from '@/lib
 import { addBridgeRow } from '@/lib/offline/bridgeStore';
 import { getExerciseDefault, saveExerciseDefault } from '@/lib/offline/exerciseDefaultsStore';
 import { loadWorkout, updateWorkoutNotes, WorkoutRow } from '@/lib/offline/workoutStore';
-import { loadSetsForWorkout, insertSet, updateSet, deleteSet, WorkoutSet } from '@/lib/offline/setStore';
+import {
+  loadSetsForWorkout,
+  insertSet,
+  updateSet,
+  deleteSet,
+  reorderSetsForWorkout,
+  WorkoutSet,
+} from '@/lib/offline/setStore';
 import { parseValues } from '@/lib/workoutSetFormat';
 import { useAppTheme } from '@/lib/ThemeContext';
 
@@ -107,6 +114,16 @@ export default function WorkoutDetailScreen() {
     if (workoutData) setWorkout(workoutData);
     setSets(setsData);
   }, [db, workoutId]);
+
+  const handleReorderSets = useCallback(
+    (orderedIds: string[]) =>
+      guard(async () => {
+        if (!workoutId) return;
+        await reorderSetsForWorkout(db, workoutId, orderedIds);
+        await loadData();
+      }),
+    [guard, db, workoutId, loadData],
+  );
 
   const dataLoadedKeyRef = useRef<string | null>(null);
   useEffect(() => {
@@ -369,21 +386,7 @@ export default function WorkoutDetailScreen() {
         </YStack>
       ) : editing ? (
         <YStack flex={1}>
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ padding: space.lg, paddingBottom: space.md }}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            automaticallyAdjustKeyboardInsets={true}
-          >
-            {workout && (
-              <XStack alignItems="center" marginBottom={space.sm} gap={space.sm}>
-                <Text flex={1} fontSize={fontSize.sm} fontWeight="700" color={colors.muted}>
-                  {formatDate(workout.user_workout_created_date)}
-                </Text>
-                <GlassButton icon="pencil" label="Notes" onPress={openWorkoutNotesModal} />
-              </XStack>
-            )}
+          <YStack flex={1} paddingHorizontal={space.lg} paddingTop={space.lg} paddingBottom={space.md}>
             <WorkoutSetsList
               sets={sets}
               exerciseDetailMap={exerciseDetailMap}
@@ -393,10 +396,21 @@ export default function WorkoutDetailScreen() {
               onEditSet={openEditSet}
               allowViewModeToggle
               interactive
+              onReorderSets={handleReorderSets}
+              listTopSlot={
+                workout ? (
+                  <XStack alignItems="center" marginBottom={space.sm} gap={space.sm}>
+                    <Text flex={1} fontSize={fontSize.sm} fontWeight="700" color={colors.muted}>
+                      {formatDate(workout.user_workout_created_date)}
+                    </Text>
+                    <GlassButton icon="pencil" label="Notes" onPress={openWorkoutNotesModal} />
+                  </XStack>
+                ) : undefined
+              }
               emptyHint="Log your first set below."
               title={setsTitle}
             />
-          </ScrollView>
+          </YStack>
 
           <WorkoutLogStickyFooter onLogSet={() => setLogSetModalVisible(true)} />
         </YStack>

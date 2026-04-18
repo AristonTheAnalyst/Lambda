@@ -19,7 +19,14 @@ import { addBridgeRow } from '@/lib/offline/bridgeStore';
 import { useAuthContext } from '@/lib/AuthContext';
 import { createWorkout, endWorkout, cancelWorkout, getActiveWorkoutId } from '@/lib/offline/workoutStore';
 import { getExerciseDefault, saveExerciseDefault } from '@/lib/offline/exerciseDefaultsStore';
-import { insertSet, updateSet, deleteSet, loadSetsForWorkout, WorkoutSet } from '@/lib/offline/setStore';
+import {
+  insertSet,
+  updateSet,
+  deleteSet,
+  loadSetsForWorkout,
+  reorderSetsForWorkout,
+  WorkoutSet,
+} from '@/lib/offline/setStore';
 import GlassButton from '@/components/GlassButton';
 import { useAsyncGuard } from '@/lib/asyncGuard';
 import { useAppTheme } from '@/lib/ThemeContext';
@@ -136,6 +143,16 @@ export default function WorkoutLogScreen() {
     setSets(data);
     setSetsLoading(false);
   }, [db]);
+
+  const handleReorderSets = useCallback(
+    (orderedIds: string[]) =>
+      guard(async () => {
+        if (!currentWorkoutId) return;
+        await reorderSetsForWorkout(db, currentWorkoutId, orderedIds);
+        await loadSets(currentWorkoutId);
+      }),
+    [guard, db, currentWorkoutId, loadSets],
+  );
 
   // ── Restore active workout on mount ───────────────────────────────────────
 
@@ -480,13 +497,7 @@ export default function WorkoutLogScreen() {
 
         {/* ── Page 1: Active workout ── */}
         <YStack flex={1}>
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ padding: space.lg, paddingBottom: space.md }}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            automaticallyAdjustKeyboardInsets={true}
-          >
+          <YStack flex={1} paddingHorizontal={space.lg} paddingTop={space.lg} paddingBottom={space.md}>
             <WorkoutSetsList
               sets={sets}
               exerciseDetailMap={exerciseDetailMap}
@@ -496,6 +507,7 @@ export default function WorkoutLogScreen() {
               onEditSet={openEditSet}
               allowViewModeToggle
               interactive
+              onReorderSets={handleReorderSets}
               title={(
                 <Text fontSize={fontSize.xl} fontWeight="700" color={colors.primary} flex={1}>
                   Sets{' '}
@@ -505,7 +517,7 @@ export default function WorkoutLogScreen() {
                 </Text>
               )}
             />
-          </ScrollView>
+          </YStack>
 
           <WorkoutLogStickyFooter onLogSet={() => setLogSetModalVisible(true)} />
         </YStack>

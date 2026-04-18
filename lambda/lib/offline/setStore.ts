@@ -131,6 +131,86 @@ export async function updateSet(
   useSyncStore.getState().requestSync();
 }
 
+async function fetchSetSyncPayload(db: SQLiteDatabase, setId: string) {
+  const row = await db.getFirstAsync<{
+    workout_set_id: string;
+    user_workout_id: string;
+    custom_exercise_id: string;
+    workout_set_number: number;
+    custom_variation_id: string | null;
+    workout_set_weight: number | null;
+    workout_set_reps: string | null;
+    workout_set_duration_seconds: string | null;
+    workout_set_notes: string | null;
+  }>(
+    `SELECT workout_set_id, user_workout_id, custom_exercise_id, workout_set_number, custom_variation_id,
+            workout_set_weight, workout_set_reps, workout_set_duration_seconds, workout_set_notes
+     FROM fact_workout_set WHERE workout_set_id = ? AND deleted_locally = 0`,
+    [setId]
+  );
+  if (!row) return null;
+  const reps = parseJsonArray(row.workout_set_reps);
+  const durs = parseJsonArray(row.workout_set_duration_seconds);
+  return {
+    workout_set_id: row.workout_set_id,
+    user_workout_id: row.user_workout_id,
+    custom_exercise_id: row.custom_exercise_id,
+    workout_set_number: row.workout_set_number,
+    workout_set_weight: row.workout_set_weight,
+    workout_set_reps: reps ?? [],
+    workout_set_duration_seconds: durs ?? [],
+    workout_set_notes: row.workout_set_notes,
+    custom_variation_id: row.custom_variation_id,
+  };
+}
+
+/** Reassign workout_set_number to 1..n in the given order; queues UPDATE only for rows whose number changed. */
+export async function reorderSetsForWorkout(
+  db: SQLiteDatabase,
+  userWorkoutId: string,
+  orderedSetIds: string[]
+): Promise<void> {
+  const rows = await db.getAllAsync<{ workout_set_id: string; workout_set_number: number }>(
+    `SELECT workout_set_id, workout_set_number FROM fact_workout_set
+     WHERE user_workout_id = ? AND deleted_locally = 0 ORDER BY workout_set_number`,
+    [userWorkoutId]
+  );
+  const idSet = new Set(rows.map((r) => r.workout_set_id));
+  if (orderedSetIds.length !== idSet.size) {
+    throw new Error('reorderSetsForWorkout: id list length does not match workout sets');
+  }
+  const seen = new Set<string>();
+  for (const id of orderedSetIds) {
+    if (!idSet.has(id) || seen.has(id)) {
+      throw new Error('reorderSetsForWorkout: invalid or duplicate set id');
+    }
+    seen.add(id);
+  }
+
+  const oldNumbers = new Map(rows.map((r) => [r.workout_set_id, r.workout_set_number]));
+  const changedIds: string[] = [];
+  for (let i = 0; i < orderedSetIds.length; i++) {
+    const id = orderedSetIds[i];
+    const newNum = i + 1;
+    if (oldNumbers.get(id) !== newNum) changedIds.push(id);
+  }
+  if (changedIds.length === 0) return;
+
+  for (let i = 0; i < orderedSetIds.length; i++) {
+    await db.runAsync(
+      `UPDATE fact_workout_set SET workout_set_number = ? WHERE workout_set_id = ? AND user_workout_id = ?`,
+      [i + 1, orderedSetIds[i], userWorkoutId]
+    );
+  }
+
+  for (const setId of changedIds) {
+    const payload = await fetchSetSyncPayload(db, setId);
+    if (!payload) continue;
+    await queueMutation(db, 'fact_workout_set', 'UPDATE', setId, payload);
+  }
+  useSyncStore.getState().requestSync();
+}
+
 // ─── Delete ───────────────────────────────────────────────────────────────────
 
 export async function deleteSet(

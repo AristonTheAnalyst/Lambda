@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { ThemeProvider as AppThemeProvider, useAppTheme } from '@/lib/ThemeContext';
@@ -7,6 +8,7 @@ import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useMemo, useRef } from 'react';
 import { Platform, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
@@ -57,10 +59,11 @@ function ThemedRoot({ children }: { children: React.ReactNode }) {
   useStatusBarForAppTheme(themeName, colors.bg);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TamaguiProvider config={config} defaultTheme={themeName}>
-        {children}
-      </TamaguiProvider>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <TamaguiProvider config={config} defaultTheme={themeName}>
+          {children}
+        </TamaguiProvider>
       {/* iOS: status bar is transparent — paint the top safe-area band (see useStatusBarForAppTheme). */}
       <View
         pointerEvents="none"
@@ -79,7 +82,8 @@ function ThemedRoot({ children }: { children: React.ReactNode }) {
         style={isDark ? 'light' : 'dark'}
         backgroundColor={Platform.OS === 'android' ? colors.bg : undefined}
       />
-    </View>
+      </View>
+    </GestureHandlerRootView>
   );
 }
 
