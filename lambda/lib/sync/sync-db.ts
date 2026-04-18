@@ -158,13 +158,16 @@ export async function hasPendingMutation(
 }
 
 /**
- * Resets all 'conflict' mutations back to 'pending' so they are retried.
- * Called on sync engine mount to recover from bugs that incorrectly marked
- * mutations as permanent failures.
+ * Resets stale mutations back to 'pending' so they are retried on the next sync.
+ * Covers two cases:
+ *   - 'conflict': permanent-failure flag that may have been set incorrectly
+ *   - 'syncing':  app was killed or crashed mid-sync; the row was never completed
+ * Called on sync engine mount.
  */
 export async function resetConflictedMutations(db: SQLiteDatabase): Promise<void> {
   await db.runAsync(
-    `UPDATE mutation_queue SET status = 'pending', error = NULL WHERE status = 'conflict'`
+    `UPDATE mutation_queue SET status = 'pending', error = NULL
+     WHERE status IN ('conflict', 'syncing')`
   );
 }
 

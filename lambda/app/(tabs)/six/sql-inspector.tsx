@@ -26,6 +26,10 @@ const PRESETS = [
     sql: 'SELECT * FROM fact_workout_set\nORDER BY user_workout_id, workout_set_number',
   },
   {
+    label: 'Non-synced',
+    sql: "SELECT id, table_name, operation, entity_id, status, error\nFROM mutation_queue\nWHERE status != 'synced'\nORDER BY created_at ASC",
+  },
+  {
     label: 'Version',
     sql: 'PRAGMA user_version',
   },
