@@ -13,6 +13,12 @@ const SECTIONS = [
     icon: 'paint-brush' as const,
   },
   {
+    route: '/six/sql-inspector',
+    label: 'SQL Inspector',
+    description: 'Run queries against the local SQLite database',
+    icon: 'database' as const,
+  },
+  {
     route: '/six/experimental',
     label: 'Experimental Features',
     description: 'Work in progress and unreleased features',

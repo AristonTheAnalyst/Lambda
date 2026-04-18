@@ -183,3 +183,55 @@ export async function purgePendingMutations(
     [tableName, entityId]
   );
 }
+
+// ─── Coalescing helpers ───────────────────────────────────────────────────────
+
+/**
+ * Returns the most recent pending mutation for a given (tableName, entityId),
+ * or null if none exists. Used by queueMutation to coalesce redundant UPDATEs.
+ */
+export async function findPendingMutationForEntity(
+  db: SQLiteDatabase,
+  tableName: string,
+  entityId: string
+): Promise<MutationRecord | null> {
+  return db.getFirstAsync<MutationRecord>(
+    `SELECT * FROM mutation_queue
+     WHERE table_name = ? AND entity_id = ? AND status = 'pending'
+     ORDER BY local_version DESC
+     LIMIT 1`,
+    [tableName, entityId]
+  ) ?? null;
+}
+
+/**
+ * Merges a new payload into an existing mutation row and bumps its local_version.
+ * Used to coalesce a new UPDATE into an existing pending UPDATE or CREATE.
+ */
+export async function updateMutationPayload(
+  db: SQLiteDatabase,
+  mutationId: string,
+  mergedPayload: Record<string, unknown>,
+  newVersion: number
+): Promise<void> {
+  await db.runAsync(
+    `UPDATE mutation_queue SET payload = ?, local_version = ? WHERE id = ?`,
+    [JSON.stringify(mergedPayload), newVersion, mutationId]
+  );
+}
+
+/**
+ * Deletes all pending UPDATE mutations for a given (tableName, entityId).
+ * Called before inserting a DELETE mutation so superseded UPDATEs don't sync.
+ */
+export async function deletePendingUpdatesForEntity(
+  db: SQLiteDatabase,
+  tableName: string,
+  entityId: string
+): Promise<void> {
+  await db.runAsync(
+    `DELETE FROM mutation_queue
+     WHERE table_name = ? AND entity_id = ? AND status = 'pending' AND operation = 'UPDATE'`,
+    [tableName, entityId]
+  );
+}

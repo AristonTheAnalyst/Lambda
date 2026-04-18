@@ -5,10 +5,16 @@ import { CREATE_TABLES_V2, SCHEMA_VERSION } from './schema';
  * Called by SQLiteProvider's onInit prop.
  *
  * Migration strategy: PRAGMA user_version tracks the schema version.
- * v1 → v2 drops all old tables (sync_queue, id_remap, local_id_seq and all entity
- * tables with INTEGER PKs) and recreates them with TEXT UUID PKs + mutation_queue.
- * Existing local data is lost — acceptable during development; add row-level
- * data migration here if needed before App Store release.
+ *
+ * Pre-App-Store wipe (any version < 2):
+ *   Drops all old tables and recreates with the v2 schema (TEXT UUID PKs +
+ *   mutation_queue). Data loss is acceptable — these versions predate any
+ *   App Store release.
+ *
+ * Incremental safe migrations (v2 → v3, v3 → v4, …):
+ *   Each block uses ALTER TABLE ADD COLUMN for additive changes, or the
+ *   create-copy-drop-rename pattern for structural changes.
+ *   Never DROP TABLE in a migration numbered 3 or above.
  */
 export async function initializeDatabase(db: SQLiteDatabase): Promise<void> {
   await db.execAsync('PRAGMA journal_mode = WAL;');
@@ -19,8 +25,9 @@ export async function initializeDatabase(db: SQLiteDatabase): Promise<void> {
   );
   const currentVersion = versionRow?.user_version ?? 0;
 
-  if (currentVersion < SCHEMA_VERSION) {
-    // Drop everything from the old schema before recreating
+  // ── Pre-App-Store destructive wipe ───────────────────────────────────────────
+  // Versions 0 and 1 predate the App Store — safe to wipe and recreate.
+  if (currentVersion < 2) {
     await db.execAsync(`
       DROP TABLE IF EXISTS sync_queue;
       DROP TABLE IF EXISTS id_remap;
@@ -34,6 +41,18 @@ export async function initializeDatabase(db: SQLiteDatabase): Promise<void> {
       DROP TABLE IF EXISTS mutation_queue;
     `);
     await db.execAsync(CREATE_TABLES_V2);
-    await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION};`);
+    await db.execAsync('PRAGMA user_version = 2;');
   }
+
+  // ── Incremental safe migrations ──────────────────────────────────────────────
+  // v2 → v3: App Store baseline — no schema change.
+  if (currentVersion < 3) {
+    await db.execAsync(`PRAGMA user_version = 3;`);
+  }
+
+  // Template for future migrations:
+  // if (currentVersion < 4) {
+  //   await db.execAsync(`ALTER TABLE fact_workout_set ADD COLUMN foo TEXT;`);
+  //   await db.execAsync(`PRAGMA user_version = 4;`);
+  // }
 }

@@ -4,7 +4,8 @@ export default function DevLayout() {
   return (
     <Stack>
       <Stack.Screen name="index"        options={{ headerShown: false }} />
-      <Stack.Screen name="experimental" options={{ headerShown: false }} />
+      <Stack.Screen name="experimental"    options={{ headerShown: false }} />
+      <Stack.Screen name="sql-inspector"  options={{ headerShown: false }} />
     </Stack>
   );
 }

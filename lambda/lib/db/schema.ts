@@ -5,8 +5,10 @@ export const DATABASE_NAME = 'lambda.db';
  * Stored in SQLite's PRAGMA user_version.
  * v1 → v2: switched all PKs to TEXT UUID, replaced sync_queue/id_remap/local_id_seq
  *           with mutation_queue.
+ * v2 → v3: App Store baseline — no schema change, establishes incremental migration
+ *           pattern. All future versions use ALTER TABLE / table-copy, never DROP TABLE.
  */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const CREATE_TABLES_V2 = `
 -- ─── Entity tables (UUID TEXT PKs, matching Supabase column names) ─────────────

@@ -12,6 +12,9 @@ import {
   getPendingMutations,
   getEntityLocalVersion,
   hasPendingMutation,
+  findPendingMutationForEntity,
+  updateMutationPayload,
+  deletePendingUpdatesForEntity,
 } from './sync-db';
 
 // ─── Table → PK column map ────────────────────────────────────────────────────
@@ -66,12 +69,18 @@ function isTransientError(err: unknown): boolean {
  * This is the ONLY write path — never write directly to Supabase.
  * The entity must already exist in its local SQLite table.
  *
- * @param db       - Open SQLite database
- * @param table    - Supabase/SQLite table name
+ * Coalescing: UPDATE mutations are merged into any existing pending UPDATE or
+ * CREATE for the same entity rather than inserting a new row. This prevents
+ * rapid edits (e.g. typing notes) from generating redundant sync jobs.
+ * DELETE mutations supersede any pending UPDATEs for the same entity before
+ * being inserted. CREATEs are never coalesced.
+ *
+ * @param db        - Open SQLite database
+ * @param table     - Supabase/SQLite table name
  * @param operation - 'CREATE' | 'UPDATE' | 'DELETE'
- * @param entityId - UUID of the entity (same UUID used as PK in SQLite + Supabase)
- * @param payload  - Full row data to send to Supabase
- * @returns        - The mutation UUID (for idempotent retry tracking)
+ * @param entityId  - UUID of the entity (same UUID used as PK in SQLite + Supabase)
+ * @param payload   - Full row data to send to Supabase
+ * @returns         - The mutation UUID (existing ID if coalesced, new UUID otherwise)
  */
 export async function queueMutation(
   db: SQLiteDatabase,
@@ -80,6 +89,24 @@ export async function queueMutation(
   entityId: string,
   payload: Record<string, unknown>
 ): Promise<string> {
+  if (operation === 'UPDATE') {
+    const existing = await findPendingMutationForEntity(db, table, entityId);
+    if (existing && (existing.operation === 'UPDATE' || existing.operation === 'CREATE')) {
+      // Merge into the existing pending mutation — new values win on key conflicts
+      const existingPayload = JSON.parse(existing.payload) as Record<string, unknown>;
+      const mergedPayload = { ...existingPayload, ...payload };
+      await updateMutationPayload(db, existing.id, mergedPayload, existing.local_version + 1);
+      return existing.id;
+    }
+    // No pending mutation to coalesce into — fall through to a fresh insert
+  }
+
+  if (operation === 'DELETE') {
+    // Pending UPDATEs are now irrelevant; clear them before inserting the DELETE
+    await deletePendingUpdatesForEntity(db, table, entityId);
+  }
+
+  // CREATE, or UPDATE/DELETE with nothing to coalesce into:
   const mutationId = randomUUID();
   const nextVersion = (await getEntityLocalVersion(db, table, entityId)) + 1;
 
