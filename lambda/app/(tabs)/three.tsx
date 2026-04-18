@@ -145,13 +145,12 @@ export default function WorkoutLogScreen() {
   }, [db]);
 
   const handleReorderSets = useCallback(
-    (orderedIds: string[]) =>
+    (_reorderedSets: WorkoutSet[], orderedIds: string[]) =>
       guard(async () => {
         if (!currentWorkoutId) return;
         await reorderSetsForWorkout(db, currentWorkoutId, orderedIds);
-        await loadSets(currentWorkoutId);
       }),
-    [guard, db, currentWorkoutId, loadSets],
+    [guard, db, currentWorkoutId],
   );
 
   // ── Restore active workout on mount ───────────────────────────────────────
@@ -512,7 +511,7 @@ export default function WorkoutLogScreen() {
                 <Text fontSize={fontSize.xl} fontWeight="700" color={colors.primary} flex={1}>
                   Sets{' '}
                   <Text fontSize={fontSize.sm} fontWeight="400" color={colors.muted}>
-                    ({viewMode === 'grouped' ? 'grouped' : 'full'})
+                    ({viewMode === 'grouped' ? 'grouped' : 'chronological'})
                   </Text>
                 </Text>
               )}

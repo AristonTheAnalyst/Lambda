@@ -1,4 +1,4 @@
-import React, { ReactNode, useCallback, useMemo } from 'react';
+import React, { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -33,13 +33,13 @@ const CompactGroup = React.memo(function CompactGroup({
   startIdx,
   onEdit,
 }: CompactGroupProps) {
-  const { colors, space, fontSize } = useAppTheme();
+  const { colors, space, radius, fontSize } = useAppTheme();
   const [collapsed, setCollapsed] = React.useState(false);
   const interactive = !!onEdit;
 
   return (
     <YStack paddingVertical={space.sm}>
-      <XStack alignItems="center" marginBottom={space.xs}>
+      <XStack alignItems="center" marginBottom={space.sm}>
         <Text fontSize={15} fontWeight="600" color={colors.primary} flex={1}>
           {exName}
         </Text>
@@ -70,7 +70,13 @@ const CompactGroup = React.memo(function CompactGroup({
           return (
             <XStack
               key={s.workout_set_id}
-              paddingVertical={space.xs}
+              paddingVertical={space.md}
+              paddingHorizontal={space.md}
+              marginBottom={space.xs}
+              borderRadius={radius.sm}
+              borderWidth={1}
+              borderColor={colors.border}
+              backgroundColor={colors.surface}
               alignItems="center"
               pressStyle={interactive ? { opacity: 0.6 } : undefined}
               onPress={interactive ? () => onEdit!(s) : undefined}
@@ -103,8 +109,8 @@ export interface WorkoutSetsListProps {
   allowViewModeToggle: boolean;
   interactive: boolean;
   emptyHint?: string;
-  /** Persist new global order (workout_set_number 1..n). Works in grouped or chrono; drag uses full session order. */
-  onReorderSets?: (orderedIds: string[]) => void | Promise<void>;
+  /** Persist new global order (workout_set_number 1..n). Only active in Chronological view. */
+  onReorderSets?: (reorderedSets: WorkoutSet[], orderedIds: string[]) => void | Promise<void>;
   /** Rendered above the chrono list (e.g. session date row). */
   listTopSlot?: ReactNode;
 }
@@ -152,7 +158,27 @@ export default function WorkoutSetsList({
   const effectiveMode = allowViewModeToggle ? viewMode : 'chrono';
   const onEdit = interactive ? onEditSet : undefined;
   const useDraggable =
-    Platform.OS !== 'web' && interactive && !!onReorderSets && sets.length > 1;
+    Platform.OS !== 'web' && interactive && !!onReorderSets && sets.length > 1 && effectiveMode === 'chrono';
+
+  // Local copy of sets for the draggable list. Updated instantly on drag end
+  // so DraggableFlatList never receives a prop change after a reorder — no flicker.
+  // Syncs from the sets prop only when items are added or removed (id set changes).
+  const [localData, setLocalData] = useState<WorkoutSet[]>(sets);
+  useEffect(() => {
+    setLocalData((prev) => {
+      const prevIds = new Set(prev.map((s) => s.workout_set_id));
+      const nextIds = new Set(sets.map((s) => s.workout_set_id));
+      const sameIds =
+        prevIds.size === nextIds.size && [...nextIds].every((id) => prevIds.has(id));
+      if (!sameIds) {
+        // Items added or removed — reset to the canonical order from the parent.
+        return sets;
+      }
+      // Same items: update content in-place (handles edits) but keep local drag order.
+      const contentMap = new Map(sets.map((s) => [s.workout_set_id, s]));
+      return prev.map((s) => contentMap.get(s.workout_set_id) ?? s);
+    });
+  }, [sets]);
 
   const renderChronoRowStatic = useCallback(
     (s: WorkoutSet, idx: number) => {
@@ -160,7 +186,7 @@ export default function WorkoutSetsList({
       return (
         <XStack
           key={s.workout_set_id}
-          paddingVertical={space.xs}
+          paddingVertical={space.md}
           borderBottomWidth={0.5}
           borderBottomColor={colors.border}
           alignItems="center"
@@ -184,7 +210,7 @@ export default function WorkoutSetsList({
         </XStack>
       );
     },
-    [colors.border, colors.accent, colors.primary, colors.muted, exerciseDetailMap, fontSize.sm, interactive, onEditSet, space.sm, space.xs],
+    [colors.border, colors.accent, colors.primary, colors.muted, exerciseDetailMap, fontSize.sm, interactive, onEditSet, space.sm, space.md],
   );
 
   const renderDraggableItem = useCallback(
@@ -220,8 +246,7 @@ export default function WorkoutSetsList({
         const { label, notes } = chronoLineParts(s, idx, exerciseDetailMap);
         bodyText = (
           <Text flex={1} fontSize={fontSize.sm} color={colors.accent} numberOfLines={2}>
-            <Text color={colors.primary}>{`#${idx + 1} :`}</Text>
-            {` ${label}`}
+            {label}
             {notes ? (
               <Text color={colors.accent}>
                 {' · '}
@@ -233,29 +258,23 @@ export default function WorkoutSetsList({
       }
 
       const row = (
-        <XStack
-          paddingVertical={space.xs}
-          borderBottomWidth={0.5}
-          borderBottomColor={colors.border}
-          alignItems="center"
-          backgroundColor={colors.bg}
+        <Pressable
+          onLongPress={drag}
+          onPress={() => onEditSet(s)}
+          delayLongPress={180}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingVertical: space.md,
+            borderBottomWidth: 0.5,
+            borderBottomColor: colors.border,
+            backgroundColor: colors.bg,
+          }}
         >
-          <Pressable
-            onLongPress={drag}
-            delayLongPress={180}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={{ paddingRight: space.sm }}
-          >
-            <FontAwesome name="bars" size={14} color={colors.muted} />
-          </Pressable>
-          <Pressable
-            style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
-            onPress={() => onEditSet(s)}
-          >
-            {bodyText}
-            <FontAwesome name="pencil" size={10} color={colors.muted} style={{ marginLeft: space.sm }} />
-          </Pressable>
-        </XStack>
+          <FontAwesome name="bars" size={14} color={colors.muted} style={{ marginRight: space.sm }} />
+          {bodyText}
+          <FontAwesome name="pencil" size={10} color={colors.muted} style={{ marginLeft: space.sm }} />
+        </Pressable>
       );
 
       if (effectiveMode === 'chrono') {
@@ -293,16 +312,17 @@ export default function WorkoutSetsList({
       onEditSet,
       sets,
       space.sm,
-      space.xs,
+      space.md,
     ],
   );
 
   const onDragEnd = useCallback(
     async ({ data, from, to }: { data: WorkoutSet[]; from: number; to: number }) => {
       if (!onReorderSets || from === to) return;
-      const ids = data.map((x) => x.workout_set_id);
-      await Promise.resolve(onReorderSets(ids));
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setLocalData(data); // instant — no parent re-render, no flicker
+      const ids = data.map((x) => x.workout_set_id);
+      await Promise.resolve(onReorderSets(data, ids));
     },
     [onReorderSets],
   );
@@ -328,11 +348,12 @@ export default function WorkoutSetsList({
         </Text>
       ) : useDraggable ? (
         <DraggableFlatList
-          data={sets}
+          data={localData}
           keyExtractor={(s) => s.workout_set_id}
           onDragEnd={onDragEnd}
           renderItem={renderDraggableItem}
           activationDistance={14}
+          animationConfig={{ duration: 200, useNativeDriver: true }}
           containerStyle={{ flex: 1 }}
           contentContainerStyle={{ flexGrow: 1, paddingBottom: space.md }}
           ListHeaderComponent={listTopSlot ? <YStack>{listTopSlot}</YStack> : undefined}

@@ -116,13 +116,12 @@ export default function WorkoutDetailScreen() {
   }, [db, workoutId]);
 
   const handleReorderSets = useCallback(
-    (orderedIds: string[]) =>
+    (_reorderedSets: WorkoutSet[], orderedIds: string[]) =>
       guard(async () => {
         if (!workoutId) return;
         await reorderSetsForWorkout(db, workoutId, orderedIds);
-        await loadData();
       }),
-    [guard, db, workoutId, loadData],
+    [guard, db, workoutId],
   );
 
   const dataLoadedKeyRef = useRef<string | null>(null);
