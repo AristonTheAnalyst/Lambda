@@ -21,6 +21,7 @@ import {
 } from '@/lib/offline/bridgeStore';
 import { useAsyncGuard, useUIGuard } from '@/lib/asyncGuard';
 import { useAppTheme } from '@/lib/ThemeContext';
+import { toProperCase } from '@/lib/workoutSetFormat';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -76,7 +77,7 @@ const ExRow = React.memo(function ExRow({
       cursor="pointer"
     >
       <YStack flex={1}>
-        <Text fontSize={15} color={colors.primary}>{ex.exercise_name}</Text>
+        <Text fontSize={15} color={colors.primary}>{toProperCase(ex.exercise_name)}</Text>
         <Text fontSize={fontSize.xs} color={colors.muted} marginTop={space.xs}>{ex.exercise_volume_type}</Text>
       </YStack>
     </XStack>
@@ -101,7 +102,7 @@ const VarRow = React.memo(function VarRow({
       onPress={() => onEdit(v)}
       cursor="pointer"
     >
-      <Text flex={1} fontSize={15} color={colors.primary}>{v.variation_name}</Text>
+      <Text flex={1} fontSize={15} color={colors.primary}>{toProperCase(v.variation_name)}</Text>
     </XStack>
   );
 });
@@ -459,7 +460,7 @@ export default function LibraryScreen() {
                   borderBottomWidth={i < exAssignedVars.length - 1 ? 0.5 : 0}
                   borderBottomColor={colors.border}
                 >
-                  <Text flex={1} fontSize={15} color={colors.primary}>{v.variation_name}</Text>
+                  <Text flex={1} fontSize={15} color={colors.primary}>{toProperCase(v.variation_name)}</Text>
                   <GlassButton
                     icon="trash"
                     iconSize={14}
@@ -472,7 +473,7 @@ export default function LibraryScreen() {
           )}
           {exAvailableVars.length > 0 && (
             <DropdownSelect
-              options={exAvailableVars.map((v) => ({ label: v.variation_name, value: v.custom_variation_id }))}
+              options={exAvailableVars.map((v) => ({ label: toProperCase(v.variation_name), value: v.custom_variation_id }))}
               multiSelect
               selectedValues={exSelection}
               onChangeMulti={setExSelection}
@@ -551,7 +552,7 @@ export default function LibraryScreen() {
                   borderBottomColor={colors.border}
                 >
                   <YStack flex={1}>
-                    <Text fontSize={15} color={colors.primary}>{ex.exercise_name}</Text>
+                    <Text fontSize={15} color={colors.primary}>{toProperCase(ex.exercise_name)}</Text>
                     <Text fontSize={fontSize.xs} color={colors.muted} marginTop={2}>{ex.exercise_volume_type}</Text>
                   </YStack>
                   <GlassButton
@@ -566,7 +567,7 @@ export default function LibraryScreen() {
           )}
           {varAvailableExs.length > 0 && (
             <DropdownSelect
-              options={varAvailableExs.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id }))}
+              options={varAvailableExs.map((ex) => ({ label: toProperCase(ex.exercise_name), value: ex.custom_exercise_id }))}
               multiSelect
               selectedValues={varSelection}
               onChangeMulti={setVarSelection}

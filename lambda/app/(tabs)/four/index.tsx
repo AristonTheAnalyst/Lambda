@@ -3,6 +3,7 @@ import { ScrollView, RefreshControl } from 'react-native';
 import { Spinner, Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
+import { useFocusEffect } from '@react-navigation/native';
 import PageHeader from '@/components/PageHeader';
 import SyncStatusIcon from '@/components/SyncStatusIcon';
 import { useAuthContext } from '@/lib/AuthContext';
@@ -10,6 +11,7 @@ import { useExerciseData } from '@/lib/ExerciseDataContext';
 import { useNetwork } from '@/hooks/useNetwork';
 import { loadWorkoutsWithSets, seedWorkoutsFromSupabase, WorkoutWithSets } from '@/lib/offline/workoutStore';
 import { useAppTheme } from '@/lib/ThemeContext';
+import { toProperCase } from '@/lib/workoutSetFormat';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -18,26 +20,44 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function getUniqueCombos(
+interface ExerciseSummary {
+  exName: string;
+  varNames: string[];
+  setCount: number;
+}
+
+function getExerciseSummaries(
   sets: WorkoutWithSets['sets'],
   exerciseDetailMap: ReturnType<typeof useExerciseData>['exerciseDetailMap']
-): string[] {
-  const seen = new Set<string>();
-  const combos: string[] = [];
+): ExerciseSummary[] {
+  const order: string[] = [];
+  const map = new Map<string, ExerciseSummary>();
+
   for (const s of sets) {
-    const exName = exerciseDetailMap[s.custom_exercise_id]?.exercise_name ?? `Exercise ${s.custom_exercise_id}`;
-    const varName = s.custom_variation_id
-      ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations.find(
+    const exId = s.custom_exercise_id;
+    if (!map.has(exId)) {
+      order.push(exId);
+      map.set(exId, {
+        exName: toProperCase(exerciseDetailMap[exId]?.exercise_name ?? `Exercise ${exId}`),
+        varNames: [],
+        setCount: 0,
+      });
+    }
+    const entry = map.get(exId)!;
+    entry.setCount += 1;
+    if (s.custom_variation_id) {
+      const varName = toProperCase(
+        exerciseDetailMap[exId]?.assigned_variations.find(
           (v) => v.custom_variation_id === s.custom_variation_id
-        )?.variation_name
-      : null;
-    const key = `${s.custom_exercise_id}:${s.custom_variation_id ?? 'none'}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      combos.push(varName ? `${exName} · ${varName}` : exName);
+        )?.variation_name ?? ''
+      );
+      if (varName && !entry.varNames.includes(varName)) {
+        entry.varNames.push(varName);
+      }
     }
   }
-  return combos;
+
+  return order.map((id) => map.get(id)!);
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -66,6 +86,11 @@ export default function TrainingLogsScreen() {
     setLogsCloudPullFailed(false);
     loadFromSQLite();
   }, [loadFromSQLite]);
+
+  // Reload from SQLite whenever the screen comes back into focus (e.g. after editing a set in [id].tsx)
+  useFocusEffect(useCallback(() => {
+    loadFromSQLite();
+  }, [loadFromSQLite]));
 
   // Background seed from Supabase on first install (non-blocking)
   useEffect(() => {
@@ -137,7 +162,7 @@ export default function TrainingLogsScreen() {
             </YStack>
           ) : (
             workouts.map((w) => {
-              const combos = getUniqueCombos(w.sets, exerciseDetailMap);
+              const summaries = getExerciseSummaries(w.sets, exerciseDetailMap);
               const setCount = w.sets.length;
               return (
                 <YStack
@@ -151,7 +176,7 @@ export default function TrainingLogsScreen() {
                   cursor="pointer"
                 >
                   {/* Date + set count */}
-                  <XStack alignItems="center" justifyContent="space-between" marginBottom={space.xs}>
+                  <XStack alignItems="center" justifyContent="space-between" marginBottom={space.sm}>
                     <Text fontSize={fontSize.sm} fontWeight="700" color={colors.accent}>
                       {formatDate(w.user_workout_created_date)}
                     </Text>
@@ -160,26 +185,43 @@ export default function TrainingLogsScreen() {
                     </Text>
                   </XStack>
 
-                  {/* Workout notes */}
-                  {w.user_post_workout_notes ? (
-                    <Text fontSize={fontSize.sm} color={colors.muted} marginBottom={space.sm} fontStyle="italic">
-                      "{w.user_post_workout_notes}"
+                  {/* Pre-workout notes */}
+                  {w.user_pre_workout_notes ? (
+                    <Text fontSize={fontSize.xs} color={colors.muted} marginBottom={space.sm} fontStyle="italic" numberOfLines={2}>
+                      {`"${w.user_pre_workout_notes}"`}
                     </Text>
                   ) : null}
 
-                  {/* Exercise + variation combos */}
-                  {combos.length > 0 ? (
-                    <YStack gap={space.xs}>
-                      {combos.map((combo, i) => (
-                        <XStack key={i} alignItems="center" gap={space.xs}>
-                          <YStack width={4} height={4} borderRadius={2} backgroundColor={colors.muted} />
-                          <Text fontSize={fontSize.sm} color={colors.primary}>{combo}</Text>
-                        </XStack>
-                      ))}
+                  {/* Per-exercise rows */}
+                  {summaries.length > 0 ? (
+                    <YStack gap={space.xs} marginBottom={w.user_post_workout_notes ? space.sm : 0}>
+                      {summaries.map((s, i) => {
+                        const label = s.varNames.length > 0
+                          ? `${s.exName} (${s.varNames.join(', ')})`
+                          : s.exName;
+                        return (
+                          <XStack key={i} alignItems="center" gap={space.sm}>
+                            <YStack width={4} height={4} borderRadius={2} backgroundColor={colors.muted} marginTop={2} flexShrink={0} />
+                            <Text fontSize={fontSize.sm} color={colors.primary} flex={1} numberOfLines={2}>
+                              {label}
+                            </Text>
+                            <Text fontSize={fontSize.xs} color={colors.muted} flexShrink={0}>
+                              {s.setCount} {s.setCount === 1 ? 'set' : 'sets'}
+                            </Text>
+                          </XStack>
+                        );
+                      })}
                     </YStack>
                   ) : (
                     <Text fontSize={fontSize.sm} color={colors.muted}>No sets recorded.</Text>
                   )}
+
+                  {/* Post-workout notes */}
+                  {w.user_post_workout_notes ? (
+                    <Text fontSize={fontSize.xs} color={colors.muted} marginTop={space.xs} fontStyle="italic" numberOfLines={2}>
+                      {`"${w.user_post_workout_notes}"`}
+                    </Text>
+                  ) : null}
                 </YStack>
               );
             })

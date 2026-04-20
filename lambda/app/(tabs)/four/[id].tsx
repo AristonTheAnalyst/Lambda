@@ -18,15 +18,8 @@ import { createVariation, findVariationByName, reactivateVariation } from '@/lib
 import { addBridgeRow } from '@/lib/offline/bridgeStore';
 import { getExerciseDefault, saveExerciseDefault } from '@/lib/offline/exerciseDefaultsStore';
 import { loadWorkout, updateWorkoutNotes, WorkoutRow } from '@/lib/offline/workoutStore';
-import {
-  loadSetsForWorkout,
-  insertSet,
-  updateSet,
-  deleteSet,
-  reorderSetsForWorkout,
-  WorkoutSet,
-} from '@/lib/offline/setStore';
-import { parseValues } from '@/lib/workoutSetFormat';
+import { loadSetsForWorkout, insertSet, updateSet, deleteSet, reorderSetsForWorkout, WorkoutSet } from '@/lib/offline/setStore';
+import { parseValues, toProperCase } from '@/lib/workoutSetFormat';
 import { useAppTheme } from '@/lib/ThemeContext';
 
 function formatDate(iso: string): string {
@@ -55,6 +48,8 @@ export default function WorkoutDetailScreen() {
   const [postNotes, setPostNotes] = useState('');
   const [notesLoading, setNotesLoading] = useState(false);
   const [workoutNotesModalVisible, setWorkoutNotesModalVisible] = useState(false);
+  const [notesTarget, setNotesTarget] = useState<'pre' | 'post'>('pre');
+  const [notesMenuOpen, setNotesMenuOpen] = useState(false);
   const [draftPre, setDraftPre] = useState('');
   const [draftPost, setDraftPost] = useState('');
 
@@ -75,6 +70,7 @@ export default function WorkoutDetailScreen() {
   const [editNotes, setEditNotes] = useState('');
   const [editVarId, setEditVarId] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
+  const editOriginalRef = useRef<{ exId: string | null; varId: string | null; weight: string; repsOrDuration: string; notes: string } | null>(null);
 
   const [newExVisible, setNewExVisible] = useState(false);
   const [newExForEdit, setNewExForEdit] = useState(false);
@@ -90,18 +86,18 @@ export default function WorkoutDetailScreen() {
   const [newVarCreating, setNewVarCreating] = useState(false);
 
   const exerciseOptions = useMemo(
-    () => exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id })),
+    () => exercises.map((ex) => ({ label: toProperCase(ex.exercise_name), value: ex.custom_exercise_id })),
     [exercises]
   );
 
   const logVarOptions = useMemo(() => [
     { label: 'None', value: null as string | null },
-    ...(selectedEx?.assigned_variations ?? []).map((v) => ({ label: v.variation_name, value: v.custom_variation_id as string | null })),
+    ...(selectedEx?.assigned_variations ?? []).map((v) => ({ label: toProperCase(v.variation_name), value: v.custom_variation_id as string | null })),
   ], [selectedEx]);
 
   const editVarOptions = useMemo(() => [
     { label: 'None', value: null as string | null },
-    ...(editEx?.assigned_variations ?? []).map((v) => ({ label: v.variation_name, value: v.custom_variation_id as string | null })),
+    ...(editEx?.assigned_variations ?? []).map((v) => ({ label: toProperCase(v.variation_name), value: v.custom_variation_id as string | null })),
   ], [editEx]);
 
   const loadData = useCallback(async () => {
@@ -110,9 +106,9 @@ export default function WorkoutDetailScreen() {
       loadWorkout(db, workoutId),
       loadSetsForWorkout(db, workoutId),
     ]);
-    setLoading(false);
     if (workoutData) setWorkout(workoutData);
     setSets(setsData);
+    setLoading(false);
   }, [db, workoutId]);
 
   const handleReorderSets = useCallback(
@@ -137,7 +133,9 @@ export default function WorkoutDetailScreen() {
     setEditing(true);
   }
 
-  function openWorkoutNotesModal() {
+  function openNotesOption(target: 'pre' | 'post') {
+    setNotesMenuOpen(false);
+    setNotesTarget(target);
     setDraftPre(preNotes);
     setDraftPost(postNotes);
     setWorkoutNotesModalVisible(true);
@@ -307,13 +305,36 @@ export default function WorkoutDetailScreen() {
 
   function openEditSet(s: WorkoutSet) {
     Keyboard.dismiss();
+    const vals = s.workout_set_reps?.length ? s.workout_set_reps : s.workout_set_duration_seconds ?? [];
+    const weight = s.workout_set_weight != null ? String(s.workout_set_weight) : '';
+    const repsOrDuration = vals.join(',');
+    const notes = s.workout_set_notes ?? '';
+    editOriginalRef.current = { exId: s.custom_exercise_id, varId: s.custom_variation_id, weight, repsOrDuration, notes };
     setEditingSet(s);
     setEditExId(s.custom_exercise_id);
-    setEditWeight(s.workout_set_weight != null ? String(s.workout_set_weight) : '');
-    const vals = s.workout_set_reps?.length ? s.workout_set_reps : s.workout_set_duration_seconds ?? [];
-    setEditRepsOrDuration(vals.join(','));
-    setEditNotes(s.workout_set_notes ?? '');
+    setEditWeight(weight);
+    setEditRepsOrDuration(repsOrDuration);
+    setEditNotes(notes);
     setEditVarId(s.custom_variation_id);
+  }
+
+  function cancelEditSet() {
+    const orig = editOriginalRef.current;
+    const dirty = orig && (
+      editExId !== orig.exId ||
+      editVarId !== orig.varId ||
+      editWeight !== orig.weight ||
+      editRepsOrDuration !== orig.repsOrDuration ||
+      editNotes !== orig.notes
+    );
+    if (dirty) {
+      Alert.alert('Discard Changes', 'You have unsaved changes. Discard them?', [
+        { text: 'Keep Editing', style: 'cancel' },
+        { text: 'Discard', style: 'destructive', onPress: () => setEditingSet(null) },
+      ]);
+    } else {
+      setEditingSet(null);
+    }
   }
 
   function saveEditSet() {
@@ -379,11 +400,7 @@ export default function WorkoutDetailScreen() {
       </XStack>
       <Separator borderColor={colors.border} />
 
-      {loading ? (
-        <YStack flex={1} alignItems="center" justifyContent="center">
-          <Spinner size="large" color={colors.accent} />
-        </YStack>
-      ) : editing ? (
+      {editing ? (
         <YStack flex={1}>
           <YStack flex={1} paddingHorizontal={space.lg} paddingTop={space.lg} paddingBottom={space.md}>
             <WorkoutSetsList
@@ -398,12 +415,9 @@ export default function WorkoutDetailScreen() {
               onReorderSets={handleReorderSets}
               listTopSlot={
                 workout ? (
-                  <XStack alignItems="center" marginBottom={space.sm} gap={space.sm}>
-                    <Text flex={1} fontSize={fontSize.sm} fontWeight="700" color={colors.muted}>
-                      {formatDate(workout.user_workout_created_date)}
-                    </Text>
-                    <GlassButton icon="pencil" label="Notes" onPress={openWorkoutNotesModal} />
-                  </XStack>
+                  <Text fontSize={fontSize.sm} fontWeight="700" color={colors.muted} marginBottom={space.sm}>
+                    {formatDate(workout.user_workout_created_date)}
+                  </Text>
                 ) : undefined
               }
               emptyHint="Log your first set below."
@@ -411,7 +425,41 @@ export default function WorkoutDetailScreen() {
             />
           </YStack>
 
-          <WorkoutLogStickyFooter onLogSet={() => setLogSetModalVisible(true)} />
+          <WorkoutLogStickyFooter
+            onLogSet={() => setLogSetModalVisible(true)}
+            secondaryLabel="Notes"
+            onSecondaryPress={() => setNotesMenuOpen((v) => !v)}
+            menuContent={notesMenuOpen ? (
+              <YStack
+                backgroundColor={colors.surface}
+                borderRadius={radius.md}
+                borderWidth={0.5}
+                borderColor={colors.border}
+                overflow="hidden"
+                alignSelf="flex-start"
+              >
+                <XStack
+                  paddingVertical={space.sm}
+                  paddingHorizontal={space.md}
+                  pressStyle={{ opacity: 0.7 }}
+                  onPress={() => openNotesOption('pre')}
+                  cursor="pointer"
+                >
+                  <Text fontSize={fontSize.sm} color={colors.primary}>Pre-workout Notes</Text>
+                </XStack>
+                <Separator borderColor={colors.border} />
+                <XStack
+                  paddingVertical={space.sm}
+                  paddingHorizontal={space.md}
+                  pressStyle={{ opacity: 0.7 }}
+                  onPress={() => openNotesOption('post')}
+                  cursor="pointer"
+                >
+                  <Text fontSize={fontSize.sm} color={colors.primary}>Post-workout Notes</Text>
+                </XStack>
+              </YStack>
+            ) : undefined}
+          />
         </YStack>
       ) : (
         <ScrollView
@@ -441,7 +489,7 @@ export default function WorkoutDetailScreen() {
           <WorkoutSetsList
             sets={sets}
             exerciseDetailMap={exerciseDetailMap}
-            setsLoading={false}
+            setsLoading={loading}
             viewMode={viewMode}
             onToggleViewMode={() => setViewMode((v) => (v === 'grouped' ? 'chrono' : 'grouped'))}
             onEditSet={openEditSet}
@@ -471,21 +519,26 @@ export default function WorkoutDetailScreen() {
         keyboardAware
       >
         <YStack padding={space.xl} gap={space.md}>
-          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>Workout notes</Text>
-          <Input
-            label="Pre-workout notes (optional)"
-            value={draftPre}
-            onChangeText={setDraftPre}
-            placeholder="Pre-workout notes…"
-            multiline
-          />
-          <Input
-            label="Post-workout notes (optional)"
-            value={draftPost}
-            onChangeText={setDraftPost}
-            placeholder="Post-workout notes…"
-            multiline
-          />
+          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>
+            {notesTarget === 'pre' ? 'Pre-Workout Notes' : 'Post-Workout Notes'}
+          </Text>
+          {notesTarget === 'pre' ? (
+            <Input
+              label="Pre-workout notes (optional)"
+              value={draftPre}
+              onChangeText={setDraftPre}
+              placeholder="Pre-workout notes…"
+              multiline
+            />
+          ) : (
+            <Input
+              label="Post-workout notes (optional)"
+              value={draftPost}
+              onChangeText={setDraftPost}
+              placeholder="Post-workout notes…"
+              multiline
+            />
+          )}
           <XStack gap={space.sm} justifyContent="center">
             <GlassButton label="Cancel" color={colors.danger} onPress={() => setWorkoutNotesModalVisible(false)} compact />
             <GlassButton label="Save" onPress={applyWorkoutNotesFromModal} compact />
@@ -561,7 +614,7 @@ export default function WorkoutDetailScreen() {
         </YStack>
       </SlideUpModal>
 
-      <SlideUpModal visible={!!editingSet} onClose={() => setEditingSet(null)} fitContent keyboardAware>
+      <SlideUpModal visible={!!editingSet} onClose={cancelEditSet} fitContent keyboardAware>
         <YStack padding={space.xl} gap={space.md}>
           <XStack alignItems="center">
             <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary} flex={1}>Edit Set</Text>
@@ -628,7 +681,7 @@ export default function WorkoutDetailScreen() {
             </>
           )}
           <XStack gap={space.sm} justifyContent="center">
-            <GlassButton label="Cancel" color={colors.danger} onPress={() => setEditingSet(null)} compact />
+            <GlassButton label="Cancel" color={colors.danger} onPress={cancelEditSet} compact />
             <GlassButton label="Save" onPress={saveEditSet} loading={editLoading} disabled={editLoading} compact />
           </XStack>
           <YStack height={space.xxl * 4} />

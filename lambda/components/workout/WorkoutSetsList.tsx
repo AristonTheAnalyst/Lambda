@@ -3,10 +3,10 @@ import { Platform, Pressable, ScrollView } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
-import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
+import { Spinner, Text, XStack, YStack } from 'tamagui';
 import GlassButton from '@/components/GlassButton';
 import { useAppTheme } from '@/lib/ThemeContext';
-import { buildGroupedSets, formatValues } from '@/lib/workoutSetFormat';
+import { buildGroupedSets, formatValues, toProperCase } from '@/lib/workoutSetFormat';
 import type { WorkoutSet } from '@/lib/offline/setStore';
 
 type ExerciseDetailMap = Record<
@@ -18,12 +18,44 @@ type ExerciseDetailMap = Record<
   | undefined
 >;
 
+// ─── Shared display helper ────────────────────────────────────────────────────
+
+interface SetDisplay {
+  exName: string;
+  varName: string | null;
+  volumeStr: string;
+  weightStr: string | null;
+  notes: string | null;
+}
+
+function parseSetDisplay(s: WorkoutSet, exerciseDetailMap: ExerciseDetailMap): SetDisplay {
+  const exName = toProperCase(exerciseDetailMap[s.custom_exercise_id]?.exercise_name ?? '—');
+  const varName = s.custom_variation_id
+    ? toProperCase(exerciseDetailMap[s.custom_exercise_id]?.assigned_variations?.find(
+        (v) => v.custom_variation_id === s.custom_variation_id
+      )?.variation_name ?? null)
+    : null;
+  const baseVolume = s.workout_set_reps?.length
+    ? `${formatValues(s.workout_set_reps)} reps`
+    : s.workout_set_duration_seconds?.length
+      ? `${formatValues(s.workout_set_duration_seconds)}s`
+      : '—';
+  const weightStr = s.workout_set_weight != null ? `${s.workout_set_weight}kg` : null;
+  const volumeStr = weightStr ? `${weightStr} × ${baseVolume}` : baseVolume;
+  return { exName, varName, volumeStr, weightStr, notes: s.workout_set_notes ?? null };
+}
+
+// ─── Grouped view ─────────────────────────────────────────────────────────────
+
 interface CompactGroupProps {
   exName: string;
   sets: WorkoutSet[];
   exerciseDetailMap: ExerciseDetailMap;
   startIdx: number;
   onEdit?: (s: WorkoutSet) => void;
+  isLast: boolean;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
 const CompactGroup = React.memo(function CompactGroup({
@@ -32,41 +64,41 @@ const CompactGroup = React.memo(function CompactGroup({
   exerciseDetailMap,
   startIdx,
   onEdit,
+  isLast,
+  collapsed,
+  onToggleCollapse,
 }: CompactGroupProps) {
   const { colors, space, radius, fontSize } = useAppTheme();
-  const [collapsed, setCollapsed] = React.useState(false);
   const interactive = !!onEdit;
 
   return (
-    <YStack paddingVertical={space.sm}>
+    <YStack
+      paddingTop={space.sm}
+      paddingBottom={isLast ? 0 : space.sm}
+      marginBottom={isLast ? 0 : (collapsed ? space.xs : space.md)}
+      borderBottomWidth={isLast ? 0 : 0.5}
+      borderBottomColor={colors.border}
+    >
+      {/* Group header */}
       <XStack alignItems="center" marginBottom={space.sm}>
-        <Text fontSize={15} fontWeight="600" color={colors.primary} flex={1}>
+        <Text fontSize={fontSize.md} fontWeight="700" color={colors.primary} flex={1}>
           {exName}
+        </Text>
+        <Text fontSize={fontSize.xs} color={colors.muted} marginRight={space.sm}>
+          {sets.length} {sets.length === 1 ? 'set' : 'sets'}
         </Text>
         <GlassButton
           icon={collapsed ? 'chevron-down' : 'chevron-up'}
           iconSize={11}
-          onPress={() => setCollapsed((c) => !c)}
+          onPress={onToggleCollapse}
         />
       </XStack>
+
+      {/* Set rows */}
       {!collapsed &&
-        sets.map((s, idx) => {
-          const varName = s.custom_variation_id
-            ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations?.find(
-                (v) => v.custom_variation_id === s.custom_variation_id
-              )?.variation_name ?? null
-            : null;
-          const repsStr = s.workout_set_reps?.length
-            ? `${formatValues(s.workout_set_reps)} reps`
-            : s.workout_set_duration_seconds?.length
-              ? `${formatValues(s.workout_set_duration_seconds)}s`
-              : '—';
-          const subParts: string[] = [
-            `#${startIdx + idx + 1}`,
-            ...(s.workout_set_weight != null ? [`${s.workout_set_weight}kg`] : []),
-            ...(varName ? [varName] : []),
-            repsStr,
-          ];
+        sets.map((s) => {
+          const { varName, volumeStr, notes } = parseSetDisplay(s, exerciseDetailMap);
+
           return (
             <XStack
               key={s.workout_set_id}
@@ -82,11 +114,28 @@ const CompactGroup = React.memo(function CompactGroup({
               onPress={interactive ? () => onEdit!(s) : undefined}
               cursor={interactive ? 'pointer' : undefined}
             >
-              <Text flex={1} fontSize={fontSize.sm} color={colors.accent} numberOfLines={2}>
-                <Text color={colors.primary}>{subParts[0]} :</Text>
-                {subParts.length > 1 ? ` ${subParts.slice(1).join(' · ')}` : ''}
-                {s.workout_set_notes ? ` · "${s.workout_set_notes}"` : ''}
+              {/* Variation + notes */}
+              <YStack flex={1}>
+                <Text fontSize={fontSize.sm} fontWeight="600" color={varName ? colors.primary : colors.muted} numberOfLines={1}>
+                  {varName ?? 'No variation'}
+                </Text>
+                {notes ? (
+                  <Text fontSize={fontSize.xs} color={colors.muted} fontStyle="italic" numberOfLines={1}>
+                    {`"${notes}"`}
+                  </Text>
+                ) : null}
+              </YStack>
+
+              {/* Volume — the key number */}
+              <Text
+                fontSize={fontSize.sm}
+                fontWeight="700"
+                color={colors.accent}
+                marginLeft={space.sm}
+              >
+                {volumeStr}
               </Text>
+
               {interactive ? (
                 <FontAwesome name="pencil" size={10} color={colors.muted} style={{ marginLeft: space.sm }} />
               ) : null}
@@ -97,6 +146,85 @@ const CompactGroup = React.memo(function CompactGroup({
   );
 });
 
+// ─── Chronological row ────────────────────────────────────────────────────────
+
+/** Two-line layout: primary (number + name + volume) and secondary (weight/notes). */
+function ChronoRow({
+  s,
+  idx,
+  exerciseDetailMap,
+  interactive,
+  onEditSet,
+}: {
+  s: WorkoutSet;
+  idx: number;
+  exerciseDetailMap: ExerciseDetailMap;
+  interactive: boolean;
+  onEditSet: (s: WorkoutSet) => void;
+}) {
+  const { colors, space, fontSize } = useAppTheme();
+  const { exName, varName, volumeStr, notes } = parseSetDisplay(s, exerciseDetailMap);
+  const exerciseLabel = varName ? `${exName} (${varName})` : exName;
+  const secondary = notes ? `"${notes}"` : null;
+
+  return (
+    <XStack
+      paddingVertical={space.md}
+      borderBottomWidth={0.5}
+      borderBottomColor={colors.border}
+      alignItems="flex-start"
+      pressStyle={interactive ? { opacity: 0.6 } : undefined}
+      onPress={interactive ? () => onEditSet(s) : undefined}
+      cursor={interactive ? 'pointer' : undefined}
+    >
+      {/* Set number */}
+      <Text
+        fontSize={fontSize.xs}
+        color={colors.muted}
+        width={28}
+        flexShrink={0}
+        paddingTop={2}
+      >
+        {`#${idx + 1}`}
+      </Text>
+
+      {/* Name + secondary */}
+      <YStack flex={1}>
+        <Text fontSize={fontSize.sm} fontWeight="600" color={colors.primary} numberOfLines={2}>
+          {exerciseLabel}
+        </Text>
+        {secondary ? (
+          <Text fontSize={fontSize.xs} color={colors.muted} marginTop={2}>
+            {secondary}
+          </Text>
+        ) : null}
+      </YStack>
+
+      {/* Volume */}
+      <Text
+        fontSize={fontSize.md}
+        fontWeight="700"
+        color={colors.accent}
+        marginLeft={space.sm}
+        paddingTop={1}
+      >
+        {volumeStr}
+      </Text>
+
+      {interactive ? (
+        <FontAwesome
+          name="pencil"
+          size={10}
+          color={colors.muted}
+          style={{ marginLeft: space.sm, marginTop: 4 }}
+        />
+      ) : null}
+    </XStack>
+  );
+}
+
+// ─── Props ────────────────────────────────────────────────────────────────────
+
 export interface WorkoutSetsListProps {
   sets: WorkoutSet[];
   exerciseDetailMap: ExerciseDetailMap;
@@ -104,41 +232,19 @@ export interface WorkoutSetsListProps {
   viewMode: 'grouped' | 'chrono';
   onToggleViewMode: () => void;
   onEditSet: (s: WorkoutSet) => void;
-  /** Title row above the list (e.g. “Sets” + grouped/full hint). */
+  /** Title row above the list. */
   title: ReactNode;
   allowViewModeToggle: boolean;
   interactive: boolean;
   emptyHint?: string;
-  /** Persist new global order (workout_set_number 1..n). Only active in Chronological view. */
+  /** Persist new global order. Only active in Chronological view. */
   onReorderSets?: (reorderedSets: WorkoutSet[], orderedIds: string[]) => void | Promise<void>;
-  /** Rendered above the chrono list (e.g. session date row). */
+  /** Rendered above the list. */
   listTopSlot?: ReactNode;
 }
 
-function chronoLineParts(
-  s: WorkoutSet,
-  _idx: number,
-  exerciseDetailMap: ExerciseDetailMap,
-): { label: string; notes: string | null } {
-  const exName = exerciseDetailMap[s.custom_exercise_id]?.exercise_name ?? `#${s.custom_exercise_id}`;
-  const varName = s.custom_variation_id
-    ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations?.find(
-        (v) => v.custom_variation_id === s.custom_variation_id
-      )?.variation_name ?? null
-    : null;
-  const volume = s.workout_set_reps?.length
-    ? `${formatValues(s.workout_set_reps)} reps`
-    : s.workout_set_duration_seconds?.length
-      ? `${formatValues(s.workout_set_duration_seconds)}s`
-      : '—';
-  const exerciseLabel = varName ? `${exName} (${varName})` : exName;
-  const label = `${exerciseLabel}${s.workout_set_weight != null ? ` : ${s.workout_set_weight}kg x` : ' :'} ${volume}`;
-  return { label, notes: s.workout_set_notes };
-}
+// ─── Main component ───────────────────────────────────────────────────────────
 
-/**
- * Sets list for Training Session (live session) and past-session detail — grouped / chrono + loading / empty.
- */
 export default function WorkoutSetsList({
   sets,
   exerciseDetailMap,
@@ -156,6 +262,12 @@ export default function WorkoutSetsList({
   const { colors, space, fontSize } = useAppTheme();
   const groupedSets = useMemo(() => buildGroupedSets(sets), [sets]);
   const effectiveMode = allowViewModeToggle ? viewMode : 'chrono';
+
+  // Collapse state per exercise group — persists across view mode toggles.
+  const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
+  const toggleCollapsed = useCallback((exId: string) => {
+    setCollapsedMap((prev) => ({ ...prev, [exId]: !prev[exId] }));
+  }, []);
   const onEdit = interactive ? onEditSet : undefined;
   const useDraggable =
     Platform.OS !== 'web' && interactive && !!onReorderSets && sets.length > 1 && effectiveMode === 'chrono';
@@ -171,161 +283,94 @@ export default function WorkoutSetsList({
       const sameIds =
         prevIds.size === nextIds.size && [...nextIds].every((id) => prevIds.has(id));
       if (!sameIds) {
-        // Items added or removed — reset to the canonical order from the parent.
         return sets;
       }
-      // Same items: update content in-place (handles edits) but keep local drag order.
       const contentMap = new Map(sets.map((s) => [s.workout_set_id, s]));
       return prev.map((s) => contentMap.get(s.workout_set_id) ?? s);
     });
   }, [sets]);
 
-  const renderChronoRowStatic = useCallback(
-    (s: WorkoutSet, idx: number) => {
-      const { label, notes } = chronoLineParts(s, idx, exerciseDetailMap);
-      return (
-        <XStack
-          key={s.workout_set_id}
-          paddingVertical={space.md}
-          borderBottomWidth={0.5}
-          borderBottomColor={colors.border}
-          alignItems="center"
-          pressStyle={interactive ? { opacity: 0.6 } : undefined}
-          onPress={interactive ? () => onEditSet(s) : undefined}
-          cursor={interactive ? 'pointer' : undefined}
-        >
-          <Text flex={1} fontSize={fontSize.sm} color={colors.accent} numberOfLines={2}>
-            <Text color={colors.primary}>{`#${idx + 1} :`}</Text>
-            {` ${label}`}
-            {notes ? (
-              <Text color={colors.accent}>
-                {' · '}
-                <Text fontStyle="italic">{`"${notes}"`}</Text>
-              </Text>
-            ) : null}
-          </Text>
-          {interactive ? (
-            <FontAwesome name="pencil" size={10} color={colors.muted} style={{ marginLeft: space.sm }} />
-          ) : null}
-        </XStack>
-      );
-    },
-    [colors.border, colors.accent, colors.primary, colors.muted, exerciseDetailMap, fontSize.sm, interactive, onEditSet, space.sm, space.md],
-  );
+  // ── Draggable row ───────────────────────────────────────────────────────────
 
   const renderDraggableItem = useCallback(
-    ({ item: s, getIndex, drag }: RenderItemParams<WorkoutSet>) => {
-      const idx = getIndex() ?? 0;
-
-      let bodyText: React.ReactNode;
-      if (effectiveMode === 'grouped') {
-        const varName = s.custom_variation_id
-          ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations?.find(
-              (v) => v.custom_variation_id === s.custom_variation_id
-            )?.variation_name ?? null
-          : null;
-        const repsStr = s.workout_set_reps?.length
-          ? `${formatValues(s.workout_set_reps)} reps`
-          : s.workout_set_duration_seconds?.length
-            ? `${formatValues(s.workout_set_duration_seconds)}s`
-            : '—';
-        const subParts: string[] = [
-          `#${idx + 1}`,
-          ...(s.workout_set_weight != null ? [`${s.workout_set_weight}kg`] : []),
-          ...(varName ? [varName] : []),
-          repsStr,
-        ];
-        bodyText = (
-          <Text flex={1} fontSize={fontSize.sm} color={colors.accent} numberOfLines={2}>
-            <Text color={colors.primary}>{subParts[0]} :</Text>
-            {subParts.length > 1 ? ` ${subParts.slice(1).join(' · ')}` : ''}
-            {s.workout_set_notes ? ` · "${s.workout_set_notes}"` : ''}
-          </Text>
-        );
-      } else {
-        const { label, notes } = chronoLineParts(s, idx, exerciseDetailMap);
-        bodyText = (
-          <Text flex={1} fontSize={fontSize.sm} color={colors.accent} numberOfLines={2}>
-            {label}
-            {notes ? (
-              <Text color={colors.accent}>
-                {' · '}
-                <Text fontStyle="italic">{`"${notes}"`}</Text>
-              </Text>
-            ) : null}
-          </Text>
-        );
-      }
-
-      const row = (
-        <Pressable
-          onLongPress={drag}
-          onPress={() => onEditSet(s)}
-          delayLongPress={180}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingVertical: space.md,
-            borderBottomWidth: 0.5,
-            borderBottomColor: colors.border,
-            backgroundColor: colors.bg,
-          }}
-        >
-          <FontAwesome name="bars" size={14} color={colors.muted} style={{ marginRight: space.sm }} />
-          {bodyText}
-          <FontAwesome name="pencil" size={10} color={colors.muted} style={{ marginLeft: space.sm }} />
-        </Pressable>
-      );
-
-      if (effectiveMode === 'chrono') {
-        return <ScaleDecorator>{row}</ScaleDecorator>;
-      }
-
-      const showHeader = idx === 0 || sets[idx - 1]?.custom_exercise_id !== s.custom_exercise_id;
-      const exName = exerciseDetailMap[s.custom_exercise_id]?.exercise_name ?? `#${s.custom_exercise_id}`;
+    ({ item: s, drag }: RenderItemParams<WorkoutSet>) => {
+      const { exName, varName, volumeStr, notes } = parseSetDisplay(s, exerciseDetailMap);
+      const exerciseLabel = varName ? `${exName} (${varName})` : exName;
+      const secondary = notes ? `"${notes}"` : null;
 
       return (
         <ScaleDecorator>
-          <YStack backgroundColor={colors.bg}>
-            {showHeader ? (
-              <YStack paddingTop={idx > 0 ? space.sm : 0}>
-                {idx > 0 ? <Separator marginBottom={space.sm} borderColor={colors.border} /> : null}
-                <Text fontSize={15} fontWeight="600" color={colors.primary} marginBottom={space.xs}>
-                  {exName}
+          <Pressable
+            onLongPress={drag}
+            onPress={() => onEditSet(s)}
+            delayLongPress={180}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'flex-start',
+              paddingVertical: space.md,
+              borderBottomWidth: 0.5,
+              borderBottomColor: colors.border,
+              backgroundColor: colors.bg,
+            }}
+          >
+            {/* Drag handle */}
+            <FontAwesome
+              name="bars"
+              size={12}
+              color={colors.muted}
+              style={{ marginRight: space.sm, marginTop: 3 }}
+            />
+
+            {/* Name + secondary */}
+            <YStack flex={1}>
+              <Text fontSize={fontSize.sm} fontWeight="600" color={colors.primary} numberOfLines={2}>
+                {exerciseLabel}
+              </Text>
+              {secondary ? (
+                <Text fontSize={fontSize.xs} color={colors.muted} marginTop={2}>
+                  {secondary}
                 </Text>
-              </YStack>
-            ) : null}
-            {row}
-          </YStack>
+              ) : null}
+            </YStack>
+
+            {/* Volume */}
+            <Text
+              fontSize={fontSize.md}
+              fontWeight="700"
+              color={colors.accent}
+              marginLeft={space.sm}
+              paddingTop={1}
+            >
+              {volumeStr}
+            </Text>
+
+            <FontAwesome
+              name="pencil"
+              size={10}
+              color={colors.muted}
+              style={{ marginLeft: space.sm, marginTop: 4 }}
+            />
+          </Pressable>
         </ScaleDecorator>
       );
     },
-    [
-      colors.bg,
-      colors.border,
-      colors.accent,
-      colors.primary,
-      colors.muted,
-      effectiveMode,
-      exerciseDetailMap,
-      fontSize.sm,
-      onEditSet,
-      sets,
-      space.sm,
-      space.md,
-    ],
+    [colors.bg, colors.border, colors.accent, colors.primary, colors.muted, exerciseDetailMap, fontSize.sm, fontSize.md, fontSize.xs, onEditSet, space.sm, space.md],
   );
+
+  // ── Drag end ────────────────────────────────────────────────────────────────
 
   const onDragEnd = useCallback(
     async ({ data, from, to }: { data: WorkoutSet[]; from: number; to: number }) => {
       if (!onReorderSets || from === to) return;
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setLocalData(data); // instant — no parent re-render, no flicker
+      setLocalData(data);
       const ids = data.map((x) => x.workout_set_id);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await Promise.resolve(onReorderSets(data, ids));
     },
     [onReorderSets],
   );
+
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <YStack flex={1}>
@@ -368,18 +413,19 @@ export default function WorkoutSetsList({
         >
           {listTopSlot}
           {groupedSets.map(({ exId, sets: groupSets, startIdx }, groupIdx) => {
-            const exName = exerciseDetailMap[exId]?.exercise_name ?? `#${exId}`;
+            const exName = toProperCase(exerciseDetailMap[exId]?.exercise_name ?? `#${exId}`);
             return (
-              <React.Fragment key={`${exId}-${groupIdx}`}>
-                {groupIdx > 0 && <Separator marginVertical={space.sm} borderColor={colors.border} />}
-                <CompactGroup
-                  exName={exName}
-                  sets={groupSets}
-                  startIdx={startIdx}
-                  exerciseDetailMap={exerciseDetailMap}
-                  onEdit={onEdit}
-                />
-              </React.Fragment>
+              <CompactGroup
+                key={exId}
+                exName={exName}
+                sets={groupSets}
+                startIdx={startIdx}
+                exerciseDetailMap={exerciseDetailMap}
+                onEdit={onEdit}
+                isLast={groupIdx === groupedSets.length - 1}
+                collapsed={!!collapsedMap[exId]}
+                onToggleCollapse={() => toggleCollapsed(exId)}
+              />
             );
           })}
         </ScrollView>
@@ -391,7 +437,16 @@ export default function WorkoutSetsList({
           nestedScrollEnabled
         >
           {listTopSlot}
-          {sets.map((s, idx) => renderChronoRowStatic(s, idx))}
+          {sets.map((s, idx) => (
+            <ChronoRow
+              key={s.workout_set_id}
+              s={s}
+              idx={idx}
+              exerciseDetailMap={exerciseDetailMap}
+              interactive={interactive}
+              onEditSet={onEditSet}
+            />
+          ))}
         </ScrollView>
       )}
     </YStack>

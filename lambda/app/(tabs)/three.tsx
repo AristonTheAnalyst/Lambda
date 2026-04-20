@@ -30,7 +30,7 @@ import {
 import GlassButton from '@/components/GlassButton';
 import { useAsyncGuard } from '@/lib/asyncGuard';
 import { useAppTheme } from '@/lib/ThemeContext';
-import { parseValues } from '@/lib/workoutSetFormat';
+import { parseValues, toProperCase } from '@/lib/workoutSetFormat';
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
@@ -98,6 +98,7 @@ export default function WorkoutLogScreen() {
 
   const [assignVarVisible, setAssignVarVisible] = useState(false);
   const [assignVarForEdit, setAssignVarForEdit] = useState(false);
+  const [assignVarSelection, setAssignVarSelection] = useState<string[]>([]);
   const [newVarVisible, setNewVarVisible]       = useState(false);
   const [newVarForEdit, setNewVarForEdit]       = useState(false);
   const [newVarName, setNewVarName]             = useState('');
@@ -106,18 +107,18 @@ export default function WorkoutLogScreen() {
   // ─── Derived / memoized options ───────────────────────────────────────────
 
   const exerciseOptions = useMemo(
-    () => exercises.map((ex) => ({ label: ex.exercise_name, value: ex.custom_exercise_id })),
+    () => exercises.map((ex) => ({ label: toProperCase(ex.exercise_name), value: ex.custom_exercise_id })),
     [exercises]
   );
 
   const logVarOptions = useMemo(() => [
     { label: 'None', value: null as string | null },
-    ...(selectedEx?.assigned_variations ?? []).map((v) => ({ label: v.variation_name, value: v.custom_variation_id as string | null })),
+    ...(selectedEx?.assigned_variations ?? []).map((v) => ({ label: toProperCase(v.variation_name), value: v.custom_variation_id as string | null })),
   ], [selectedEx]);
 
   const editVarOptions = useMemo(() => [
     { label: 'None', value: null as string | null },
-    ...(editEx?.assigned_variations ?? []).map((v) => ({ label: v.variation_name, value: v.custom_variation_id as string | null })),
+    ...(editEx?.assigned_variations ?? []).map((v) => ({ label: toProperCase(v.variation_name), value: v.custom_variation_id as string | null })),
   ], [editEx]);
 
   const plannedWorkoutOptions = useMemo(
@@ -187,19 +188,32 @@ export default function WorkoutLogScreen() {
 
   function openAssignVar(forEdit: boolean) {
     setAssignVarForEdit(forEdit);
+    setAssignVarSelection([]);
     setAssignVarVisible(true);
   }
 
-  async function pickUnassignedVar(varId: string) {
+  function toggleAssignVarSelection(varId: string) {
+    setAssignVarSelection((prev) =>
+      prev.includes(varId) ? prev.filter((id) => id !== varId) : [...prev, varId]
+    );
+  }
+
+  function confirmAssignVars() { return guard(async () => {
+    if (assignVarSelection.length === 0) return;
     const exId = assignVarForEdit ? editExId : selectedExId;
     if (exId !== null) {
-      await addBridgeRow(db, user!.id, exId, varId);
+      for (const varId of assignVarSelection) {
+        await addBridgeRow(db, user!.id, exId, varId);
+      }
       await refreshExerciseDetails();
     }
     setAssignVarVisible(false);
-    if (assignVarForEdit) setEditVarId(varId);
-    else setSelectedVarId(varId);
-  }
+    // Auto-select only if exactly one was picked
+    if (assignVarSelection.length === 1) {
+      if (assignVarForEdit) setEditVarId(assignVarSelection[0]);
+      else setSelectedVarId(assignVarSelection[0]);
+    }
+  }); }
 
   // ── New variation ──────────────────────────────────────────────────────────
 
@@ -711,9 +725,16 @@ export default function WorkoutLogScreen() {
 
       {/* ── Assign Variations Sheet ── */}
       <SlideUpModal visible={assignVarVisible} onClose={() => setAssignVarVisible(false)} zIndex={200_000} fitContent>
-        <YStack padding={space.xl} gap={space.md}>
-          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>Assign New Variations</Text>
+        <YStack>
+          {/* Handle */}
+          <YStack alignItems="center" paddingTop={space.sm} paddingBottom={space.xs}>
+            <YStack width={36} height={4} borderRadius={2} backgroundColor={colors.border} />
+          </YStack>
+
+          {/* + New Variation */}
           <XStack
+            paddingHorizontal={space.xl}
+            paddingVertical={15}
             pressStyle={{ opacity: 0.7 }}
             onPress={() => openNewVariation(assignVarForEdit)}
             cursor="pointer"
@@ -721,35 +742,67 @@ export default function WorkoutLogScreen() {
             <Text fontSize={fontSize.md} color={colors.accent} fontWeight="500">+ New Variation</Text>
           </XStack>
           <Separator borderColor={colors.border} />
+
+          {/* Unassigned variation list */}
           {(() => {
             const exId = assignVarForEdit ? editExId : selectedExId;
             const assignedIds = new Set(exerciseDetailMap[exId ?? -1]?.assigned_variations.map((v) => v.custom_variation_id) ?? []);
             const unassigned = variations.filter((v) => !assignedIds.has(v.custom_variation_id));
             if (unassigned.length === 0) return (
-              <Text color={colors.muted} fontSize={fontSize.sm}>
+              <Text color={colors.muted} fontSize={fontSize.sm} paddingHorizontal={space.xl} paddingVertical={15}>
                 No existing variations to assign.
               </Text>
             );
-            return unassigned.map((v) => (
-              <XStack
-                key={v.custom_variation_id}
-                paddingVertical={space.sm}
-                pressStyle={{ opacity: 0.7 }}
-                onPress={() => pickUnassignedVar(v.custom_variation_id)}
-                cursor="pointer"
-                borderTopWidth={0.5}
-                borderTopColor={colors.border}
-              >
-                <Text fontSize={fontSize.md} color={colors.primary}>{v.variation_name}</Text>
-              </XStack>
-            ));
+            return unassigned.map((v, i) => {
+              const selected = assignVarSelection.includes(v.custom_variation_id);
+              return (
+                <YStack key={v.custom_variation_id}>
+                  {i > 0 && <Separator borderColor={colors.border} />}
+                  <XStack
+                    alignItems="center"
+                    justifyContent="space-between"
+                    paddingHorizontal={space.xl}
+                    paddingVertical={15}
+                    backgroundColor={selected ? colors.accentBg : 'transparent'}
+                    pressStyle={{ opacity: 0.7 }}
+                    onPress={() => toggleAssignVarSelection(v.custom_variation_id)}
+                    cursor="pointer"
+                  >
+                    <Text fontSize={fontSize.md} color={selected ? colors.accent : colors.primary} fontWeight={selected ? '600' : '400'}>
+                      {v.variation_name}
+                    </Text>
+                    {selected && <Text color={colors.accent} fontSize={fontSize.md}>✓</Text>}
+                  </XStack>
+                </YStack>
+              );
+            });
           })()}
+
+          {/* Confirm button */}
+          {assignVarSelection.length > 0 && (
+            <YStack paddingHorizontal={space.lg} paddingVertical={space.md}>
+              <XStack
+                backgroundColor={colors.accent}
+                borderRadius={radius.md}
+                paddingVertical={space.md}
+                alignItems="center"
+                justifyContent="center"
+                pressStyle={{ opacity: 0.8 }}
+                onPress={confirmAssignVars}
+                cursor="pointer"
+              >
+                <Text color={colors.accentText} fontSize={fontSize.md} fontWeight="600">
+                  {assignVarSelection.length === 1 ? 'Add Variation' : `Add ${assignVarSelection.length} Variations`}
+                </Text>
+              </XStack>
+            </YStack>
+          )}
           <YStack height={space.xxl * 4} />
         </YStack>
       </SlideUpModal>
 
       {/* ── New Variation Modal ── */}
-      <SlideUpModal visible={newVarVisible} onClose={() => setNewVarVisible(false)} zIndex={200_000} fitContent>
+      <SlideUpModal visible={newVarVisible} onClose={() => setNewVarVisible(false)} zIndex={200_000} fitContent keyboardAware>
         <YStack padding={space.xl} gap={space.md}>
           <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>New Variation</Text>
           <Input placeholder="Variation name" value={newVarName} onChangeText={setNewVarName} autoCapitalize="words" />

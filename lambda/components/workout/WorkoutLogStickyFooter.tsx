@@ -1,17 +1,22 @@
 import { ReactNode } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import Button from '@/components/Button';
 import { useAppTheme } from '@/lib/ThemeContext';
 
 interface WorkoutLogStickyFooterProps {
   onLogSet: () => void;
-  /** Extra rows below Log Set (e.g. note triggers). */
+  /** When provided, renders a second equal-width button to the left of Log Set. */
+  secondaryLabel?: string;
+  onSecondaryPress?: () => void;
+  /** Rendered above the button row (e.g. a popup menu). */
+  menuContent?: ReactNode;
+  /** Extra rows below the button row. */
   children?: ReactNode;
 }
 
 /** Sticky footer: primary Log Set button — same chrome as Training Session active workout. */
-export default function WorkoutLogStickyFooter({ onLogSet, children }: WorkoutLogStickyFooterProps) {
+export default function WorkoutLogStickyFooter({ onLogSet, secondaryLabel, onSecondaryPress, menuContent, children }: WorkoutLogStickyFooterProps) {
   const { colors, space } = useAppTheme();
   const insets = useSafeAreaInsets();
 
@@ -23,10 +28,21 @@ export default function WorkoutLogStickyFooter({ onLogSet, children }: WorkoutLo
       borderTopWidth={0.5}
       borderTopColor={colors.border}
       backgroundColor={colors.bg}
-      justifyContent="center"
       gap={space.sm}
     >
-      <Button label="Log Set" onPress={onLogSet} />
+      {menuContent}
+      {secondaryLabel && onSecondaryPress ? (
+        <XStack gap={space.sm}>
+          <YStack flex={1}>
+            <Button label={secondaryLabel} onPress={onSecondaryPress} variant="ghost" fullWidth />
+          </YStack>
+          <YStack flex={1}>
+            <Button label="Log Set" onPress={onLogSet} fullWidth />
+          </YStack>
+        </XStack>
+      ) : (
+        <Button label="Log Set" onPress={onLogSet} />
+      )}
       {children}
     </YStack>
   );
