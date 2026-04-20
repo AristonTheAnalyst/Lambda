@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, Keyboard, KeyboardAvoidingView, Platform, ScrollView, TextInput } from 'react-native';
+import { FlatList, Keyboard, ScrollView, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Separator,
@@ -9,6 +9,7 @@ import {
   YStack,
 } from 'tamagui';
 import { SquashPressable } from '@/components/PressSquash';
+import { useCappedKeyboardInset } from '@/hooks/useCappedKeyboardInset';
 import { useAppTheme } from '@/lib/ThemeContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -83,6 +84,7 @@ interface SlideUpModalProps {
 
 export function SlideUpModal({ visible, onClose, children, zIndex, snapPoints, fitContent, keyboardAware }: SlideUpModalProps) {
   const { colors } = useAppTheme();
+  const cappedInset = useCappedKeyboardInset(!!keyboardAware && visible);
   const wasVisibleRef = React.useRef(false);
   React.useEffect(() => { if (visible && !keyboardAware) Keyboard.dismiss(); }, [visible, keyboardAware]);
   React.useEffect(() => {
@@ -118,19 +120,15 @@ export function SlideUpModal({ visible, onClose, children, zIndex, snapPoints, f
       />
       <Sheet.Frame backgroundColor={colors.surface}>
         {keyboardAware ? (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={0}
-            style={{ width: '100%' }}
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            automaticallyAdjustKeyboardInsets={false}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: cappedInset }}
           >
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="interactive"
-              showsVerticalScrollIndicator={false}
-            >
-              {children}
-            </ScrollView>
-          </KeyboardAvoidingView>
+            {children}
+          </ScrollView>
         ) : (
           children
         )}

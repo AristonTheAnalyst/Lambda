@@ -784,7 +784,7 @@ export default function WorkoutDetailScreen() {
         </YStack>
       </SlideUpModal>
 
-      <SlideUpModal visible={newVarVisible} onClose={() => setNewVarVisible(false)} zIndex={200_000} fitContent>
+      <SlideUpModal visible={newVarVisible} onClose={() => setNewVarVisible(false)} zIndex={200_000} fitContent keyboardAware>
         <YStack padding={space.xl} gap={space.md}>
           <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary}>New Variation</Text>
           <Input placeholder="Variation name" value={newVarName} onChangeText={setNewVarName} autoCapitalize="words" />

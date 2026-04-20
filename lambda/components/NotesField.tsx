@@ -81,7 +81,7 @@ export default function NotesField({
         </YStack>
       )}
 
-      <SlideUpModal visible={modalVisible} onClose={cancel}>
+      <SlideUpModal visible={modalVisible} onClose={cancel} fitContent keyboardAware>
         <YStack
           backgroundColor={colors.surface}
           borderTopLeftRadius={radius.lg}
