@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Tabs } from 'expo-router';
@@ -12,7 +12,6 @@ import { useSyncEngine } from '@/lib/sync/useSyncEngine';
 import { useAppTheme } from '@/lib/ThemeContext';
 import OfflineBanner from '@/components/OfflineBanner';
 import SyncErrorBanner from '@/components/SyncErrorBanner';
-import { navGuard } from '@/hooks/useNavGuard';
 
 /** Mounts the sync engine once for the entire tab session. */
 function SyncMount() {
@@ -40,27 +39,18 @@ function BottomNav({ navigation, state }: BottomTabBarProps) {
         const nested = current.state as { routes: { name: string }[]; index: number } | undefined;
         const nestedName = nested?.routes?.[nested.index ?? 0]?.name;
         if (nestedName && nestedName !== 'index') {
-          navGuard(() => navigation.navigate('four', { screen: 'index' }));
+          navigation.navigate('four', { screen: 'index' });
           return;
         }
         return;
       }
     }
 
-    const currentName = state.routes[state.index]?.name;
-    const currentIdx = NAV_ITEMS.findIndex((i) => i.tabName === currentName);
-    const targetIdx = NAV_ITEMS.findIndex((i) => i.tabName === item.tabName);
+    const rawName = state.routes[state.index]?.name;
+    const currentTabName = rawName === 'index' ? 'three' : rawName;
+    if (currentTabName === item.tabName) return;
 
-    if (currentIdx === -1 || targetIdx === -1) {
-      navGuard(() => navigation.navigate(item.tabName));
-      return;
-    }
-
-    if (targetIdx === currentIdx) {
-      return;
-    }
-
-    navGuard(() => navigation.navigate(item.tabName));
+    navigation.navigate(item.tabName);
   }
 
   return (
@@ -81,15 +71,18 @@ function BottomNav({ navigation, state }: BottomTabBarProps) {
               ? item.icon
               : (`${item.icon}-outline` as const);
         return (
-          <TouchableOpacity
+          <Pressable
             key={item.route}
-            style={styles.navItem}
-            onPress={() => handlePress(item)}
-            activeOpacity={0.7}
+            style={({ pressed }) => [styles.navItem, pressed && { opacity: 0.82 }]}
+            onPressIn={() => handlePress(item)}
+            unstable_pressDelay={0}
+            android_disableSound
+            android_ripple={Platform.OS === 'android' ? { borderless: true, radius: 60, color: `${colors.muted}35` } : undefined}
+            hitSlop={6}
           >
             <Ionicons name={iconName as React.ComponentProps<typeof Ionicons>['name']} size={24} color={isActive ? colors.accent : colors.muted} />
             <Text style={[styles.navLabel, { color: isActive ? colors.accent : colors.muted }]}>{item.label}</Text>
-          </TouchableOpacity>
+          </Pressable>
         );
       })}
     </View>
@@ -122,7 +115,12 @@ export default function TabLayout() {
             <FixedTabPageHeader />
             <View style={{ flex: 1, overflow: 'hidden' }}>
               <Tabs
-                screenOptions={{ headerShown: false, tabBarStyle: { display: 'none', height: 0 } }}
+                screenOptions={{
+                  headerShown: false,
+                  tabBarStyle: { display: 'none', height: 0 },
+                  animation: 'none',
+                  lazy: false,
+                }}
                 tabBar={(props) => <TabBarPropsSync tabBarProps={props} />}
               >
                 <Tabs.Screen name="index" options={{ headerShown: false }} />

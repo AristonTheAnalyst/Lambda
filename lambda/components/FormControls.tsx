@@ -149,6 +149,9 @@ interface DropdownSelectMultiProps<T = any> {
   onChangeMulti: (values: T[]) => void;
   onConfirm?: () => void;
   confirmLabel?: string;
+  /** Same as single-select: row at top of sheet to create a new item, then return to this picker. */
+  onCreateNew?: () => void;
+  createNewLabel?: string;
 }
 
 export function DropdownSelect<T = any>(
@@ -163,8 +166,12 @@ export function DropdownSelect<T = any>(
 
   const onConfirm    = multiSelect ? (props as DropdownSelectMultiProps<T>).onConfirm    : undefined;
   const confirmLabel = multiSelect ? (props as DropdownSelectMultiProps<T>).confirmLabel : undefined;
-  const onCreateNew    = !multiSelect ? (props as DropdownSelectProps<T>).onCreateNew    : undefined;
-  const createNewLabel = !multiSelect ? (props as DropdownSelectProps<T>).createNewLabel : undefined;
+  const onCreateNew = multiSelect
+    ? (props as DropdownSelectMultiProps<T>).onCreateNew
+    : (props as DropdownSelectProps<T>).onCreateNew;
+  const createNewLabel = multiSelect
+    ? (props as DropdownSelectMultiProps<T>).createNewLabel
+    : (props as DropdownSelectProps<T>).createNewLabel;
 
   const { colors, space, radius, fontSize } = useAppTheme();
   const [open, setOpen] = React.useState(false);

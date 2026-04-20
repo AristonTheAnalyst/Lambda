@@ -82,6 +82,8 @@ interface NewExerciseSheetProps {
   onClose: () => void;
   userId: string | null;
   refreshExercises: () => Promise<void>;
+  /** Called after a new or reactivated exercise is created (e.g. add to edit-variation draft). */
+  onCreated?: (exerciseId: string) => void;
 }
 
 /**
@@ -93,6 +95,7 @@ export const LibraryNewExerciseCreateSheet = React.memo(function LibraryNewExerc
   onClose,
   userId,
   refreshExercises,
+  onCreated,
 }: NewExerciseSheetProps) {
   const { colors, space, fontSize } = useAppTheme();
   const db = useSQLiteContext();
@@ -124,15 +127,18 @@ export const LibraryNewExerciseCreateSheet = React.memo(function LibraryNewExerc
         }
         await reactivateExercise(db, existing.custom_exercise_id, volume);
         setCreating(false);
+        await refreshExercises();
+        onCreated?.(existing.custom_exercise_id);
         onClose();
-        return refreshExercises();
+        return;
       }
-      await createExercise(db, userId, name, volume);
+      const newId = await createExercise(db, userId, name, volume);
       setCreating(false);
+      await refreshExercises();
+      onCreated?.(newId);
       onClose();
-      refreshExercises();
     });
-  }, [guard, userId, db, volume, onClose, refreshExercises]);
+  }, [guard, userId, db, volume, onClose, refreshExercises, onCreated]);
 
   return (
     <SlideUpModal visible={visible} onClose={onClose} fitContent keyboardAware zIndex={200_000}>
@@ -162,6 +168,8 @@ interface NewVariationSheetProps {
   onClose: () => void;
   userId: string | null;
   refreshVariations: () => Promise<void>;
+  /** Called after a new or reactivated variation is created (e.g. add to edit-exercise draft). */
+  onCreated?: (variationId: string) => void;
 }
 
 export const LibraryNewVariationCreateSheet = React.memo(function LibraryNewVariationCreateSheet({
@@ -169,6 +177,7 @@ export const LibraryNewVariationCreateSheet = React.memo(function LibraryNewVari
   onClose,
   userId,
   refreshVariations,
+  onCreated,
 }: NewVariationSheetProps) {
   const { colors, space, fontSize } = useAppTheme();
   const db = useSQLiteContext();
@@ -198,15 +207,18 @@ export const LibraryNewVariationCreateSheet = React.memo(function LibraryNewVari
         }
         await reactivateVariation(db, existing.custom_variation_id);
         setCreating(false);
+        await refreshVariations();
+        onCreated?.(existing.custom_variation_id);
         onClose();
-        return refreshVariations();
+        return;
       }
-      await createVariation(db, userId, name);
+      const newId = await createVariation(db, userId, name);
       setCreating(false);
+      await refreshVariations();
+      onCreated?.(newId);
       onClose();
-      refreshVariations();
     });
-  }, [guard, userId, db, onClose, refreshVariations]);
+  }, [guard, userId, db, onClose, refreshVariations, onCreated]);
 
   return (
     <SlideUpModal visible={visible} onClose={onClose} fitContent keyboardAware zIndex={200_000}>

@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Alert, ScrollView, TextInput } from 'react-native';
 import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
 import { LibraryNewExerciseCreateSheet, LibraryNewVariationCreateSheet } from '@/components/LibraryCreateSheets';
+import SlideTabView, { type SlideTab } from '@/components/SlideTabView';
 import { DropdownSelect, SegmentedControl, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
 import { useAuthContext } from '@/lib/AuthContext';
@@ -41,10 +42,8 @@ interface Variation {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const TABS = [
-  { label: 'Exercises', value: 'exercises' },
-  { label: 'Variations', value: 'variations' },
-];
+const LIB_TAB_LABELS = ['Exercises', 'Variations'] as const;
+type LibraryTab = (typeof LIB_TAB_LABELS)[number];
 const VOLUME_OPTIONS = [
   { label: 'Reps', value: 'reps' },
   { label: 'Duration', value: 'duration' },
@@ -108,6 +107,43 @@ const VarRow = React.memo(function VarRow({
   );
 });
 
+// ─── Top tab bar (matches Dev → Experimental layout) ──────────────────────────
+
+function LibraryTabBar({
+  active,
+  onChange,
+}: {
+  active: LibraryTab;
+  onChange: (t: LibraryTab) => void;
+}) {
+  const { colors, space, fontSize } = useAppTheme();
+  return (
+    <XStack borderBottomWidth={0.5} borderBottomColor={colors.border}>
+      {LIB_TAB_LABELS.map((tab) => {
+        const isActive = tab === active;
+        return (
+          <XStack
+            key={tab}
+            flex={1}
+            paddingVertical={space.md}
+            alignItems="center"
+            justifyContent="center"
+            onPress={() => onChange(tab)}
+            cursor="pointer"
+            pressStyle={{ opacity: 0.7 }}
+            borderBottomWidth={2}
+            borderBottomColor={isActive ? colors.accent : 'transparent'}
+          >
+            <Text fontSize={fontSize.sm} fontWeight={isActive ? '700' : '400'} color={isActive ? colors.accent : colors.muted}>
+              {tab}
+            </Text>
+          </XStack>
+        );
+      })}
+    </XStack>
+  );
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function LibraryScreen() {
@@ -127,16 +163,16 @@ export default function LibraryScreen() {
     refreshExerciseDetails,
   } = useExerciseData();
 
-  const [tab, setTab] = useState<'exercises' | 'variations'>('exercises');
+  const [activeTab, setActiveTab] = useState<LibraryTab>('Exercises');
 
   useFocusEffect(
     useCallback(() => {
       setTabHeader({
-        title: tab === 'exercises' ? 'Exercises' : 'Variations',
+        title: 'Exercises & Variations',
         left: <GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} />,
         right: undefined,
       });
-    }, [tab, setTabHeader, router]),
+    }, [setTabHeader, router]),
   );
 
   // ── Exercises state ──────────────────────────────────────────────────────
@@ -226,8 +262,19 @@ export default function LibraryScreen() {
     else { setVarOriginalExIds(new Set()); setVarDraftExIds(new Set()); setVarSelection([]); }
   }, [editVar?.custom_variation_id, loadVarExs]);
 
-  const closeExCreate = useCallback(() => setExCreateVisible(false), []);
-  const closeVarCreate = useCallback(() => setVarCreateVisible(false), []);
+  /** When true, next variation created from the add sheet is linked to the open Edit Exercise. */
+  const appendNewVariationToEditExerciseDraft = useRef(false);
+  /** When true, next exercise created from the add sheet is linked to the open Edit Variation. */
+  const appendNewExerciseToEditVariationDraft = useRef(false);
+
+  const closeExCreate = useCallback(() => {
+    appendNewExerciseToEditVariationDraft.current = false;
+    setExCreateVisible(false);
+  }, []);
+  const closeVarCreate = useCallback(() => {
+    appendNewVariationToEditExerciseDraft.current = false;
+    setVarCreateVisible(false);
+  }, []);
 
   // ── Exercise handlers ────────────────────────────────────────────────────
 
@@ -284,109 +331,186 @@ export default function LibraryScreen() {
     [colors.primary, fontSize.sm],
   );
 
+  const exercisesPanel = useMemo(
+    () => (
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: space.lg }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <XStack alignItems="center" marginBottom={space.md}>
+          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary} flex={1}>
+            All Exercises
+          </Text>
+          {exercises.length > 0 && (
+            <XStack
+              backgroundColor={colors.surface}
+              borderRadius={radius.md}
+              paddingHorizontal={space.sm}
+              alignItems="center"
+              height={34}
+              minWidth={130}
+              marginRight={space.sm}
+            >
+              <TextInput
+                placeholder="Search…"
+                placeholderTextColor={colors.muted}
+                value={exSearch}
+                onChangeText={setExSearch}
+                spellCheck={false}
+                selectionColor={colors.primary}
+                style={searchInputStyle}
+              />
+            </XStack>
+          )}
+          <GlassButton
+            icon="plus"
+            iconSize={14}
+            onPress={() => {
+              appendNewExerciseToEditVariationDraft.current = false;
+              setExCreateVisible(true);
+            }}
+          />
+        </XStack>
+
+        {exercises.length === 0 ? (
+          <YStack alignItems="center" paddingTop={space.xxl} gap={space.sm}>
+            {catalogCloudPullFailed ? (
+              <Text color={colors.danger} fontSize={fontSize.sm} textAlign="center" paddingHorizontal={space.md}>
+                {"Couldn't load exercises from the server. Check your connection — we'll retry when it's stable, or tap + to add one manually."}
+              </Text>
+            ) : null}
+            <Text color={colors.primary} fontSize={fontSize.md} fontWeight="600">
+              No exercises yet
+            </Text>
+            <Text color={colors.muted} fontSize={fontSize.sm} textAlign="center">
+              Tap + to create your first exercise.
+            </Text>
+          </YStack>
+        ) : filteredEx.length === 0 ? (
+          <Text color={colors.muted} padding={space.xs}>
+            No results.
+          </Text>
+        ) : (
+          filteredEx.map((ex) => <ExRow key={ex.custom_exercise_id} ex={ex} onEdit={handleEditEx} />)
+        )}
+        <YStack height={space.xxl} />
+      </ScrollView>
+    ),
+    [
+      space,
+      colors,
+      fontSize,
+      radius,
+      exercises.length,
+      filteredEx,
+      exSearch,
+      catalogCloudPullFailed,
+      searchInputStyle,
+      handleEditEx,
+    ],
+  );
+
+  const variationsPanel = useMemo(
+    () => (
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: space.lg }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <XStack alignItems="center" marginBottom={space.md}>
+          <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary} flex={1}>
+            All Variations
+          </Text>
+          {variations.length > 0 && (
+            <XStack
+              backgroundColor={colors.surface}
+              borderRadius={radius.md}
+              paddingHorizontal={space.sm}
+              alignItems="center"
+              height={34}
+              minWidth={130}
+              marginRight={space.sm}
+            >
+              <TextInput
+                placeholder="Search…"
+                placeholderTextColor={colors.muted}
+                value={varSearch}
+                onChangeText={setVarSearch}
+                spellCheck={false}
+                selectionColor={colors.primary}
+                style={searchInputStyle}
+              />
+            </XStack>
+          )}
+          <GlassButton
+            icon="plus"
+            iconSize={14}
+            onPress={() => {
+              appendNewVariationToEditExerciseDraft.current = false;
+              setVarCreateVisible(true);
+            }}
+          />
+        </XStack>
+
+        {variations.length === 0 ? (
+          <YStack alignItems="center" paddingTop={space.xxl} gap={space.sm}>
+            {catalogCloudPullFailed ? (
+              <Text color={colors.danger} fontSize={fontSize.sm} textAlign="center" paddingHorizontal={space.md}>
+                {"Couldn't load variations from the server. Check your connection — we'll retry when it's stable, or tap + to add one manually."}
+              </Text>
+            ) : null}
+            <Text color={colors.primary} fontSize={fontSize.md} fontWeight="600">
+              No variations yet
+            </Text>
+            <Text color={colors.muted} fontSize={fontSize.sm} textAlign="center">
+              Tap + to create your first variation.
+            </Text>
+          </YStack>
+        ) : filteredVar.length === 0 ? (
+          <Text color={colors.muted} padding={space.xs}>
+            No results.
+          </Text>
+        ) : (
+          filteredVar.map((v) => <VarRow key={v.custom_variation_id} v={v} onEdit={handleEditVar} />)
+        )}
+        <YStack height={space.xxl} />
+      </ScrollView>
+    ),
+    [
+      space,
+      colors,
+      fontSize,
+      radius,
+      variations.length,
+      filteredVar,
+      varSearch,
+      catalogCloudPullFailed,
+      searchInputStyle,
+      handleEditVar,
+    ],
+  );
+
+  const slideTabs = useMemo<SlideTab[]>(
+    () => [
+      { key: 'Exercises', content: exercisesPanel },
+      { key: 'Variations', content: variationsPanel },
+    ],
+    [exercisesPanel, variationsPanel],
+  );
+
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <YStack flex={1} backgroundColor={colors.bg}>
-      {/* ── Tab switcher ── */}
-      <YStack paddingHorizontal={space.lg} paddingVertical={space.sm} backgroundColor={colors.bg}>
-        <SegmentedControl
-          options={TABS}
-          value={tab}
-          onChange={(v) => setTab(v as 'exercises' | 'variations')}
-        />
-      </YStack>
-      <Separator borderColor={colors.border} />
-
-      {/* ── Exercises tab ── */}
-      {tab === 'exercises' && (
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ padding: space.lg }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <XStack alignItems="center" marginBottom={space.md}>
-            <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary} flex={1}>All Exercises</Text>
-            {exercises.length > 0 && (
-              <XStack backgroundColor={colors.surface} borderRadius={radius.md} paddingHorizontal={space.sm} alignItems="center" height={34} minWidth={130} marginRight={space.sm}>
-                <TextInput
-                  placeholder="Search…"
-                  placeholderTextColor={colors.muted}
-                  value={exSearch}
-                  onChangeText={setExSearch}
-                  spellCheck={false}
-                  selectionColor={colors.primary}
-                  style={searchInputStyle}
-                />
-              </XStack>
-            )}
-            <GlassButton icon="plus" iconSize={14} onPress={() => setExCreateVisible(true)} />
-          </XStack>
-
-          {exercises.length === 0 ? (
-            <YStack alignItems="center" paddingTop={space.xxl} gap={space.sm}>
-              {catalogCloudPullFailed ? (
-                <Text color={colors.danger} fontSize={fontSize.sm} textAlign="center" paddingHorizontal={space.md}>
-                  {"Couldn't load exercises from the server. Check your connection — we'll retry when it's stable, or tap + to add one manually."}
-                </Text>
-              ) : null}
-              <Text color={colors.primary} fontSize={fontSize.md} fontWeight="600">No exercises yet</Text>
-              <Text color={colors.muted} fontSize={fontSize.sm} textAlign="center">Tap + to create your first exercise.</Text>
-            </YStack>
-          ) : filteredEx.length === 0 ? (
-            <Text color={colors.muted} padding={space.xs}>No results.</Text>
-          ) : filteredEx.map((ex) => (
-            <ExRow key={ex.custom_exercise_id} ex={ex} onEdit={handleEditEx} />
-          ))}
-          <YStack height={space.xxl} />
-        </ScrollView>
-      )}
-
-      {/* ── Variations tab ── */}
-      {tab === 'variations' && (
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ padding: space.lg }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <XStack alignItems="center" marginBottom={space.md}>
-            <Text fontSize={fontSize.lg} fontWeight="700" color={colors.primary} flex={1}>All Variations</Text>
-            {variations.length > 0 && (
-              <XStack backgroundColor={colors.surface} borderRadius={radius.md} paddingHorizontal={space.sm} alignItems="center" height={34} minWidth={130} marginRight={space.sm}>
-                <TextInput
-                  placeholder="Search…"
-                  placeholderTextColor={colors.muted}
-                  value={varSearch}
-                  onChangeText={setVarSearch}
-                  spellCheck={false}
-                  selectionColor={colors.primary}
-                  style={searchInputStyle}
-                />
-              </XStack>
-            )}
-            <GlassButton icon="plus" iconSize={14} onPress={() => setVarCreateVisible(true)} />
-          </XStack>
-
-          {variations.length === 0 ? (
-            <YStack alignItems="center" paddingTop={space.xxl} gap={space.sm}>
-              {catalogCloudPullFailed ? (
-                <Text color={colors.danger} fontSize={fontSize.sm} textAlign="center" paddingHorizontal={space.md}>
-                  {"Couldn't load variations from the server. Check your connection — we'll retry when it's stable, or tap + to add one manually."}
-                </Text>
-              ) : null}
-              <Text color={colors.primary} fontSize={fontSize.md} fontWeight="600">No variations yet</Text>
-              <Text color={colors.muted} fontSize={fontSize.sm} textAlign="center">Tap + to create your first variation.</Text>
-            </YStack>
-          ) : filteredVar.length === 0 ? (
-            <Text color={colors.muted} padding={space.xs}>No results.</Text>
-          ) : filteredVar.map((v) => (
-            <VarRow key={v.custom_variation_id} v={v} onEdit={handleEditVar} />
-          ))}
-          <YStack height={space.xxl} />
-        </ScrollView>
-      )}
+      <LibraryTabBar active={activeTab} onChange={setActiveTab} />
+      <SlideTabView
+        tabs={slideTabs}
+        activeKey={activeTab}
+        onIndexChange={(k) => setActiveTab(k as LibraryTab)}
+      />
 
       {/* ── Modals — always mounted so Tamagui Sheet state is never lost on tab switch ── */}
 
@@ -395,6 +519,20 @@ export default function LibraryScreen() {
         onClose={closeExCreate}
         userId={user?.id ?? null}
         refreshExercises={refreshExercises}
+        onCreated={(id) => {
+          if (!appendNewExerciseToEditVariationDraft.current) return;
+          if (!editVar || !user) {
+            appendNewExerciseToEditVariationDraft.current = false;
+            return;
+          }
+          appendNewExerciseToEditVariationDraft.current = false;
+          void guard(async () => {
+            await addBridgeRow(db, user.id, id, editVar.custom_variation_id);
+            setVarDraftExIds((prev) => new Set([...prev, id]));
+            setVarOriginalExIds((prev) => new Set([...prev, id]));
+            await refreshExerciseDetails();
+          });
+        }}
       />
 
       {/* ── Edit Exercise ── */}
@@ -466,21 +604,28 @@ export default function LibraryScreen() {
               ))}
             </YStack>
           )}
-          {exAvailableVars.length > 0 && (
-            <DropdownSelect
-              options={exAvailableVars.map((v) => ({ label: toProperCase(v.variation_name), value: v.custom_variation_id }))}
-              multiSelect
-              selectedValues={exSelection}
-              onChangeMulti={setExSelection}
-              placeholder="Add variations…"
-              searchable
-              confirmLabel={addLabel(exSelection.length, 'Variation', 'Variations')}
-              onConfirm={() => {
-                setExDraftVarIds((prev) => { const next = new Set(prev); exSelection.forEach((id) => next.add(id)); return next; });
-                setExSelection([]);
-              }}
-            />
-          )}
+          <DropdownSelect
+            options={exAvailableVars.map((v) => ({ label: toProperCase(v.variation_name), value: v.custom_variation_id }))}
+            multiSelect
+            selectedValues={exSelection}
+            onChangeMulti={setExSelection}
+            placeholder="Add variations…"
+            searchable
+            confirmLabel={addLabel(exSelection.length, 'Variation', 'Variations')}
+            onConfirm={() => {
+              setExDraftVarIds((prev) => {
+                const next = new Set(prev);
+                exSelection.forEach((id) => next.add(id));
+                return next;
+              });
+              setExSelection([]);
+            }}
+            onCreateNew={() => {
+              appendNewVariationToEditExerciseDraft.current = true;
+              setVarCreateVisible(true);
+            }}
+            createNewLabel="New variation"
+          />
           <XStack gap={space.sm} justifyContent="center">
             <Button label="Cancel" onPress={() => setEditEx(null)} variant="danger-ghost" />
             <Button label="Save" onPress={saveEditEx} />
@@ -494,6 +639,20 @@ export default function LibraryScreen() {
         onClose={closeVarCreate}
         userId={user?.id ?? null}
         refreshVariations={refreshVariations}
+        onCreated={(id) => {
+          if (!appendNewVariationToEditExerciseDraft.current) return;
+          if (!editEx || !user) {
+            appendNewVariationToEditExerciseDraft.current = false;
+            return;
+          }
+          appendNewVariationToEditExerciseDraft.current = false;
+          void guard(async () => {
+            await addBridgeRow(db, user.id, editEx.custom_exercise_id, id);
+            setExDraftVarIds((prev) => new Set([...prev, id]));
+            setExOriginalVarIds((prev) => new Set([...prev, id]));
+            await refreshExerciseDetails();
+          });
+        }}
       />
 
       {/* ── Edit Variation ── */}
@@ -560,21 +719,28 @@ export default function LibraryScreen() {
               ))}
             </YStack>
           )}
-          {varAvailableExs.length > 0 && (
-            <DropdownSelect
-              options={varAvailableExs.map((ex) => ({ label: toProperCase(ex.exercise_name), value: ex.custom_exercise_id }))}
-              multiSelect
-              selectedValues={varSelection}
-              onChangeMulti={setVarSelection}
-              placeholder="Add exercises…"
-              searchable
-              confirmLabel={addLabel(varSelection.length, 'Exercise', 'Exercises')}
-              onConfirm={() => {
-                setVarDraftExIds((prev) => { const next = new Set(prev); varSelection.forEach((id) => next.add(id)); return next; });
-                setVarSelection([]);
-              }}
-            />
-          )}
+          <DropdownSelect
+            options={varAvailableExs.map((ex) => ({ label: toProperCase(ex.exercise_name), value: ex.custom_exercise_id }))}
+            multiSelect
+            selectedValues={varSelection}
+            onChangeMulti={setVarSelection}
+            placeholder="Add exercises…"
+            searchable
+            confirmLabel={addLabel(varSelection.length, 'Exercise', 'Exercises')}
+            onConfirm={() => {
+              setVarDraftExIds((prev) => {
+                const next = new Set(prev);
+                varSelection.forEach((id) => next.add(id));
+                return next;
+              });
+              setVarSelection([]);
+            }}
+            onCreateNew={() => {
+              appendNewExerciseToEditVariationDraft.current = true;
+              setExCreateVisible(true);
+            }}
+            createNewLabel="New exercise"
+          />
           <XStack gap={space.sm} justifyContent="center">
             <Button label="Cancel" onPress={() => setEditVar(null)} variant="danger-ghost" />
             <Button label="Save" onPress={saveEditVar} />
