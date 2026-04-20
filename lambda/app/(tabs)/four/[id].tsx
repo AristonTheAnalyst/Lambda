@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Alert, InteractionManager, Keyboard, ScrollView } from 'react-native';
-import { Spinner, Text, XStack, YStack } from 'tamagui';
+import { Alert, InteractionManager, Keyboard, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
+import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Separator } from 'tamagui';
 import { useSQLiteContext } from 'expo-sqlite';
 import { SlideUpModal, DropdownSelect, SegmentedControl } from '@/components/FormControls';
 import Input from '@/components/Input';
@@ -50,6 +49,9 @@ export default function WorkoutDetailScreen() {
   const [workoutNotesModalVisible, setWorkoutNotesModalVisible] = useState(false);
   const [notesTarget, setNotesTarget] = useState<'pre' | 'post'>('pre');
   const [notesMenuOpen, setNotesMenuOpen] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<{ x: number; bottom: number } | null>(null);
+  const notesButtonRef = useRef<View>(null);
+  const { height: screenHeight } = useWindowDimensions();
   const [draftPre, setDraftPre] = useState('');
   const [draftPost, setDraftPost] = useState('');
 
@@ -139,6 +141,13 @@ export default function WorkoutDetailScreen() {
     setDraftPre(preNotes);
     setDraftPost(postNotes);
     setWorkoutNotesModalVisible(true);
+  }
+
+  function handleNotesPress() {
+    notesButtonRef.current?.measureInWindow((x, y, width) => {
+      setMenuAnchor({ x: x + width / 2, bottom: screenHeight - y + space.xs });
+      setNotesMenuOpen(true);
+    });
   }
 
   function applyWorkoutNotesFromModal() {
@@ -428,38 +437,66 @@ export default function WorkoutDetailScreen() {
           <WorkoutLogStickyFooter
             onLogSet={() => setLogSetModalVisible(true)}
             secondaryLabel="Notes"
-            onSecondaryPress={() => setNotesMenuOpen((v) => !v)}
-            menuContent={notesMenuOpen ? (
-              <YStack
-                backgroundColor={colors.surface}
-                borderRadius={radius.md}
-                borderWidth={0.5}
-                borderColor={colors.border}
-                overflow="hidden"
-                alignSelf="flex-start"
-              >
-                <XStack
-                  paddingVertical={space.sm}
-                  paddingHorizontal={space.md}
-                  pressStyle={{ opacity: 0.7 }}
-                  onPress={() => openNotesOption('pre')}
-                  cursor="pointer"
-                >
-                  <Text fontSize={fontSize.sm} color={colors.primary}>Pre-workout Notes</Text>
-                </XStack>
-                <Separator borderColor={colors.border} />
-                <XStack
-                  paddingVertical={space.sm}
-                  paddingHorizontal={space.md}
-                  pressStyle={{ opacity: 0.7 }}
-                  onPress={() => openNotesOption('post')}
-                  cursor="pointer"
-                >
-                  <Text fontSize={fontSize.sm} color={colors.primary}>Post-workout Notes</Text>
-                </XStack>
-              </YStack>
-            ) : undefined}
+            onSecondaryPress={handleNotesPress}
+            secondaryRef={notesButtonRef}
           />
+
+          {/* Dim overlay — always mounted, opacity animates between 0 and 1 */}
+          <YStack
+            animation="fast"
+            animateOnly={['opacity']}
+            opacity={notesMenuOpen ? 1 : 0}
+            pointerEvents={notesMenuOpen ? 'auto' : 'none'}
+            position="absolute"
+            top={0}
+            left={0}
+            right={0}
+            bottom={0}
+          >
+            <Pressable
+              style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }}
+              onPress={() => setNotesMenuOpen(false)}
+            />
+          </YStack>
+
+          {/* Notes popup menu — always mounted, spring-animates scale/y/opacity on open */}
+          <YStack
+            animation="fast"
+            animateOnly={['opacity', 'transform']}
+            opacity={notesMenuOpen && menuAnchor ? 1 : 0}
+            scale={notesMenuOpen && menuAnchor ? 1 : 0.88}
+            y={notesMenuOpen && menuAnchor ? 0 : 8}
+            pointerEvents={notesMenuOpen && menuAnchor ? 'auto' : 'none'}
+            position="absolute"
+            bottom={menuAnchor?.bottom ?? 0}
+            left={(menuAnchor?.x ?? 95) - 95}
+            width={190}
+            backgroundColor={colors.surface}
+            borderRadius={radius.md}
+            borderWidth={0.5}
+            borderColor={colors.border}
+            overflow="hidden"
+          >
+            <XStack
+              paddingVertical={space.sm}
+              paddingHorizontal={space.md}
+              pressStyle={{ opacity: 0.7 }}
+              onPress={() => openNotesOption('pre')}
+              cursor="pointer"
+            >
+              <Text fontSize={fontSize.sm} color={colors.primary}>Pre-workout Notes</Text>
+            </XStack>
+            <Separator borderColor={colors.border} />
+            <XStack
+              paddingVertical={space.sm}
+              paddingHorizontal={space.md}
+              pressStyle={{ opacity: 0.7 }}
+              onPress={() => openNotesOption('post')}
+              cursor="pointer"
+            >
+              <Text fontSize={fontSize.sm} color={colors.primary}>Post-workout Notes</Text>
+            </XStack>
+          </YStack>
         </YStack>
       ) : (
         <ScrollView
