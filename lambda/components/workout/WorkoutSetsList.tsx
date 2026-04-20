@@ -9,7 +9,7 @@ import { useAppTheme } from '@/lib/ThemeContext';
 import { buildGroupedSets, formatValues, toProperCase } from '@/lib/workoutSetFormat';
 import type { WorkoutSet } from '@/lib/offline/setStore';
 
-type ExerciseDetailMap = Record<
+export type ExerciseDetailMap = Record<
   string,
   | {
       exercise_name?: string;
@@ -20,7 +20,7 @@ type ExerciseDetailMap = Record<
 
 // ─── Shared display helper ────────────────────────────────────────────────────
 
-interface SetDisplay {
+export interface SetDisplay {
   exName: string;
   varName: string | null;
   volumeStr: string;
@@ -28,13 +28,15 @@ interface SetDisplay {
   notes: string | null;
 }
 
-function parseSetDisplay(s: WorkoutSet, exerciseDetailMap: ExerciseDetailMap): SetDisplay {
+export function parseSetDisplay(s: WorkoutSet, exerciseDetailMap: ExerciseDetailMap): SetDisplay {
   const exName = toProperCase(exerciseDetailMap[s.custom_exercise_id]?.exercise_name ?? '—');
-  const varName = s.custom_variation_id
-    ? toProperCase(exerciseDetailMap[s.custom_exercise_id]?.assigned_variations?.find(
-        (v) => v.custom_variation_id === s.custom_variation_id
-      )?.variation_name ?? null)
-    : null;
+  const rawVarName =
+    s.custom_variation_id
+      ? exerciseDetailMap[s.custom_exercise_id]?.assigned_variations?.find(
+          (v) => v.custom_variation_id === s.custom_variation_id,
+        )?.variation_name
+      : undefined;
+  const varName = rawVarName ? toProperCase(rawVarName) : null;
   const baseVolume = s.workout_set_reps?.length
     ? `${formatValues(s.workout_set_reps)} reps`
     : s.workout_set_duration_seconds?.length
@@ -146,9 +148,95 @@ const CompactGroup = React.memo(function CompactGroup({
   );
 });
 
-// ─── Chronological row ────────────────────────────────────────────────────────
+// ─── Chronological row (shared: session chrono + training logs Sets tab) ─────
 
-/** Two-line layout: primary (number + name + volume) and secondary (weight/notes). */
+export interface ChronologicalSetRowProps {
+  set: WorkoutSet;
+  /** Displayed in the left column as `#${index + 1}` (global order in the list). */
+  index: number;
+  exerciseDetailMap: ExerciseDetailMap;
+  onPress: () => void;
+  /** Training session: show pencil affordance when edits are allowed. */
+  showEditAffordance?: boolean;
+  /** Optional muted line under the title (e.g. workout date on cross-workout lists). */
+  contextLine?: string | null;
+  /** When false, row is not pressable (e.g. past session view-only chrono). */
+  pressable?: boolean;
+}
+
+/** Same row chrome as chronological view in `WorkoutSetsList` / live session. */
+export const ChronologicalSetRow = React.memo(function ChronologicalSetRow({
+  set: s,
+  index,
+  exerciseDetailMap,
+  onPress,
+  showEditAffordance = false,
+  contextLine,
+  pressable = true,
+}: ChronologicalSetRowProps) {
+  const { colors, space, fontSize } = useAppTheme();
+  const { exName, varName, volumeStr, notes } = parseSetDisplay(s, exerciseDetailMap);
+  const exerciseLabel = varName ? `${exName} (${varName})` : exName;
+  const secondary = notes ? `"${notes}"` : null;
+
+  return (
+    <XStack
+      paddingVertical={space.md}
+      borderBottomWidth={0.5}
+      borderBottomColor={colors.border}
+      alignItems="flex-start"
+      pressStyle={pressable ? { opacity: 0.6 } : undefined}
+      onPress={pressable ? onPress : undefined}
+      cursor={pressable ? 'pointer' : undefined}
+    >
+      <Text
+        fontSize={fontSize.xs}
+        color={colors.muted}
+        width={28}
+        flexShrink={0}
+        paddingTop={2}
+      >
+        {`#${index + 1}`}
+      </Text>
+
+      <YStack flex={1}>
+        <Text fontSize={fontSize.sm} fontWeight="600" color={colors.primary} numberOfLines={2}>
+          {exerciseLabel}
+        </Text>
+        {contextLine ? (
+          <Text fontSize={fontSize.xs} color={colors.muted} marginTop={2}>
+            {contextLine}
+          </Text>
+        ) : null}
+        {secondary ? (
+          <Text fontSize={fontSize.xs} color={colors.muted} marginTop={2}>
+            {secondary}
+          </Text>
+        ) : null}
+      </YStack>
+
+      <Text
+        fontSize={fontSize.md}
+        fontWeight="700"
+        color={colors.accent}
+        marginLeft={space.sm}
+        paddingTop={1}
+      >
+        {volumeStr}
+      </Text>
+
+      {showEditAffordance ? (
+        <FontAwesome
+          name="pencil"
+          size={10}
+          color={colors.muted}
+          style={{ marginLeft: space.sm, marginTop: 4 }}
+        />
+      ) : null}
+    </XStack>
+  );
+});
+
 function ChronoRow({
   s,
   idx,
@@ -162,64 +250,15 @@ function ChronoRow({
   interactive: boolean;
   onEditSet: (s: WorkoutSet) => void;
 }) {
-  const { colors, space, fontSize } = useAppTheme();
-  const { exName, varName, volumeStr, notes } = parseSetDisplay(s, exerciseDetailMap);
-  const exerciseLabel = varName ? `${exName} (${varName})` : exName;
-  const secondary = notes ? `"${notes}"` : null;
-
   return (
-    <XStack
-      paddingVertical={space.md}
-      borderBottomWidth={0.5}
-      borderBottomColor={colors.border}
-      alignItems="flex-start"
-      pressStyle={interactive ? { opacity: 0.6 } : undefined}
-      onPress={interactive ? () => onEditSet(s) : undefined}
-      cursor={interactive ? 'pointer' : undefined}
-    >
-      {/* Set number */}
-      <Text
-        fontSize={fontSize.xs}
-        color={colors.muted}
-        width={28}
-        flexShrink={0}
-        paddingTop={2}
-      >
-        {`#${idx + 1}`}
-      </Text>
-
-      {/* Name + secondary */}
-      <YStack flex={1}>
-        <Text fontSize={fontSize.sm} fontWeight="600" color={colors.primary} numberOfLines={2}>
-          {exerciseLabel}
-        </Text>
-        {secondary ? (
-          <Text fontSize={fontSize.xs} color={colors.muted} marginTop={2}>
-            {secondary}
-          </Text>
-        ) : null}
-      </YStack>
-
-      {/* Volume */}
-      <Text
-        fontSize={fontSize.md}
-        fontWeight="700"
-        color={colors.accent}
-        marginLeft={space.sm}
-        paddingTop={1}
-      >
-        {volumeStr}
-      </Text>
-
-      {interactive ? (
-        <FontAwesome
-          name="pencil"
-          size={10}
-          color={colors.muted}
-          style={{ marginLeft: space.sm, marginTop: 4 }}
-        />
-      ) : null}
-    </XStack>
+    <ChronologicalSetRow
+      set={s}
+      index={idx}
+      exerciseDetailMap={exerciseDetailMap}
+      onPress={() => onEditSet(s)}
+      showEditAffordance={interactive}
+      pressable={interactive}
+    />
   );
 }
 

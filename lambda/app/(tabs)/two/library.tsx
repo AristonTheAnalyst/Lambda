@@ -5,10 +5,12 @@ import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
 import { LibraryNewExerciseCreateSheet, LibraryNewVariationCreateSheet } from '@/components/LibraryCreateSheets';
 import SlideTabView, { type SlideTab } from '@/components/SlideTabView';
+import SlideTabBar from '@/components/SlideTabBar';
 import { DropdownSelect, SegmentedControl, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
 import { useAuthContext } from '@/lib/AuthContext';
 import GlassButton from '@/components/GlassButton';
+import { SquashPressable } from '@/components/PressSquash';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -67,20 +69,20 @@ const ExRow = React.memo(function ExRow({
 }) {
   const { colors, space, fontSize } = useAppTheme();
   return (
-    <XStack
-      alignItems="center"
-      paddingVertical={space.md}
-      borderBottomWidth={0.5}
-      borderBottomColor={colors.border}
-      pressStyle={{ opacity: 0.6 }}
-      onPress={() => onEdit(ex)}
-      cursor="pointer"
-    >
-      <YStack flex={1}>
-        <Text fontSize={15} color={colors.primary}>{toProperCase(ex.exercise_name)}</Text>
-        <Text fontSize={fontSize.xs} color={colors.muted} marginTop={space.xs}>{ex.exercise_volume_type}</Text>
-      </YStack>
-    </XStack>
+    <SquashPressable onPress={() => onEdit(ex)} contentStyle={{ alignSelf: 'stretch' }}>
+      <XStack
+        alignItems="center"
+        paddingVertical={space.md}
+        borderBottomWidth={0.5}
+        borderBottomColor={colors.border}
+        cursor="pointer"
+      >
+        <YStack flex={1}>
+          <Text fontSize={15} color={colors.primary}>{toProperCase(ex.exercise_name)}</Text>
+          <Text fontSize={fontSize.xs} color={colors.muted} marginTop={space.xs}>{ex.exercise_volume_type}</Text>
+        </YStack>
+      </XStack>
+    </SquashPressable>
   );
 });
 
@@ -93,56 +95,19 @@ const VarRow = React.memo(function VarRow({
 }) {
   const { colors, space } = useAppTheme();
   return (
-    <XStack
-      alignItems="center"
-      paddingVertical={space.md}
-      borderBottomWidth={0.5}
-      borderBottomColor={colors.border}
-      pressStyle={{ opacity: 0.6 }}
-      onPress={() => onEdit(v)}
-      cursor="pointer"
-    >
-      <Text flex={1} fontSize={15} color={colors.primary}>{toProperCase(v.variation_name)}</Text>
-    </XStack>
+    <SquashPressable onPress={() => onEdit(v)} contentStyle={{ alignSelf: 'stretch' }}>
+      <XStack
+        alignItems="center"
+        paddingVertical={space.md}
+        borderBottomWidth={0.5}
+        borderBottomColor={colors.border}
+        cursor="pointer"
+      >
+        <Text flex={1} fontSize={15} color={colors.primary}>{toProperCase(v.variation_name)}</Text>
+      </XStack>
+    </SquashPressable>
   );
 });
-
-// ─── Top tab bar (matches Dev → Experimental layout) ──────────────────────────
-
-function LibraryTabBar({
-  active,
-  onChange,
-}: {
-  active: LibraryTab;
-  onChange: (t: LibraryTab) => void;
-}) {
-  const { colors, space, fontSize } = useAppTheme();
-  return (
-    <XStack borderBottomWidth={0.5} borderBottomColor={colors.border}>
-      {LIB_TAB_LABELS.map((tab) => {
-        const isActive = tab === active;
-        return (
-          <XStack
-            key={tab}
-            flex={1}
-            paddingVertical={space.md}
-            alignItems="center"
-            justifyContent="center"
-            onPress={() => onChange(tab)}
-            cursor="pointer"
-            pressStyle={{ opacity: 0.7 }}
-            borderBottomWidth={2}
-            borderBottomColor={isActive ? colors.accent : 'transparent'}
-          >
-            <Text fontSize={fontSize.sm} fontWeight={isActive ? '700' : '400'} color={isActive ? colors.accent : colors.muted}>
-              {tab}
-            </Text>
-          </XStack>
-        );
-      })}
-    </XStack>
-  );
-}
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -505,7 +470,7 @@ export default function LibraryScreen() {
 
   return (
     <YStack flex={1} backgroundColor={colors.bg}>
-      <LibraryTabBar active={activeTab} onChange={setActiveTab} />
+      <SlideTabBar tabs={LIB_TAB_LABELS} active={activeTab} onChange={setActiveTab} />
       <SlideTabView
         tabs={slideTabs}
         activeKey={activeTab}

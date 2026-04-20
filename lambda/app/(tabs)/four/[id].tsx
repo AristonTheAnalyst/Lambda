@@ -340,7 +340,11 @@ export default function WorkoutDetailScreen() {
     if (dirty) {
       Alert.alert('Discard Changes', 'You have unsaved changes. Discard them?', [
         { text: 'Keep Editing', style: 'cancel' },
-        { text: 'Discard', style: 'destructive', onPress: () => setEditingSet(null) },
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: () => setEditingSet(null),
+        },
       ]);
     } else {
       setEditingSet(null);

@@ -1,10 +1,12 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PageHeader from '@/components/PageHeader';
+import { useSquashPressHandlers } from '@/components/PressSquash';
 import { BottomTabBarPropsProvider, TabBarPropsSync, useBottomTabBarProps } from '@/lib/BottomTabBarPropsContext';
 import { ExerciseDataProvider } from '@/lib/ExerciseDataContext';
 import { TabHeaderProvider, useTabHeader } from '@/lib/TabHeaderContext';
@@ -27,6 +29,40 @@ const NAV_ITEMS = [
   { route: '/one', tabName: 'one' as const, icon: 'person' as const, label: 'Profile' },
   { route: '/six', tabName: 'six' as const, icon: 'code' as const, label: 'Dev' },
 ] as const;
+
+function NavTabButton({
+  item,
+  isActive,
+  iconName,
+  accentColor,
+  mutedColor,
+  onActivate,
+}: {
+  item: (typeof NAV_ITEMS)[number];
+  isActive: boolean;
+  iconName: React.ComponentProps<typeof Ionicons>['name'];
+  accentColor: string;
+  mutedColor: string;
+  onActivate: () => void;
+}) {
+  const { animatedStyle, onPressIn: squashIn, onPressOut } = useSquashPressHandlers('ghost');
+  return (
+    <Pressable
+      style={{ flex: 1 }}
+      onPressIn={squashIn}
+      onPress={onActivate}
+      onPressOut={onPressOut}
+      unstable_pressDelay={0}
+      android_disableSound
+      hitSlop={6}
+    >
+      <Animated.View style={[animatedStyle, styles.navItem]}>
+        <Ionicons name={iconName} size={24} color={isActive ? accentColor : mutedColor} />
+        <Text style={[styles.navLabel, { color: isActive ? accentColor : mutedColor }]}>{item.label}</Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
 
 function BottomNav({ navigation, state }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
@@ -71,18 +107,15 @@ function BottomNav({ navigation, state }: BottomTabBarProps) {
               ? item.icon
               : (`${item.icon}-outline` as const);
         return (
-          <Pressable
+          <NavTabButton
             key={item.route}
-            style={({ pressed }) => [styles.navItem, pressed && { opacity: 0.82 }]}
-            onPressIn={() => handlePress(item)}
-            unstable_pressDelay={0}
-            android_disableSound
-            android_ripple={Platform.OS === 'android' ? { borderless: true, radius: 60, color: `${colors.muted}35` } : undefined}
-            hitSlop={6}
-          >
-            <Ionicons name={iconName as React.ComponentProps<typeof Ionicons>['name']} size={24} color={isActive ? colors.accent : colors.muted} />
-            <Text style={[styles.navLabel, { color: isActive ? colors.accent : colors.muted }]}>{item.label}</Text>
-          </Pressable>
+            item={item}
+            isActive={isActive}
+            iconName={iconName as React.ComponentProps<typeof Ionicons>['name']}
+            accentColor={colors.accent}
+            mutedColor={colors.muted}
+            onActivate={() => handlePress(item)}
+          />
         );
       })}
     </View>
@@ -147,7 +180,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   navItem: {
-    flex: 1,
+    alignSelf: 'stretch',
     alignItems: 'center',
     paddingVertical: 10,
     gap: 3,

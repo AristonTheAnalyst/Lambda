@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import { Spinner, Text, XStack } from 'tamagui';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { SquashPressable } from '@/components/PressSquash';
 import { useAppTheme } from '@/lib/ThemeContext';
 
 const isGlassSupported = Platform.OS === 'ios' && Number(Platform.Version) >= 26;
@@ -70,35 +71,32 @@ export default function GlassButton({
 
   if (isGlassSupported && GlassView) {
     return (
-      <XStack
-        borderRadius={999}
-        overflow="hidden"
-        onPress={inactive ? undefined : onPress}
-        cursor={inactive ? undefined : 'pointer'}
-        opacity={inactive ? 0.45 : 1}
-      >
-        <GlassView
-          glassEffectStyle="systemThinMaterial"
-          tintColor={colors.surface}
-          style={{ borderRadius: 999 }}
-        >
-          {inner}
-        </GlassView>
-      </XStack>
+      <SquashPressable onPress={onPress} disabled={inactive} contentStyle={{ alignSelf: 'flex-start' }}>
+        <XStack borderRadius={999} overflow="hidden" opacity={inactive ? 0.45 : 1}>
+          <GlassView
+            glassEffectStyle="systemThinMaterial"
+            tintColor={colors.surface}
+            style={{ borderRadius: 999 }}
+            pointerEvents="none"
+          >
+            {inner}
+          </GlassView>
+        </XStack>
+      </SquashPressable>
     );
   }
 
   return (
-    <XStack
-      borderRadius={999}
-      backgroundColor={hexToRgba(colors.surface, 0.92)}
-      borderWidth={1}
-      borderColor={hexToRgba(colors.border, 0.9)}
-      onPress={inactive ? undefined : onPress}
-      cursor={inactive ? undefined : 'pointer'}
-      opacity={inactive ? 0.45 : 1}
-    >
-      {inner}
-    </XStack>
+    <SquashPressable onPress={onPress} disabled={inactive} contentStyle={{ alignSelf: 'flex-start' }}>
+      <XStack
+        borderRadius={999}
+        backgroundColor={hexToRgba(colors.surface, 0.92)}
+        borderWidth={1}
+        borderColor={hexToRgba(colors.border, 0.9)}
+        opacity={inactive ? 0.45 : 1}
+      >
+        {inner}
+      </XStack>
+    </SquashPressable>
   );
 }

@@ -1,11 +1,11 @@
 import { useCallback, useEffect } from 'react';
-import { TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import SyncStatusIcon from '@/components/SyncStatusIcon';
+import { SquashPressable } from '@/components/PressSquash';
 import { useAppTheme } from '@/lib/ThemeContext';
 import { useTabHeader } from '@/lib/TabHeaderContext';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
@@ -59,11 +59,7 @@ export default function AdminExercisesHub() {
     <YStack flex={1} backgroundColor={colors.bg}>
       <YStack flex={1} padding={space.xl} gap={space.md}>
         {sections.map((s) => (
-          <TouchableOpacity
-            key={s.route}
-            activeOpacity={0.7}
-            onPress={() => router.push(s.route as any)}
-          >
+          <SquashPressable key={s.route} onPress={() => router.push(s.route as any)} contentStyle={{ alignSelf: 'stretch' }}>
             <YStack
               backgroundColor={colors.surface}
               borderWidth={1}
@@ -89,7 +85,7 @@ export default function AdminExercisesHub() {
                 <FontAwesome name="chevron-right" size={14} color={colors.muted} />
               </XStack>
             </YStack>
-          </TouchableOpacity>
+          </SquashPressable>
         ))}
       </YStack>
     </YStack>

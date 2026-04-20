@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, Keyboard, TextInput } from 'react-native';
+import { FlatList, Keyboard, KeyboardAvoidingView, Platform, ScrollView, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Separator,
@@ -8,6 +8,7 @@ import {
   XStack,
   YStack,
 } from 'tamagui';
+import { SquashPressable } from '@/components/PressSquash';
 import { useAppTheme } from '@/lib/ThemeContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -43,26 +44,25 @@ export function SegmentedControl<T extends string>({
       {options.map((opt) => {
         const active = opt.value === value;
         return (
-          <YStack
-            key={String(opt.value)}
-            flex={1}
-            paddingVertical={space.sm}
-            alignItems="center"
-            justifyContent="center"
-            borderRadius={radius.sm}
-            cursor="pointer"
-            backgroundColor={active ? colors.accent : 'transparent'}
-            pressStyle={{ opacity: active ? 0.85 : 0.7 }}
-            onPress={() => onChange(opt.value)}
-          >
-            <Text
-              color={active ? colors.accentText : colors.muted}
-              fontSize={fontSize.sm}
-              fontWeight={active ? '600' : '400'}
+          <SquashPressable key={String(opt.value)} onPress={() => onChange(opt.value)} contentStyle={{ flex: 1 }}>
+            <YStack
+              flex={1}
+              paddingVertical={space.sm}
+              alignItems="center"
+              justifyContent="center"
+              borderRadius={radius.sm}
+              cursor="pointer"
+              backgroundColor={active ? colors.accent : 'transparent'}
             >
-              {opt.label}
-            </Text>
-          </YStack>
+              <Text
+                color={active ? colors.accentText : colors.muted}
+                fontSize={fontSize.sm}
+                fontWeight={active ? '600' : '400'}
+              >
+                {opt.label}
+              </Text>
+            </YStack>
+          </SquashPressable>
         );
       })}
     </XStack>
@@ -83,18 +83,32 @@ interface SlideUpModalProps {
 
 export function SlideUpModal({ visible, onClose, children, zIndex, snapPoints, fitContent, keyboardAware }: SlideUpModalProps) {
   const { colors } = useAppTheme();
+  const wasVisibleRef = React.useRef(false);
   React.useEffect(() => { if (visible && !keyboardAware) Keyboard.dismiss(); }, [visible, keyboardAware]);
+  React.useEffect(() => {
+    if (wasVisibleRef.current && !visible) {
+      Keyboard.dismiss();
+    }
+    wasVisibleRef.current = visible;
+  }, [visible]);
   return (
     <Sheet
       modal
       open={visible}
-      onOpenChange={(open: boolean) => { if (!open) onClose(); }}
+      onOpenChange={(open: boolean) => {
+        if (!open) {
+          Keyboard.dismiss();
+          onClose();
+        }
+      }}
       animation="medium"
       snapPoints={fitContent ? undefined : (snapPoints ?? [85])}
       snapPointsMode={fitContent ? 'fit' : undefined}
       disableDrag
       zIndex={zIndex ?? 100_000}
-      moveOnKeyboardChange={!!visible && !!keyboardAware}
+      // Tamagui v2 rc: moveOnKeyboardChange often leaves Sheet.Frame vertically offset after
+      // the keyboard hides; reopening looks "shifted up". Scroll + dismiss-on-close instead.
+      moveOnKeyboardChange={false}
     >
       <Sheet.Overlay
         animation="medium"
@@ -103,7 +117,23 @@ export function SlideUpModal({ visible, onClose, children, zIndex, snapPoints, f
         backgroundColor="rgba(0,0,0,0.6)"
       />
       <Sheet.Frame backgroundColor={colors.surface}>
-        {children}
+        {keyboardAware ? (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={0}
+            style={{ width: '100%' }}
+          >
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              showsVerticalScrollIndicator={false}
+            >
+              {children}
+            </ScrollView>
+          </KeyboardAvoidingView>
+        ) : (
+          children
+        )}
       </Sheet.Frame>
     </Sheet>
   );
@@ -216,31 +246,31 @@ export function DropdownSelect<T = any>(
   return (
     <>
       {/* ── Trigger ── */}
-      <XStack
-        alignItems="center"
-        justifyContent="space-between"
-        borderWidth={1}
-        borderColor={colors.border}
-        borderRadius={radius.md}
-        paddingHorizontal={space.md}
-        height={48}
-        backgroundColor={colors.surface}
-        pressStyle={{ opacity: 0.75 }}
-        onPress={handleOpen}
-        cursor="pointer"
-      >
-        <Text
-          fontSize={fontSize.md}
-          fontWeight="400"
-          flex={1}
-          marginRight={space.sm}
-          numberOfLines={1}
-          color={triggerHasValue ? colors.primary : colors.muted}
+      <SquashPressable onPress={handleOpen} contentStyle={{ alignSelf: 'stretch' }}>
+        <XStack
+          alignItems="center"
+          justifyContent="space-between"
+          borderWidth={1}
+          borderColor={colors.border}
+          borderRadius={radius.md}
+          paddingHorizontal={space.md}
+          height={48}
+          backgroundColor={colors.surface}
+          cursor="pointer"
         >
-          {triggerLabel}
-        </Text>
-        <Text color={colors.muted} fontSize={fontSize.lg}>▾</Text>
-      </XStack>
+          <Text
+            fontSize={fontSize.md}
+            fontWeight="400"
+            flex={1}
+            marginRight={space.sm}
+            numberOfLines={1}
+            color={triggerHasValue ? colors.primary : colors.muted}
+          >
+            {triggerLabel}
+          </Text>
+          <Text color={colors.muted} fontSize={fontSize.lg}>▾</Text>
+        </XStack>
+      </SquashPressable>
 
       {/* ── Sheet ── */}
       <Sheet
@@ -290,17 +320,16 @@ export function DropdownSelect<T = any>(
             ItemSeparatorComponent={() => <Separator borderColor={colors.border} />}
             ListHeaderComponent={onCreateNew ? (() => (
               <YStack>
-                <XStack
-                  paddingHorizontal={space.xl}
-                  paddingVertical={15}
-                  pressStyle={{ opacity: 0.7 }}
+                <SquashPressable
                   onPress={() => { setOpen(false); onCreateNew!(); }}
-                  cursor="pointer"
+                  contentStyle={{ alignSelf: 'stretch' }}
                 >
-                  <Text fontSize={fontSize.md} color={colors.accent} fontWeight="500">
-                    {`+ ${createNewLabel ?? 'New'}`}
-                  </Text>
-                </XStack>
+                  <XStack paddingHorizontal={space.xl} paddingVertical={15} cursor="pointer">
+                    <Text fontSize={fontSize.md} color={colors.accent} fontWeight="500">
+                      {`+ ${createNewLabel ?? 'New'}`}
+                    </Text>
+                  </XStack>
+                </SquashPressable>
                 <Separator borderColor={colors.border} />
               </YStack>
             )) as any : undefined}
@@ -309,47 +338,50 @@ export function DropdownSelect<T = any>(
                 ? selValueSet.has(String(item.value))
                 : item.value === props.value;
               return (
-                <XStack
-                  alignItems="center"
-                  justifyContent="space-between"
-                  paddingHorizontal={space.xl}
-                  paddingVertical={15}
-                  backgroundColor={active ? colors.accentBg : 'transparent'}
-                  pressStyle={{ opacity: 0.7 }}
+                <SquashPressable
                   onPress={() => {
                     Keyboard.dismiss();
                     if (multiSelect) { toggleMulti(item.value); }
                     else { (props as DropdownSelectProps<T>).onChange(item.value); setOpen(false); }
                   }}
-                  cursor="pointer"
+                  contentStyle={{ alignSelf: 'stretch' }}
                 >
-                  <Text
-                    fontSize={fontSize.md}
-                    color={active ? colors.accent : colors.primary}
-                    fontWeight={active ? '600' : '400'}
+                  <XStack
+                    alignItems="center"
+                    justifyContent="space-between"
+                    paddingHorizontal={space.xl}
+                    paddingVertical={15}
+                    backgroundColor={active ? colors.accentBg : 'transparent'}
+                    cursor="pointer"
                   >
-                    {item.label}
-                  </Text>
-                  {active && <Text color={colors.accent} fontSize={fontSize.md}>✓</Text>}
-                </XStack>
+                    <Text
+                      fontSize={fontSize.md}
+                      color={active ? colors.accent : colors.primary}
+                      fontWeight={active ? '600' : '400'}
+                    >
+                      {item.label}
+                    </Text>
+                    {active && <Text color={colors.accent} fontSize={fontSize.md}>✓</Text>}
+                  </XStack>
+                </SquashPressable>
               );
             }}
           />
 
           {multiSelect && (
             <YStack paddingHorizontal={space.lg} paddingVertical={space.md}>
-              <XStack
-                backgroundColor={colors.accent}
-                borderRadius={radius.md}
-                paddingVertical={space.md}
-                alignItems="center"
-                justifyContent="center"
-                pressStyle={{ opacity: 0.8 }}
-                onPress={() => { setOpen(false); onConfirm?.(); }}
-                cursor="pointer"
-              >
-                <Text color={colors.accentText} fontSize={fontSize.md} fontWeight="600">{confirmLabel ?? 'Done'}</Text>
-              </XStack>
+              <SquashPressable onPress={() => { setOpen(false); onConfirm?.(); }} contentStyle={{ alignSelf: 'stretch' }}>
+                <XStack
+                  backgroundColor={colors.accent}
+                  borderRadius={radius.md}
+                  paddingVertical={space.md}
+                  alignItems="center"
+                  justifyContent="center"
+                  cursor="pointer"
+                >
+                  <Text color={colors.accentText} fontSize={fontSize.md} fontWeight="600">{confirmLabel ?? 'Done'}</Text>
+                </XStack>
+              </SquashPressable>
             </YStack>
           )}
         </Sheet.Frame>

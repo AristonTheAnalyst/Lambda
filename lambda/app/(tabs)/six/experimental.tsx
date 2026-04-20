@@ -7,6 +7,7 @@ import GlassButton from '@/components/GlassButton';
 import Button from '@/components/Button';
 import PopupMenuButton from '@/components/PopupMenuButton';
 import SlideTabView from '@/components/SlideTabView';
+import SlideTabBar from '@/components/SlideTabBar';
 import { SegmentedControl, SlideUpModal, DropdownSelect } from '@/components/FormControls';
 import type { SlideTab } from '@/components/SlideTabView';
 import type { PressVariant } from '@/components/PopupMenuButton';
@@ -270,43 +271,8 @@ function SheetsPage() {
   );
 }
 
-// ─── Tab bar ──────────────────────────────────────────────────────────────────
-
 const TABS = ['Popup Menu', 'Buttons', 'Sheets'] as const;
 type Tab = typeof TABS[number];
-
-function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
-  const { colors, space, fontSize } = useAppTheme();
-  return (
-    <XStack borderBottomWidth={0.5} borderBottomColor={colors.border}>
-      {TABS.map(tab => {
-        const isActive = tab === active;
-        return (
-          <XStack
-            key={tab}
-            flex={1}
-            paddingVertical={space.md}
-            alignItems="center"
-            justifyContent="center"
-            onPress={() => onChange(tab)}
-            cursor="pointer"
-            pressStyle={{ opacity: 0.7 }}
-            borderBottomWidth={2}
-            borderBottomColor={isActive ? colors.accent : 'transparent'}
-          >
-            <Text
-              fontSize={fontSize.sm}
-              fontWeight={isActive ? '700' : '400'}
-              color={isActive ? colors.accent : colors.muted}
-            >
-              {tab}
-            </Text>
-          </XStack>
-        );
-      })}
-    </XStack>
-  );
-}
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -334,7 +300,7 @@ export default function ExperimentalScreen() {
 
   return (
     <YStack flex={1} backgroundColor={colors.bg}>
-      <TabBar active={activeTab} onChange={setActiveTab} />
+      <SlideTabBar tabs={TABS} active={activeTab} onChange={setActiveTab} />
       <SlideTabView tabs={tabs} activeKey={activeTab} onIndexChange={(k) => setActiveTab(k as Tab)} />
     </YStack>
   );

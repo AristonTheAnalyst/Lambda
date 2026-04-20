@@ -4,6 +4,7 @@ import { queueMutation } from '@/lib/sync/sync-engine';
 import { purgePendingMutations } from '@/lib/sync/sync-db';
 import { randomUUID } from '@/lib/uuid';
 import { useSyncStore } from '@/lib/sync/useSyncEngine';
+import type { WorkoutSet } from '@/lib/offline/setStore';
 
 export interface WorkoutRow {
   user_workout_id: string;
@@ -253,6 +254,62 @@ export async function loadWorkoutsWithSets(
     user_pre_workout_notes: w.user_pre_workout_notes,
     user_post_workout_notes: w.user_post_workout_notes,
     sets: setsByWorkout[w.user_workout_id] ?? [],
+  }));
+}
+
+/** One logged set plus its parent workout date (for global timelines). */
+export type PastSetLogRow = WorkoutSet & {
+  user_workout_id: string;
+  user_workout_created_date: string;
+};
+
+function parseJsonNumberArray(val: string | null | undefined): number[] | null {
+  if (val == null || val === '') return null;
+  try {
+    const n = JSON.parse(val) as unknown;
+    return Array.isArray(n) ? (n as number[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * All sets from ended workouts, newest first: by workout date DESC, then set number DESC
+ * within each workout (last logged set in the session before the previous session’s sets).
+ */
+export async function loadPastSetsTimeline(db: SQLiteDatabase, userId: string): Promise<PastSetLogRow[]> {
+  const rows = await db.getAllAsync<{
+    workout_set_id: string;
+    user_workout_id: string;
+    custom_exercise_id: string;
+    custom_variation_id: string | null;
+    workout_set_number: number;
+    workout_set_weight: number | null;
+    workout_set_reps: string | null;
+    workout_set_duration_seconds: string | null;
+    workout_set_notes: string | null;
+    user_workout_created_date: string;
+  }>(
+    `SELECT s.workout_set_id, s.user_workout_id, s.custom_exercise_id, s.custom_variation_id,
+            s.workout_set_number, s.workout_set_weight, s.workout_set_reps, s.workout_set_duration_seconds,
+            s.workout_set_notes, w.user_workout_created_date
+     FROM fact_workout_set s
+     INNER JOIN fact_user_workout w ON w.user_workout_id = s.user_workout_id
+     WHERE w.user_id = ? AND w.deleted_locally = 0 AND s.deleted_locally = 0 AND w.is_active = 0
+     ORDER BY w.user_workout_created_date DESC, s.workout_set_number DESC`,
+    [userId]
+  );
+  return rows.map((r) => ({
+    workout_set_id: r.workout_set_id,
+    user_workout_id: r.user_workout_id,
+    custom_exercise_id: r.custom_exercise_id,
+    custom_variation_id: r.custom_variation_id,
+    workout_set_number: r.workout_set_number,
+    workout_set_weight: r.workout_set_weight,
+    workout_set_reps: parseJsonNumberArray(r.workout_set_reps),
+    workout_set_duration_seconds: parseJsonNumberArray(r.workout_set_duration_seconds),
+    workout_set_notes: r.workout_set_notes,
+    user_workout_created_date: r.user_workout_created_date,
   }));
 }
 

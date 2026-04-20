@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import { YStack } from 'tamagui';
 import { isDarkAppearance } from '@/constants/themes';
+import { SquashPressable } from '@/components/PressSquash';
 import { useAppTheme } from '@/lib/ThemeContext';
 
 const isGlassSupported = Platform.OS === 'ios' && Number(Platform.Version) >= 26;
@@ -28,23 +29,23 @@ export default function Card({ children, onPress, onPressIn, flex, variant = 'de
   const lightLift = !isDarkAppearance(themeName);
 
   if (variant === 'glass' && isGlassSupported && GlassView) {
-    return (
-      <YStack
-        flex={flex}
-        borderRadius={radius.md}
-        overflow="hidden"
-        pressStyle={pressable ? { opacity: 0.8 } : undefined}
-        onPress={onPress}
-        onPressIn={onPressIn}
-      >
-        <GlassView glassEffectStyle="systemMaterial" style={{ borderRadius: radius.md, padding: space.md }}>
+    const inner = (
+      <YStack flex={flex} borderRadius={radius.md} overflow="hidden">
+        <GlassView glassEffectStyle="systemMaterial" style={{ borderRadius: radius.md, padding: space.md }} pointerEvents="box-none">
           {children}
         </GlassView>
       </YStack>
     );
+    return pressable ? (
+      <SquashPressable onPress={onPress} onPressIn={onPressIn} contentStyle={{ flex, alignSelf: 'stretch' }}>
+        {inner}
+      </SquashPressable>
+    ) : (
+      inner
+    );
   }
 
-  return (
+  const inner = (
     <YStack
       flex={flex}
       backgroundColor={colors.surface}
@@ -52,9 +53,6 @@ export default function Card({ children, onPress, onPressIn, flex, variant = 'de
       borderColor={colors.border}
       borderRadius={radius.md}
       padding={space.md}
-      pressStyle={pressable ? { opacity: 0.75 } : undefined}
-      onPress={onPress}
-      onPressIn={onPressIn}
       cursor={pressable ? 'pointer' : undefined}
       {...(lightLift
         ? {
@@ -68,5 +66,13 @@ export default function Card({ children, onPress, onPressIn, flex, variant = 'de
     >
       {children}
     </YStack>
+  );
+
+  return pressable ? (
+    <SquashPressable onPress={onPress} onPressIn={onPressIn} contentStyle={{ flex, alignSelf: 'stretch' }}>
+      {inner}
+    </SquashPressable>
+  ) : (
+    inner
   );
 }
