@@ -9,25 +9,25 @@ const BANNER_HEIGHT = 28;
 export default function OfflineBanner() {
   const { colors, fontSize } = useAppTheme();
   const { isConnected } = useNetwork();
-  const translateY = useSharedValue(-BANNER_HEIGHT);
+  /** Collapse height when hidden — translate-only left a 28px layout gap (looked like huge empty space above headers). */
+  const heightSv = useSharedValue(0);
 
   useEffect(() => {
-    translateY.value = withTiming(isConnected ? -BANNER_HEIGHT : 0, { duration: 260 });
+    heightSv.value = withTiming(isConnected ? 0 : BANNER_HEIGHT, { duration: 260 });
   }, [isConnected]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
+    height: heightSv.value,
+    overflow: 'hidden',
   }));
 
   return (
     <Animated.View
       style={[
         {
-          height: BANNER_HEIGHT,
           backgroundColor: colors.danger,
           alignItems: 'center',
           justifyContent: 'center',
-          overflow: 'hidden',
         },
         animatedStyle,
       ]}

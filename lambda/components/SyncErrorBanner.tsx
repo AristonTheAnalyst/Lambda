@@ -18,25 +18,24 @@ export default function SyncErrorBanner() {
   const pendingCount = useSyncStore((s) => s.pendingCount);
   const visible = isConnected && !!lastError && pendingCount > 0;
 
-  const translateY = useSharedValue(-BANNER_HEIGHT);
+  const heightSv = useSharedValue(0);
 
   useEffect(() => {
-    translateY.value = withTiming(visible ? 0 : -BANNER_HEIGHT, { duration: 260 });
-  }, [visible, translateY]);
+    heightSv.value = withTiming(visible ? BANNER_HEIGHT : 0, { duration: 260 });
+  }, [visible]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
+    height: heightSv.value,
+    overflow: 'hidden',
   }));
 
   return (
     <Animated.View
       style={[
         {
-          height: BANNER_HEIGHT,
           backgroundColor: colors.accentBg,
           alignItems: 'center',
           justifyContent: 'center',
-          overflow: 'hidden',
           borderBottomWidth: 0.5,
           borderBottomColor: colors.border,
         },

@@ -1,7 +1,8 @@
 /**
  * Module-level navigation guard.
  * Blocks duplicate router.push / router.replace calls for `duration` ms after
- * the first call — covers the full screen transition animation (~500ms).
+ * the first call — long enough to absorb double-taps, short enough to allow
+ * quick successive navigations (default 180ms).
  *
  * Module-level (not per-component) because navigation is global app state:
  * a screen transition triggered from one component should block triggers from
@@ -16,7 +17,7 @@
  */
 let _navBusy = false;
 
-export function navGuard(fn: () => void, duration = 500): void {
+export function navGuard(fn: () => void, duration = 50): void {
   if (_navBusy) return;
   _navBusy = true;
   fn();

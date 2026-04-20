@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Alert, InteractionManager, Keyboard, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
 import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
 import { SlideUpModal, DropdownSelect, SegmentedControl } from '@/components/FormControls';
 import Input from '@/components/Input';
@@ -20,6 +19,8 @@ import { loadWorkout, updateWorkoutNotes, WorkoutRow } from '@/lib/offline/worko
 import { loadSetsForWorkout, insertSet, updateSet, deleteSet, reorderSetsForWorkout, WorkoutSet } from '@/lib/offline/setStore';
 import { parseValues, toProperCase } from '@/lib/workoutSetFormat';
 import { useAppTheme } from '@/lib/ThemeContext';
+import { useFocusEffect } from '@react-navigation/native';
+import { useTabHeader } from '@/lib/TabHeaderContext';
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -28,11 +29,11 @@ function formatDate(iso: string): string {
 
 export default function WorkoutDetailScreen() {
   const { colors, space, radius, fontSize } = useAppTheme();
+  const { setTabHeader } = useTabHeader();
   const { id } = useLocalSearchParams<{ id: string }>();
   const workoutId = id;
   const db = useSQLiteContext();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const guard = useAsyncGuard();
   const { user } = useAuthContext();
   const { exercises, variations, exerciseDetailMap, refreshExercises, refreshVariations, refreshExerciseDetails } = useExerciseData();
@@ -376,39 +377,32 @@ export default function WorkoutDetailScreen() {
     </Text>
   );
 
+  useFocusEffect(
+    useCallback(() => {
+      setTabHeader({
+        title: editing ? 'Edit Session' : 'Past Session',
+        left: editing ? (
+          <GlassButton label="Cancel" color={colors.danger} onPress={cancelEditing} compact />
+        ) : (
+          <GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} />
+        ),
+        right: editing ? (
+          <GlassButton
+            label="Save"
+            onPress={() => saveNotes()}
+            loading={notesLoading}
+            disabled={notesLoading}
+            compact
+          />
+        ) : (
+          <GlassButton label="Edit" onPress={startEditing} compact />
+        ),
+      });
+    }, [editing, notesLoading, setTabHeader, router, colors.danger]),
+  );
+
   return (
     <YStack flex={1} backgroundColor={colors.bg}>
-      <XStack
-        style={{ height: insets.top + 52, paddingTop: insets.top }}
-        paddingHorizontal={space.md}
-        alignItems="center"
-      >
-        <XStack minWidth={80} justifyContent="flex-start">
-          {editing ? (
-            <GlassButton label="Cancel" color={colors.danger} onPress={cancelEditing} compact />
-          ) : (
-            <GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} />
-          )}
-        </XStack>
-        <Text flex={1} textAlign="center" color={colors.primary} fontSize={fontSize.xl} fontWeight="600">
-          {editing ? 'Edit Session' : 'Past Session'}
-        </Text>
-        <XStack minWidth={80} justifyContent="flex-end">
-          {editing ? (
-            <GlassButton
-              label="Save"
-              onPress={() => saveNotes()}
-              loading={notesLoading}
-              disabled={notesLoading}
-              compact
-            />
-          ) : (
-            <GlassButton label="Edit" onPress={startEditing} compact />
-          )}
-        </XStack>
-      </XStack>
-      <Separator borderColor={colors.border} />
-
       {editing ? (
         <YStack flex={1}>
           <YStack flex={1} paddingHorizontal={space.lg} paddingTop={space.lg} paddingBottom={space.md}>

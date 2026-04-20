@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Alert, InteractionManager, Keyboard, ScrollView } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SlidePages from '@/components/SlidePages';
 import { useSlidePages } from '@/hooks/useSlidePages';
@@ -7,7 +8,6 @@ import { Separator, Text, XStack, YStack } from 'tamagui';
 import WorkoutLogStickyFooter from '@/components/workout/WorkoutLogStickyFooter';
 import WorkoutSetsList from '@/components/workout/WorkoutSetsList';
 import { useSQLiteContext } from 'expo-sqlite';
-import PageHeader from '@/components/PageHeader';
 import SyncStatusIcon from '@/components/SyncStatusIcon';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
@@ -30,12 +30,14 @@ import {
 import GlassButton from '@/components/GlassButton';
 import { useAsyncGuard } from '@/lib/asyncGuard';
 import { useAppTheme } from '@/lib/ThemeContext';
+import { useTabHeader } from '@/lib/TabHeaderContext';
 import { parseValues, toProperCase } from '@/lib/workoutSetFormat';
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function WorkoutLogScreen() {
   const { colors, space, radius, fontSize } = useAppTheme();
+  const { setTabHeader } = useTabHeader();
   const insets = useSafeAreaInsets();
   const db = useSQLiteContext();
   const guard = useAsyncGuard();
@@ -128,13 +130,13 @@ export default function WorkoutLogScreen() {
 
   // ── Workout state helper ───────────────────────────────────────────────────
 
-  function clearLogForm() {
+  const clearLogForm = useCallback(() => {
     setSelectedExId(null);
     setSelectedVarId(null);
     setWeight('');
     setRepsOrDuration('');
     setSetNotes('');
-  }
+  }, []);
 
   // ── Load sets from SQLite ──────────────────────────────────────────────────
 
@@ -299,7 +301,7 @@ export default function WorkoutLogScreen() {
 
   // ── End / cancel workout ───────────────────────────────────────────────────
 
-  function confirmCancelWorkout() {
+  const confirmCancelWorkout = useCallback(() => {
     Alert.alert('Cancel Workout', 'Discard this workout and all logged sets?', [
       { text: 'Discard', style: 'destructive', onPress: () => guard(async () => {
         if (!currentWorkoutId) return;
@@ -312,7 +314,7 @@ export default function WorkoutLogScreen() {
       })},
       { text: 'Keep Going' },
     ]);
-  }
+  }, [currentWorkoutId, guard, db, slidePages, clearLogForm]);
 
   function doEndWorkout() { return guard(async () => {
     if (!currentWorkoutId) return;
@@ -399,21 +401,26 @@ export default function WorkoutLogScreen() {
     if (currentWorkoutId) loadSets(currentWorkoutId);
   }); }
 
+  useFocusEffect(
+    useCallback(() => {
+      setTabHeader({
+        title: currentWorkoutId === null ? 'Mental Prep and Planning' : 'Training Session',
+        left:
+          currentWorkoutId !== null ? (
+            <GlassButton label="Cancel" color={colors.danger} onPress={confirmCancelWorkout} compact />
+          ) : undefined,
+        right:
+          currentWorkoutId !== null ? (
+            <GlassButton label="End" onPress={() => setEndWorkoutModalVisible(true)} compact />
+          ) : undefined,
+      });
+    }, [currentWorkoutId, setTabHeader, colors.danger, confirmCancelWorkout]),
+  );
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <YStack flex={1} backgroundColor={colors.bg}>
-      <PageHeader
-        title={currentWorkoutId === null ? 'Mental Prep and Planning' : 'Training Session'}
-        left={currentWorkoutId !== null ? (
-          <GlassButton label="Cancel" color={colors.danger} onPress={confirmCancelWorkout} compact />
-        ) : undefined}
-        right={currentWorkoutId !== null ? (
-          <GlassButton label="End" onPress={() => setEndWorkoutModalVisible(true)} compact />
-        ) : undefined}
-      />
-
       <SlidePages controller={slidePages}>
         {/* ── Page 0: Start ── */}
         <YStack flex={1}>

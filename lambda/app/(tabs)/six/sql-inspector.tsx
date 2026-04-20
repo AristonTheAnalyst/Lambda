@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react';
 import { ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Text, XStack, YStack } from 'tamagui';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import { Text, YStack } from 'tamagui';
 import { useSQLiteContext } from 'expo-sqlite';
 import GlassButton from '@/components/GlassButton';
 import Button from '@/components/Button';
 import { useAppTheme } from '@/lib/ThemeContext';
+import { useTabHeader } from '@/lib/TabHeaderContext';
 
 const PRESETS = [
   {
@@ -38,8 +39,18 @@ const PRESETS = [
 export default function SqlInspectorScreen() {
   const { colors, space, radius, fontSize } = useAppTheme();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const { setTabHeader } = useTabHeader();
   const db = useSQLiteContext();
+
+  useFocusEffect(
+    useCallback(() => {
+      setTabHeader({
+        title: 'SQL Inspector',
+        left: <GlassButton icon="chevron-left" onPress={() => router.back()} />,
+        right: undefined,
+      });
+    }, [setTabHeader, router]),
+  );
 
   const [sql, setSql] = useState(PRESETS[0].sql);
   const [rows, setRows] = useState<Record<string, unknown>[] | null>(null);
@@ -65,15 +76,6 @@ export default function SqlInspectorScreen() {
 
   return (
     <YStack flex={1} backgroundColor={colors.bg}>
-      <YStack paddingTop={insets.top + space.sm} paddingBottom={space.md} paddingHorizontal={space.lg}>
-        <XStack alignItems="center" gap={space.md}>
-          <GlassButton icon="chevron-left" onPress={() => router.back()} />
-          <Text fontSize={fontSize.xl} fontWeight="700" color={colors.primary} flex={1} textAlign="center" marginRight={44}>
-            SQL Inspector
-          </Text>
-        </XStack>
-      </YStack>
-
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: space.lg, paddingBottom: space.xxl }}>
 
         {/* Preset chips */}

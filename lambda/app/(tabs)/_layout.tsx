@@ -2,13 +2,17 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Tabs, usePathname } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import PageHeader from '@/components/PageHeader';
+import { BottomTabBarPropsProvider, TabBarPropsSync, useBottomTabBarProps } from '@/lib/BottomTabBarPropsContext';
 import { ExerciseDataProvider } from '@/lib/ExerciseDataContext';
+import { TabHeaderProvider, useTabHeader } from '@/lib/TabHeaderContext';
 import { useSyncEngine } from '@/lib/sync/useSyncEngine';
 import { useAppTheme } from '@/lib/ThemeContext';
 import OfflineBanner from '@/components/OfflineBanner';
 import SyncErrorBanner from '@/components/SyncErrorBanner';
+import { navGuard } from '@/hooks/useNavGuard';
 
 /** Mounts the sync engine once for the entire tab session. */
 function SyncMount() {
@@ -23,10 +27,9 @@ const NAV_ITEMS = [
   { route: '/two', tabName: 'two' as const, icon: 'barbell' as const, label: 'Exercises' },
   { route: '/one', tabName: 'one' as const, icon: 'person' as const, label: 'Profile' },
   { route: '/six', tabName: 'six' as const, icon: 'code' as const, label: 'Dev' },
-];
+] as const;
 
 function BottomNav({ navigation, state }: BottomTabBarProps) {
-  const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const { colors } = useAppTheme();
 
@@ -37,22 +40,40 @@ function BottomNav({ navigation, state }: BottomTabBarProps) {
         const nested = current.state as { routes: { name: string }[]; index: number } | undefined;
         const nestedName = nested?.routes?.[nested.index ?? 0]?.name;
         if (nestedName && nestedName !== 'index') {
-          navigation.navigate('four', { screen: 'index' });
+          navGuard(() => navigation.navigate('four', { screen: 'index' }));
           return;
         }
         return;
       }
     }
-    navigation.navigate(item.tabName);
+
+    const currentName = state.routes[state.index]?.name;
+    const currentIdx = NAV_ITEMS.findIndex((i) => i.tabName === currentName);
+    const targetIdx = NAV_ITEMS.findIndex((i) => i.tabName === item.tabName);
+
+    if (currentIdx === -1 || targetIdx === -1) {
+      navGuard(() => navigation.navigate(item.tabName));
+      return;
+    }
+
+    if (targetIdx === currentIdx) {
+      return;
+    }
+
+    navGuard(() => navigation.navigate(item.tabName));
   }
 
   return (
-    <View style={[
-      styles.navbar,
-      { paddingBottom: insets.bottom, backgroundColor: colors.surface, borderTopColor: colors.border },
-    ]}>
+    <View
+      style={[
+        styles.navbar,
+        { paddingBottom: insets.bottom, backgroundColor: colors.surface, borderTopColor: colors.border },
+      ]}
+    >
       {NAV_ITEMS.map((item) => {
-        const isActive = pathname.startsWith(item.route);
+        const rawName = state.routes[state.index]?.name;
+        const activeTabName = rawName === 'index' ? 'three' : rawName;
+        const isActive = activeTabName === item.tabName;
         const iconName =
           'alwaysSolid' in item && item.alwaysSolid
             ? item.icon
@@ -75,28 +96,49 @@ function BottomNav({ navigation, state }: BottomTabBarProps) {
   );
 }
 
+function ExternalBottomNav() {
+  const p = useBottomTabBarProps();
+  if (!p) return null;
+  return <BottomNav {...p} />;
+}
+
+function FixedTabPageHeader() {
+  const { header } = useTabHeader();
+  if (!header.title) return null;
+  return <PageHeader title={header.title} left={header.left} right={header.right} />;
+}
+
 export default function TabLayout() {
   const { colors } = useAppTheme();
+
   return (
     <ExerciseDataProvider>
-      <SyncMount />
-      <View style={{ flex: 1, backgroundColor: colors.bg }}>
-        <OfflineBanner />
-        <SyncErrorBanner />
-        <Tabs
-          screenOptions={{ headerShown: false }}
-          tabBar={(props) => <BottomNav {...props} />}
-        >
-          <Tabs.Screen name="index"   options={{ headerShown: false }} />
-          <Tabs.Screen name="one"     options={{ headerShown: false }} />
-          <Tabs.Screen name="two"     options={{ headerShown: false }} />
-          <Tabs.Screen name="three"   options={{ headerShown: false }} />
-          <Tabs.Screen name="four"    options={{ headerShown: false }} />
-          <Tabs.Screen name="five"    options={{ headerShown: false }} />
-          <Tabs.Screen name="ui-kit"  options={{ headerShown: false }} />
-          <Tabs.Screen name="six"     options={{ headerShown: false }} />
-               </Tabs>
-      </View>
+      <BottomTabBarPropsProvider>
+        <TabHeaderProvider>
+          <SyncMount />
+          <View style={{ flex: 1, backgroundColor: colors.bg }}>
+            <OfflineBanner />
+            <SyncErrorBanner />
+            <FixedTabPageHeader />
+            <View style={{ flex: 1, overflow: 'hidden' }}>
+              <Tabs
+                screenOptions={{ headerShown: false, tabBarStyle: { display: 'none', height: 0 } }}
+                tabBar={(props) => <TabBarPropsSync tabBarProps={props} />}
+              >
+                <Tabs.Screen name="index" options={{ headerShown: false }} />
+                <Tabs.Screen name="one" options={{ headerShown: false }} />
+                <Tabs.Screen name="two" options={{ headerShown: false }} />
+                <Tabs.Screen name="three" options={{ headerShown: false }} />
+                <Tabs.Screen name="four" options={{ headerShown: false }} />
+                <Tabs.Screen name="five" options={{ headerShown: false }} />
+                <Tabs.Screen name="ui-kit" options={{ headerShown: false }} />
+                <Tabs.Screen name="six" options={{ headerShown: false }} />
+              </Tabs>
+            </View>
+            <ExternalBottomNav />
+          </View>
+        </TabHeaderProvider>
+      </BottomTabBarPropsProvider>
     </ExerciseDataProvider>
   );
 }

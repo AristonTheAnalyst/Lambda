@@ -1,9 +1,11 @@
+import { useCallback } from 'react';
 import { TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Text, XStack, YStack } from 'tamagui';
-import PageHeader from '@/components/PageHeader';
 import { useAppTheme } from '@/lib/ThemeContext';
+import { useTabHeader } from '@/lib/TabHeaderContext';
 
 const SECTIONS = [
   {
@@ -17,10 +19,16 @@ const SECTIONS = [
 export default function ProfileHub() {
   const { colors, space, radius, fontSize } = useAppTheme();
   const router = useRouter();
+  const { setTabHeader } = useTabHeader();
+
+  useFocusEffect(
+    useCallback(() => {
+      setTabHeader({ title: 'Profile', left: undefined, right: undefined });
+    }, [setTabHeader]),
+  );
 
   return (
     <YStack flex={1} backgroundColor={colors.bg}>
-      <PageHeader title="Profile" />
       <YStack flex={1} padding={space.xl} gap={space.md}>
         {SECTIONS.map((s) => (
           <TouchableOpacity

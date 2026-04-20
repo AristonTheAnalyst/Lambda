@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { ScrollView, useWindowDimensions } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Text, XStack, YStack } from 'tamagui';
-import PageHeader from '@/components/PageHeader';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import Input from '@/components/Input';
@@ -10,6 +10,7 @@ import NotesField from '@/components/NotesField';
 import { SegmentedControl, DropdownSelect, SlideUpModal } from '@/components/FormControls';
 import GlassButton from '@/components/GlassButton';
 import { useAppTheme, THEME_PRESETS, THEME_ORDER } from '@/lib/ThemeContext';
+import { useTabHeader } from '@/lib/TabHeaderContext';
 
 // ─── Section header ───────────────────────────────────────────────────────────
 
@@ -52,8 +53,15 @@ function Swatch({ name, color, textColor }: { name: string; color: string; textC
 
 export default function UIKitScreen() {
   const { themeName, setTheme, colors, space, radius, fontSize } = useAppTheme();
+  const { setTabHeader } = useTabHeader();
   const { height: windowHeight } = useWindowDimensions();
   const modalBottomSpacer = windowHeight * 0.15;
+
+  useFocusEffect(
+    useCallback(() => {
+      setTabHeader({ title: 'UI Kit — DEV ONLY', left: undefined, right: undefined });
+    }, [setTabHeader]),
+  );
 
   const [inputValue, setInputValue]       = useState('');
   const [segValue, setSegValue]           = useState<'reps' | 'duration'>('reps');
@@ -79,8 +87,6 @@ export default function UIKitScreen() {
 
   return (
     <YStack flex={1} backgroundColor={colors.bg}>
-      <PageHeader title="UI Kit — DEV ONLY" />
-
       <ScrollView contentContainerStyle={{ padding: space.lg, gap: space.xl }} showsVerticalScrollIndicator={false}>
         <YStack gap={space.xl}>
 

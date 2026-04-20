@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ScrollView, RefreshControl } from 'react-native';
 import { Spinner, Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useFocusEffect } from '@react-navigation/native';
-import PageHeader from '@/components/PageHeader';
 import SyncStatusIcon from '@/components/SyncStatusIcon';
 import { useAuthContext } from '@/lib/AuthContext';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
 import { useNetwork } from '@/hooks/useNetwork';
 import { loadWorkoutsWithSets, seedWorkoutsFromSupabase, WorkoutWithSets } from '@/lib/offline/workoutStore';
 import { useAppTheme } from '@/lib/ThemeContext';
+import { useTabHeader } from '@/lib/TabHeaderContext';
 import { toProperCase } from '@/lib/workoutSetFormat';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -66,6 +66,7 @@ export default function TrainingLogsScreen() {
   const { colors, space, radius, fontSize } = useAppTheme();
   const db = useSQLiteContext();
   const router = useRouter();
+  const { setTabHeader } = useTabHeader();
   const { user } = useAuthContext();
   const { exerciseDetailMap } = useExerciseData();
   const { isConnected } = useNetwork();
@@ -87,10 +88,20 @@ export default function TrainingLogsScreen() {
     loadFromSQLite();
   }, [loadFromSQLite]);
 
+  const headerRight = useMemo(() => <SyncStatusIcon />, []);
+
   // Reload from SQLite whenever the screen comes back into focus (e.g. after editing a set in [id].tsx)
-  useFocusEffect(useCallback(() => {
-    loadFromSQLite();
-  }, [loadFromSQLite]));
+  useFocusEffect(
+    useCallback(() => {
+      loadFromSQLite();
+    }, [loadFromSQLite]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      setTabHeader({ title: 'Training Logs', left: undefined, right: headerRight });
+    }, [setTabHeader, headerRight]),
+  );
 
   // Background seed from Supabase on first install (non-blocking)
   useEffect(() => {
@@ -136,7 +147,6 @@ export default function TrainingLogsScreen() {
 
   return (
     <YStack flex={1} backgroundColor={colors.bg}>
-      <PageHeader title="Training Logs" right={<SyncStatusIcon />} />
       {loading ? (
         <YStack flex={1} alignItems="center" justifyContent="center">
           <Spinner size="large" color={colors.accent} />

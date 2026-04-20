@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Platform, ScrollView } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Separator, Text, XStack, YStack } from 'tamagui';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import GlassButton from '@/components/GlassButton';
 import Button from '@/components/Button';
 import PopupMenuButton from '@/components/PopupMenuButton';
@@ -11,6 +11,7 @@ import { SegmentedControl, SlideUpModal, DropdownSelect } from '@/components/For
 import type { SlideTab } from '@/components/SlideTabView';
 import type { PressVariant } from '@/components/PopupMenuButton';
 import { useAppTheme } from '@/lib/ThemeContext';
+import { useTabHeader } from '@/lib/TabHeaderContext';
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -311,9 +312,19 @@ function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
 
 export default function ExperimentalScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { colors, space, fontSize } = useAppTheme();
+  const { setTabHeader } = useTabHeader();
   const [activeTab, setActiveTab] = useState<Tab>('Popup Menu');
+
+  useFocusEffect(
+    useCallback(() => {
+      setTabHeader({
+        title: 'Experimental Features',
+        left: <GlassButton icon="chevron-left" onPress={() => router.back()} />,
+        right: undefined,
+      });
+    }, [setTabHeader, router]),
+  );
 
   const tabs = useMemo<SlideTab[]>(() => [
     { key: 'Popup Menu', content: <PopupMenuPage /> },
@@ -323,15 +334,6 @@ export default function ExperimentalScreen() {
 
   return (
     <YStack flex={1} backgroundColor={colors.bg}>
-      <YStack paddingTop={insets.top + space.sm} paddingBottom={space.md} paddingHorizontal={space.lg}>
-        <XStack alignItems="center" gap={space.md}>
-          <GlassButton icon="chevron-left" onPress={() => router.back()} />
-          <Text fontSize={fontSize.xl} fontWeight="700" color={colors.primary} flex={1} textAlign="center" marginRight={44}>
-            Experimental Features
-          </Text>
-        </XStack>
-      </YStack>
-
       <TabBar active={activeTab} onChange={setActiveTab} />
       <SlideTabView tabs={tabs} activeKey={activeTab} onIndexChange={(k) => setActiveTab(k as Tab)} />
     </YStack>

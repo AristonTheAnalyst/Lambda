@@ -1,12 +1,13 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
-import PageHeader from '@/components/PageHeader';
 import SyncStatusIcon from '@/components/SyncStatusIcon';
 import { useAppTheme } from '@/lib/ThemeContext';
+import { useTabHeader } from '@/lib/TabHeaderContext';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
 // Pre-warm sub-screen modules so first navigation is instant
 import '@/components/GlassButton';
@@ -18,6 +19,13 @@ import '@/lib/asyncGuard';
 export default function AdminExercisesHub() {
   const { colors, space, radius, fontSize } = useAppTheme();
   const router = useRouter();
+  const { setTabHeader } = useTabHeader();
+
+  useFocusEffect(
+    useCallback(() => {
+      setTabHeader({ title: 'Exercise Configuration', left: undefined, right: <SyncStatusIcon /> });
+    }, [setTabHeader]),
+  );
 
   const sections: { route: string; label: string; description: string; icon: React.ReactNode }[] = [
     {
@@ -49,7 +57,6 @@ export default function AdminExercisesHub() {
 
   return (
     <YStack flex={1} backgroundColor={colors.bg}>
-      <PageHeader title="Exercise Configuration" right={<SyncStatusIcon />} />
       <YStack flex={1} padding={space.xl} gap={space.md}>
         {sections.map((s) => (
           <TouchableOpacity

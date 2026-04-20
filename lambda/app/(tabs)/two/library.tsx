@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { Alert, ScrollView, TextInput } from 'react-native';
 import { Separator, Spinner, Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LibraryNewExerciseCreateSheet, LibraryNewVariationCreateSheet } from '@/components/LibraryCreateSheets';
 import { DropdownSelect, SegmentedControl, SlideUpModal } from '@/components/FormControls';
 import { useExerciseData } from '@/lib/ExerciseDataContext';
@@ -21,6 +21,7 @@ import {
 } from '@/lib/offline/bridgeStore';
 import { useAsyncGuard, useUIGuard } from '@/lib/asyncGuard';
 import { useAppTheme } from '@/lib/ThemeContext';
+import { useTabHeader } from '@/lib/TabHeaderContext';
 import { toProperCase } from '@/lib/workoutSetFormat';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -114,7 +115,7 @@ export default function LibraryScreen() {
   const guard    = useAsyncGuard();
   const openEdit = useUIGuard();
   const router   = useRouter();
-  const insets   = useSafeAreaInsets();
+  const { setTabHeader } = useTabHeader();
   const db       = useSQLiteContext();
   const { user } = useAuthContext();
   const {
@@ -127,6 +128,16 @@ export default function LibraryScreen() {
   } = useExerciseData();
 
   const [tab, setTab] = useState<'exercises' | 'variations'>('exercises');
+
+  useFocusEffect(
+    useCallback(() => {
+      setTabHeader({
+        title: tab === 'exercises' ? 'Exercises' : 'Variations',
+        left: <GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} />,
+        right: undefined,
+      });
+    }, [tab, setTabHeader, router]),
+  );
 
   // ── Exercises state ──────────────────────────────────────────────────────
   const [exSearch, setExSearch]               = useState('');
@@ -277,22 +288,6 @@ export default function LibraryScreen() {
 
   return (
     <YStack flex={1} backgroundColor={colors.bg}>
-
-      {/* ── Header ── */}
-      <XStack
-        style={{ height: insets.top + 52, paddingTop: insets.top }}
-        paddingHorizontal={space.md}
-        alignItems="center"
-      >
-        <XStack minWidth={80}>
-          <GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} />
-        </XStack>
-        <Text flex={1} textAlign="center" color={colors.primary} fontSize={fontSize.xl} fontWeight="600">
-          {tab === 'exercises' ? 'Exercises' : 'Variations'}
-        </Text>
-        <XStack width={80} />
-      </XStack>
-
       {/* ── Tab switcher ── */}
       <YStack paddingHorizontal={space.lg} paddingVertical={space.sm} backgroundColor={colors.bg}>
         <SegmentedControl

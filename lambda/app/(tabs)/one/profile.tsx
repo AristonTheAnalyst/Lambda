@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -7,16 +7,17 @@ import {
 } from 'react-native';
 import { Separator, Text, XStack, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import supabase from '@/lib/supabase';
 import { useAuthContext } from '@/lib/AuthContext';
 import { DropdownSelect } from '@/components/FormControls';
-import PageHeader from '@/components/PageHeader';
 import GlassButton from '@/components/GlassButton';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import DatePickerField from '@/components/DatePickerField';
 import { useAsyncGuard } from '@/lib/asyncGuard';
 import { useAppTheme } from '@/lib/ThemeContext';
+import { useTabHeader } from '@/lib/TabHeaderContext';
 
 const GENDER_OPTIONS = [
   { label: 'Not specified', value: '' },
@@ -29,6 +30,7 @@ export default function ProfileScreen() {
   const { colors, space, radius, fontSize } = useAppTheme();
   const guard = useAsyncGuard();
   const router = useRouter();
+  const { setTabHeader } = useTabHeader();
   const { user, profile, signOut, refreshProfile } = useAuthContext();
 
   const [editing, setEditing]     = useState(false);
@@ -93,6 +95,20 @@ export default function ProfileScreen() {
     ]);
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      setTabHeader({
+        title: 'User Profile',
+        left: <GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} />,
+        right: !editing ? (
+          <Text color={colors.accent} fontSize={fontSize.md} fontWeight="600" onPress={startEditing} cursor="pointer">
+            Edit
+          </Text>
+        ) : undefined,
+      });
+    }, [editing, setTabHeader, router, colors.accent, fontSize.md]),
+  );
+
   const handleDeleteAccount = () => {
     Alert.alert(
       'Delete Account',
@@ -122,14 +138,6 @@ export default function ProfileScreen() {
 
   return (
     <YStack flex={1} backgroundColor={colors.bg}>
-      <PageHeader
-        title="User Profile"
-        left={<GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} />}
-        right={!editing
-          ? <Text color={colors.accent} fontSize={fontSize.md} fontWeight="600" onPress={startEditing} cursor="pointer">Edit</Text>
-          : undefined
-        }
-      />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView showsVerticalScrollIndicator={false}>
           <YStack padding={space.xl} gap={space.lg}>

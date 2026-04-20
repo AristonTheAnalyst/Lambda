@@ -1,25 +1,29 @@
+import { useCallback } from 'react';
 import { ScrollView } from 'react-native';
-import { Text, YStack, XStack } from 'tamagui';
+import { Text, YStack } from 'tamagui';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Separator } from 'tamagui';
+import { useFocusEffect } from '@react-navigation/native';
 import GlassButton from '@/components/GlassButton';
 import { useAppTheme } from '@/lib/ThemeContext';
+import { useTabHeader } from '@/lib/TabHeaderContext';
 
 export default function UserGuideScreen() {
   const { colors, space, radius, fontSize } = useAppTheme();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const { setTabHeader } = useTabHeader();
+
+  useFocusEffect(
+    useCallback(() => {
+      setTabHeader({
+        title: 'User Guide',
+        left: <GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} />,
+        right: undefined,
+      });
+    }, [setTabHeader, router]),
+  );
 
   return (
     <YStack flex={1} backgroundColor={colors.bg}>
-      <XStack style={{ height: insets.top + 52, paddingTop: insets.top }} paddingHorizontal={space.md} alignItems="center">
-        <XStack minWidth={80}><GlassButton icon="chevron-left" label="Back" onPress={() => router.back()} /></XStack>
-        <Text flex={1} textAlign="center" color={colors.primary} fontSize={fontSize.xl} fontWeight="600">User Guide</Text>
-        <XStack width={80} />
-      </XStack>
-      <Separator borderColor={colors.border} />
-
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: space.lg, paddingBottom: space.xxl }}
