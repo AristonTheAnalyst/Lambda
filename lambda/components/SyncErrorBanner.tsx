@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Text } from 'tamagui';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useNetwork } from '@/hooks/useNetwork';
+import { DEV_LITE_UI } from '@/lib/devLiteUi';
 import { useAppTheme } from '@/lib/ThemeContext';
 import { useSyncStore } from '@/lib/sync/useSyncEngine';
 
@@ -21,7 +22,7 @@ export default function SyncErrorBanner() {
   const heightSv = useSharedValue(0);
 
   useEffect(() => {
-    heightSv.value = withTiming(visible ? BANNER_HEIGHT : 0, { duration: 260 });
+    heightSv.value = withTiming(visible ? BANNER_HEIGHT : 0, { duration: DEV_LITE_UI ? 0 : 260 });
   }, [visible]);
 
   const animatedStyle = useAnimatedStyle(() => ({

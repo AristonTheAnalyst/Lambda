@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { DEV_LITE_UI } from '@/lib/devLiteUi';
 
 export type PressSquashVariant = 'native' | 'bouncy' | 'ghost' | 'depth' | 'minimal';
 
@@ -41,6 +42,12 @@ export function useSquashPressHandlers(
 
   function onPressIn() {
     if (disabled) return;
+    if (DEV_LITE_UI) {
+      pressScale.value = v.scale;
+      pressOpacity.value = v.opacity;
+      pressShadow.value = v.shadow;
+      return;
+    }
     pressScale.value = withSpring(v.scale, v.spring);
     pressOpacity.value = withSpring(v.opacity, v.spring);
     pressShadow.value = withSpring(v.shadow, v.spring);
@@ -48,6 +55,12 @@ export function useSquashPressHandlers(
 
   function onPressOut() {
     if (disabled) return;
+    if (DEV_LITE_UI) {
+      pressScale.value = 1;
+      pressOpacity.value = 1;
+      pressShadow.value = 0;
+      return;
+    }
     pressScale.value = withSpring(1.0, v.spring);
     pressOpacity.value = withSpring(1.0, v.spring);
     pressShadow.value = withSpring(0, v.spring);

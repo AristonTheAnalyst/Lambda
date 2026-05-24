@@ -8,6 +8,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { DEV_LITE_UI } from '@/lib/devLiteUi';
 
 export interface SlideTab {
   key: string;
@@ -20,7 +21,10 @@ interface SlideTabViewProps {
   onIndexChange?: (key: string) => void;
 }
 
-const TIMING = { duration: 350, easing: Easing.out(Easing.cubic) } as const;
+const TIMING = {
+  duration: DEV_LITE_UI ? 0 : 350,
+  easing: Easing.out(Easing.cubic),
+} as const;
 const VELOCITY_THRESHOLD = 500;
 const RUBBER_BAND = 0.3;
 

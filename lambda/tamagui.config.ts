@@ -1,12 +1,21 @@
 import { createAnimations } from '@tamagui/animations-reanimated'
 import { defaultConfig as config } from '@tamagui/config/v4'
 import { createTamagui } from 'tamagui'
+import { DEV_LITE_UI } from './lib/devLiteUi'
 
-const animations = createAnimations({
-  fast:   { type: 'spring', damping: 20, mass: 1.2, stiffness: 250 },
-  medium: { type: 'spring', damping: 10, mass: 0.9, stiffness: 100 },
-  slow:   { type: 'spring', damping: 20, mass: 1.5, stiffness: 60  },
-})
+const animations = createAnimations(
+  DEV_LITE_UI
+    ? {
+        fast: { type: 'timing', duration: 1 },
+        medium: { type: 'timing', duration: 1 },
+        slow: { type: 'timing', duration: 1 },
+      }
+    : {
+        fast: { type: 'spring', damping: 20, mass: 1.2, stiffness: 250 },
+        medium: { type: 'spring', damping: 10, mass: 0.9, stiffness: 100 },
+        slow: { type: 'spring', damping: 20, mass: 1.5, stiffness: 60 },
+      },
+)
 
 // monoDark / monoLight mirror Tamagui’s dark & light tokens so defaultTheme={name} always resolves.
 const tamaguiConfig = createTamagui({

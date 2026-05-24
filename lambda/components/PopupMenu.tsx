@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Separator, Text, XStack } from 'tamagui';
 import { SquashPressable } from '@/components/PressSquash';
+import { DEV_LITE_UI } from '@/lib/devLiteUi';
 import { useAppTheme } from '@/lib/ThemeContext';
 import type { ThemeColors } from '@/lib/ThemeContext';
 
@@ -42,6 +43,11 @@ function OptionRow({ opt, index, colors, space, fontSize, borderColor, onPress }
   const opacity = useSharedValue(0);
 
   useEffect(() => {
+    if (DEV_LITE_UI) {
+      translateX.value = 0;
+      opacity.value = 1;
+      return;
+    }
     const delay = index * 50;
     translateX.value = withDelay(delay, withTiming(0, { duration: 220, easing: Easing.out(Easing.quad) }));
     opacity.value = withDelay(delay, withTiming(1, { duration: 180 }));
@@ -102,6 +108,11 @@ export default function PopupMenu({
   }));
 
   function openMenu() {
+    if (DEV_LITE_UI) {
+      menuScale.value = 1;
+      menuOpacity.value = 1;
+      return;
+    }
     menuScale.value = 0.88;
     menuOpacity.value = 0;
     menuScale.value = withSpring(1, { damping: 20, mass: 1.2, stiffness: 250 });
@@ -114,6 +125,12 @@ export default function PopupMenu({
   }, [visible, anchor?.left, anchor?.top]);
 
   function closeMenu() {
+    if (DEV_LITE_UI) {
+      menuScale.value = 0.88;
+      menuOpacity.value = 0;
+      onClose();
+      return;
+    }
     menuScale.value = withSpring(0.88, { damping: 20, mass: 1.2, stiffness: 250 });
     menuOpacity.value = withTiming(0, { duration: 120 }, (finished) => {
       if (finished) runOnJS(onClose)();

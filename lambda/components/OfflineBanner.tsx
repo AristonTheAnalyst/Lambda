@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Text } from 'tamagui';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useNetwork } from '@/hooks/useNetwork';
+import { DEV_LITE_UI } from '@/lib/devLiteUi';
 import { useAppTheme } from '@/lib/ThemeContext';
 
 const BANNER_HEIGHT = 28;
@@ -13,7 +14,7 @@ export default function OfflineBanner() {
   const heightSv = useSharedValue(0);
 
   useEffect(() => {
-    heightSv.value = withTiming(isConnected ? 0 : BANNER_HEIGHT, { duration: 260 });
+    heightSv.value = withTiming(isConnected ? 0 : BANNER_HEIGHT, { duration: DEV_LITE_UI ? 0 : 260 });
   }, [isConnected]);
 
   const animatedStyle = useAnimatedStyle(() => ({

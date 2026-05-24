@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useWindowDimensions } from 'react-native';
 import { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
+import { DEV_LITE_UI } from '@/lib/devLiteUi';
 
 export interface SlidePagesController {
   screenWidth: number;
@@ -15,13 +16,15 @@ export function useSlidePages(): SlidePagesController {
   const slideX = useSharedValue(0);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ translateX: slideX.value }] }));
 
+  const slideDur = DEV_LITE_UI ? 0 : 280;
+
   const slideIn = useCallback(() => {
-    slideX.value = withTiming(-screenWidth, { duration: 280, easing: Easing.out(Easing.cubic) });
-  }, [screenWidth, slideX]);
+    slideX.value = withTiming(-screenWidth, { duration: slideDur, easing: Easing.out(Easing.cubic) });
+  }, [screenWidth, slideX, slideDur]);
 
   const slideOut = useCallback(() => {
-    slideX.value = withTiming(0, { duration: 280, easing: Easing.out(Easing.cubic) });
-  }, [slideX]);
+    slideX.value = withTiming(0, { duration: slideDur, easing: Easing.out(Easing.cubic) });
+  }, [slideX, slideDur]);
 
   const resetToPage = useCallback(
     (page: 0 | 1) => {
